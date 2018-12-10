@@ -1,14 +1,14 @@
 CC = gcc
-CFLAGS = -I $(IDIR)
+CFLAGS = -I $(IDIR) -lm
 
 IDIR = ../include
 LDIR = ../lib
 ODIR = obj
 
-_DEPS = laser.h
+_DEPS = laser.h parse_args.h
 DEPS = $(patsubst %, $(IDIR)/%,$(_DEPS))
 
-_OBJ = laser.o parse_args.o
+_OBJ = laser.o parse_args.o convert.o
 OBJ = $(patsubst %, $(ODIR)/%,$(_OBJ))
 
 $(ODIR)/%.o: %.c $(DEPS)
@@ -20,7 +20,7 @@ laser: $(OBJ)
 .PHONY: clean install uninstall
 
 clean:
-	rm -f $(ODIR)/*.o
+	rm -f $(ODIR)/*.o && rm -f laser
 
 install:
 	cp laser /usr/local/bin
