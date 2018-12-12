@@ -1,4 +1,5 @@
 #include "laser.h"
+#include "str_const.h"
 
 int main(int argc, char *argv[]){
 	
@@ -30,6 +31,10 @@ int main(int argc, char *argv[]){
 		printf("invalid flags\n");
 	}
 
+//
+//	TESTING FUNCTIONS
+//
+
 	printf("64 in binary is: %u\n", decToTwoComp(-24));
 
 	int bin[16];
@@ -46,12 +51,10 @@ int main(int argc, char *argv[]){
 		i++;
 	}
 	printf("\n");
-	
-	
-	// parse .asm file
-	if(fileOpened){
-		
-	}
+
+//
+//	END TESTING
+//
 
 	// cleanup
 	if(fileOpened) fclose(fp);
