@@ -6,9 +6,15 @@
 #include "math.h"
 
 // macros
-#define size_arr(arr) ((&arr)[1]-arr)
+#define size(arr) ((&arr)[1]-arr)
 
 // function declarations
+void notArr(int bin[], int size);
+
+void printIntArr(int num[], int size);
+
+void printCharArr(char hex[], int size);
+
 int binToDec(int bin[], int size);
 
 int twoCompToDec(int bin[], int size);
@@ -17,4 +23,6 @@ void decToTwoComp(int n, int bin[], int size);
 
 void zext(unsigned int n, int bin[], int size);
 
-char binToHex(int bin[], int bin_size, char hex[]);
+void binToHex(int bin[], int bin_size, char hex[], int hex_size);
+
+void addArr(int bin1[], int s1, int bin2[], int s2, int bin3[], int s3);

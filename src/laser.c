@@ -34,23 +34,20 @@ int main(int argc, char *argv[]){
 //
 //	TESTING FUNCTIONS
 //
+	int bin_test=101010001;
+	int bin[16];
+	char hex_test[4];
+	zext(bin_test, bin, size(bin));
 
-	int bin[24];
-	zext(101101, bin, size_arr(bin));
-
-	printf("1000000 in decimal is: %i\n", twoCompToDec(bin, size_arr(bin)));
+	printf("%i in decimal is: %i\n", bin_test, twoCompToDec(bin, size(bin)));
 
 	int num[16];
-	int size=size_arr(bin);
-	zext(10011, num, size);
-	decToTwoComp(24, bin, size_arr(bin));
-	int i=0;
-	while(i<=size-1){
-		//printf("%d", num[i]);
-		printf("%d", bin[i]);
-		i++;
-	}
-	printf("\n");
+	zext(bin_test, num, size(num));
+	decToTwoComp(3146, bin, size(bin));
+	printIntArr(bin, size(bin));
+	binToHex(bin, size(bin), hex_test, size(hex_test));
+	printIntArr(num, size(num));
+	printCharArr(hex_test, size(hex_test));
 
 //
 //	END TESTING
@@ -59,4 +56,22 @@ int main(int argc, char *argv[]){
 	// cleanup
 	if(fileOpened) fclose(fp);
 	return 0;
+}
+
+void printIntArr(int num[], int size){
+	int i=0;
+	while(i<=size-1){
+		printf("%i", num[i]);
+		i++;
+	}
+	printf("\n");
+}
+
+void printCharArr(char hex[], int size){
+	int i=0;
+	while(i<=size-1){
+		printf("%c", hex[i]);
+		i++;
+	}
+	printf("\n");
 }

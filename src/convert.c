@@ -2,13 +2,13 @@
 #include "arr_const.h"
 
 int binToDec(int bin[], int size){
-	int dec_num=0, i=0, r, n=0;
+	int i=0, r, n=0;
 	while(i<=size-1){
-		n*=10;
+		n*=2;
 		n+=bin[i];
 		i++;
 	}
-	return dec_num;
+	return n;
 }
 
 void zext(unsigned int n, int bin[], int size){
@@ -39,51 +39,79 @@ int twoCompToDec(int bin[], int size){
 	return dec_num;
 }
 
-void decToTwoComp(int n, int bin[], int size){
-	int bin_num=0, i=0, mask=0, carry=0, r;
-	bool neg=false, stillOnes=true;
-	if(n<0){n=-n;neg=true;}
-	while(n>0){
-		r=n%2;
-		n/=2;
-		bin_num+=r*pow(10, i);
-		i++;
-	}
-	if(neg){
-		while(i>=0){
-			mask*=10;
-			mask++;
-			i--;
-		}
-		bin_num=n=abs(bin_num-mask);
-		while(n>0&&stillOnes){
-			r=n%10;
-			n/=10;
-			if(r==1){
-				carry*=10;
-				carry++;
-			}
-			else{
-				stillOnes=false;
-			}
-		}
-		if(bin_num%2==1){
-			bin_num+=8*carry;
-			bin_num=bin_num+1;
-		}
-		else{
-			bin_num+=1;
-		}
-	}
-	i=size-1;
+void notArr(int bin[], int size){
+	int i=size-1;
 	while(i>=0){
-		bin[i]=bin_num%10;
-		bin_num/=10;
-		if(neg&&bin_num==0) bin_num++;
-		i--;
+		if(bin[i]==1) bin[i]==0;
+		else bin[i]==1;
 	}
 }
 
-char binToHex(int bin[], int bin_size, char hex[]){
+void addArr(int bin1[], int s1, int bin2[], int s2, int bin3[], int s3){
+	int carry=0, i=s1-1, j=s2-1, k=s3-1, b1, b2;
+	if(s1>s3||s2>s3){
+		printf("\nArray size too small to store result.\n");
+	}
+	else{
+		while(k>=0){
+			if(i<0) b1=bin1[0];
+			else b1=bin1[i];
+			if(j<0) b2=bin2[0];
+			else b2=bin2[j];
+			if(b1+b2==2&&carry==1){
+				bin3[k]=1;
+				carry=1;
+			}
+			else if((b1+b2==2&&carry==0)||(b1+b2==1&&carry==1)){
+				bin3[k]=0;
+				carry=1;
+			}
+			else if((b1+b2==1&&carry==0)||(b1+b2==0&&carry==1)){
+				bin3[k]=1;
+				carry=0;
+			}
+			else if(b1+b2==0&&carry==0){
+				bin3[k]=1;
+				carry=0;
+			}
+			i--;
+			j--;
+			k--;
+		}
+	}
+}
 
+void decToTwoComp(int n, int bin[], int size){
+	int bin_num=0, i=size-1, mask=0, carry=0, r;
+	bool neg=false, stillOnes=true;
+	if(n<0){n=-n;neg=true;}
+	while(i>=0){
+		r=n%2;
+		n/=2;
+		bin[i]=r;
+		i--;
+	}
+	if(neg){
+		notArr(bin, size(bin));
+		addArr(bin, size(bin), one_16b, size(one_16b), bin, size(bin));
+	}
+}
+
+// note that hex_size should always be at least 1/4 of bin_size
+void binToHex(int bin[], int bin_size, char hex[], int hex_size){
+	int bin_seg[4], i=bin_size-1, j=3, k=hex_size-1, dec_num;
+	while(i>=0||k>=0){
+		while(j>=0){
+			if(i>=0) bin_seg[j]=bin[i];
+			else bin_seg[j]=0;
+			i--;
+			j--;
+		}
+		j=3;
+		dec_num=binToDec(bin_seg, size(bin_seg));
+		if(i>=0) hex[k]=hex_chars[dec_num];
+		else if(bin[0]==0) hex[k]='0';
+		else hex[k]='F';
+		k--;
+	}
 }
