@@ -9,11 +9,11 @@
 #define size_arr(arr) ((&arr)[1]-arr)
 
 // function declarations
-void parse_args(int argc, char *argv[], FILE *fp, bool fileOpened);
+int binToDec(int bin[], int size);
 
 int twoCompToDec(int bin[], int size);
 
-unsigned int decToTwoComp(int n);
+void decToTwoComp(int n, int bin[], int size);
 
 void zext(unsigned int n, int bin[], int size);
 

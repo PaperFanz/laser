@@ -35,19 +35,19 @@ int main(int argc, char *argv[]){
 //	TESTING FUNCTIONS
 //
 
-	printf("64 in binary is: %u\n", decToTwoComp(-24));
-
-	int bin[16];
+	int bin[24];
 	zext(101101, bin, size_arr(bin));
 
 	printf("1000000 in decimal is: %i\n", twoCompToDec(bin, size_arr(bin)));
 
-	int num[32];
-	int size=size_arr(num);
+	int num[16];
+	int size=size_arr(bin);
 	zext(10011, num, size);
+	decToTwoComp(24, bin, size_arr(bin));
 	int i=0;
 	while(i<=size-1){
-		printf("%d", num[i]);
+		//printf("%d", num[i]);
+		printf("%d", bin[i]);
 		i++;
 	}
 	printf("\n");

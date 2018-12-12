@@ -1,4 +1,25 @@
 #include "laser.h"
+#include "arr_const.h"
+
+int binToDec(int bin[], int size){
+	int dec_num=0, i=0, r, n=0;
+	while(i<=size-1){
+		n*=10;
+		n+=bin[i];
+		i++;
+	}
+	return dec_num;
+}
+
+void zext(unsigned int n, int bin[], int size){
+	int i=size-1, r;
+	while(i>=0){
+		r=n%10;
+		n/=10;
+		bin[i]=r;
+		i--;
+	}
+}
 
 int twoCompToDec(int bin[], int size){
 	int dec_num=0, i=0, r, n=0;
@@ -18,7 +39,7 @@ int twoCompToDec(int bin[], int size){
 	return dec_num;
 }
 
-unsigned int decToTwoComp(int n){
+void decToTwoComp(int n, int bin[], int size){
 	int bin_num=0, i=0, mask=0, carry=0, r;
 	bool neg=false, stillOnes=true;
 	if(n<0){n=-n;neg=true;}
@@ -54,15 +75,11 @@ unsigned int decToTwoComp(int n){
 			bin_num+=1;
 		}
 	}
-	return bin_num;
-}
-
-void zext(unsigned int n, int bin[], int size){
-	int i=size-1, r;
+	i=size-1;
 	while(i>=0){
-		r=n%10;
-		n/=10;
-		bin[i]=r;
+		bin[i]=bin_num%10;
+		bin_num/=10;
+		if(neg&&bin_num==0) bin_num++;
 		i--;
 	}
 }
