@@ -21,10 +21,7 @@ int twoCompToDec(int bin[], int size){
 unsigned int decToTwoComp(int n){
 	int bin_num=0, i=0, mask=0, carry=0, r;
 	bool neg=false, stillOnes=true;
-	if(n<0){
-		n=-n;
-		neg=true;
-	}
+	if(n<0){n=-n;neg=true;}
 	while(n>0){
 		r=n%2;
 		n/=2;
@@ -70,6 +67,6 @@ void zext(unsigned int n, int bin[], int size){
 	}
 }
 
-char binToHex(unsigned int n){
+char binToHex(int bin[], int bin_size, char hex[]){
 
 }
