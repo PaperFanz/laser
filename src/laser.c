@@ -36,18 +36,18 @@ int main(int argc, char *argv[]){
 //
 	int bin_test=101010001;
 	int bin[16];
-	char hex_test[4];
+	char hex[4];
 	zext(bin_test, bin, size(bin));
 
 	printf("%i in decimal is: %i\n", bin_test, twoCompToDec(bin, size(bin)));
 
 	int num[16];
 	zext(bin_test, num, size(num));
-	decToTwoComp(3146, bin, size(bin));
+	decToTwoComp(36417, bin, size(bin));
 	printIntArr(bin, size(bin));
-	binToHex(bin, size(bin), hex_test, size(hex_test));
+	binToHex(bin, size(bin), hex, size(hex));
 	printIntArr(num, size(num));
-	printCharArr(hex_test, size(hex_test));
+	printCharArr(hex, size(hex));
 
 //
 //	END TESTING

@@ -82,8 +82,8 @@ void addArr(int bin1[], int s1, int bin2[], int s2, int bin3[], int s3){
 }
 
 void decToTwoComp(int n, int bin[], int size){
-	int bin_num=0, i=size-1, mask=0, carry=0, r;
-	bool neg=false, stillOnes=true;
+	int i=size-1, carry=0, r;
+	bool neg=false;
 	if(n<0){n=-n;neg=true;}
 	while(i>=0){
 		r=n%2;
