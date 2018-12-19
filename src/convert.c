@@ -1,6 +1,34 @@
 #include "laser.h"
 #include "arr_const.h"
 
+//
+// File I/O Functions
+//
+
+int isKeyword(char c[]){
+	int i, j, max_dim;
+	for(i=0; i<=15; i++){
+		switch(i){
+			case 0: max_dim=15; break;
+			case 4: max_dim=3; break;
+			case 12: max_dim=3; break;
+			case 13: max_dim=0; break;
+			case 15: max_dim=11; break;
+			default: max_dim=1; break;
+		}
+		for(j=0; j<=max_dim; j++){
+			if(strcmp(c, keyword[i][j])==0){
+				return i;
+			}
+		}
+	}
+	return -1;
+}
+
+//
+// Convert Functions
+//
+
 int binToDec(int bin[], int size){
 	int i=0, r, n=0;
 	while(i<=size-1){
@@ -47,6 +75,7 @@ void notArr(int bin[], int size){
 	}
 }
 
+// bin3 is result array, bin1 and bin2 are operands
 void addArr(int bin1[], int s1, int bin2[], int s2, int bin3[], int s3){
 	int carry=0, i=s1-1, j=s2-1, k=s3-1, b1, b2;
 	if(s1>s3||s2>s3){

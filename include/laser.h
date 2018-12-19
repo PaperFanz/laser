@@ -10,7 +10,7 @@
 #define max_len 40					// max # of chars for a line of assembly
 
 // function declarations
-int isKeyword(char c);
+int isKeyword(char c[]);
 
 void parse_file(FILE *fp);
 

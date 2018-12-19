@@ -1,8 +1,10 @@
+// includes
 #include "laser.h"
 #include "str_const.h"
 
 int main(int argc, char *argv[]){
 	
+	// declarations
 	FILE *fp;
 	bool fileOpened = false;
 	
@@ -20,7 +22,7 @@ int main(int argc, char *argv[]){
 		printf("filename: %s\n", argv[2]);
 		fp = fopen(argv[2],"r+");
 		if(fp!=NULL){
-			fputs("write successful\n", fp);
+			parse_file(fp);
 			fileOpened = true;
 		}
 		else{
@@ -48,6 +50,7 @@ int main(int argc, char *argv[]){
 	binToHex(bin, size(bin), hex, size(hex));
 	printIntArr(num, size(num));
 	printCharArr(hex, size(hex));
+	printf("%d", isKeyword("gyu"));
 
 //
 //	END TESTING
