@@ -7,29 +7,25 @@ const char hex_chars[16]={'0','1','2','3',
 						  'C','D','E','F'};
 
 // keyword array used to parse text file
-const char *keyword[]={
-	"ADD", "add",
-	"AND", "and",
-	"NOT", "not",
-	"JMP", "jmp", "RET", "ret",
-	"JSR", "jsr", "JSRR", "jsrr",
-	"BR", "br", "BRnzp", "brnzp", "BRn", "brn", "BRnz",
-	"brnz", "BRz", "brz", "BRzp", "brzp", "BRp", "brp",
-	"LD", "ld",
-	"LDR", "ldr",
-	"LDI", "ldi",
-	"ST", "st",
-	"STR", "str",
-	"STI", "sti",
-	"LEA", "lea",
-	"RTI", "rti",
-	"TRAP", "trap",
-	"HALT", "halt",
-	"GETC", "getc",
-	"OUT", "out",
-	"PUTS", "puts"
-	"IN", "in",
-	"PUTSP", "putsp"
+const char *keyword[][16]={
+	{"BR", "br", "BRnzp", "brnzp", "BRnz", "brnz", "BRn", "brn",
+	"BRnp", "brnp", "BRzp", "brzp", "BRz", "brz", "BRp", "brp"},
+	{"ADD", "add"},
+	{"LD", "ld"},
+	{"ST", "st"},
+	{"JSR", "jsr", "JSRR", "jsrr"},
+	{"AND", "and"},
+	{"LDR", "ldr"},
+	{"STR", "str"},
+	{"RTI", "rti"},
+	{"NOT", "not"},
+	{"LDI", "ldi"},
+	{"STI", "sti"},
+	{"JMP", "jmp", "RET", "ret"},
+	{"\0"},
+	{"LEA", "lea"},
+	{"TRAP", "trap", "GETC", "getc", "OUT", "out", "PUTS", "puts",
+	"IN", "in", "PUTSP", "putsp"}
 };
 
 
