@@ -1,14 +1,19 @@
 // include statements
-#include "stdio.h"
-#include "stdlib.h"
-#include "string.h"
-#include "stdbool.h"
-#include "math.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdbool.h>
+#include <math.h>
 
 // macros
 #define size(arr) ((&arr)[1]-arr)
+#define max_len 40					// max # of chars for a line of assembly
 
 // function declarations
+int isKeyword(char c);
+
+void parse_file(FILE *fp);
+
 void notArr(int bin[], int size);
 
 void printIntArr(int num[], int size);
