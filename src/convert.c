@@ -25,6 +25,18 @@ int isKeyword(char c[]){
 	return -1;
 }
 
+int isPseuodoOp(char c[]){
+	int i, j;
+	for(i=0; i<=4; i++){
+		for(j=0; j<=1; j++){
+			if(strcmp(c, pseudoop[i][j])==0){
+				return i;
+			}
+		}
+	}
+	return -1;
+}
+
 //
 // Convert Functions
 //

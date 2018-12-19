@@ -36,21 +36,21 @@ int main(int argc, char *argv[]){
 //
 //	TESTING FUNCTIONS
 //
-	int bin_test=101010001;
-	int bin[16];
-	char hex[4];
-	zext(bin_test, bin, size(bin));
+	// int bin_test=101010001;
+	// int bin[16];
+	// char hex[4];
+	// zext(bin_test, bin, size(bin));
 
-	printf("%i in decimal is: %i\n", bin_test, twoCompToDec(bin, size(bin)));
+	// printf("%i in decimal is: %i\n", bin_test, twoCompToDec(bin, size(bin)));
 
-	int num[16];
-	zext(bin_test, num, size(num));
-	decToTwoComp(36417, bin, size(bin));
-	printIntArr(bin, size(bin));
-	binToHex(bin, size(bin), hex, size(hex));
-	printIntArr(num, size(num));
-	printCharArr(hex, size(hex));
-	printf("%d", isKeyword("gyu"));
+	// int num[16];
+	// zext(bin_test, num, size(num));
+	// decToTwoComp(36417, bin, size(bin));
+	// printIntArr(bin, size(bin));
+	// binToHex(bin, size(bin), hex, size(hex));
+	// printIntArr(num, size(num));
+	// printCharArr(hex, size(hex));
+	// printf("%d", isKeyword("gyu"));
 
 //
 //	END TESTING

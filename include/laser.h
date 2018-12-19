@@ -4,10 +4,11 @@
 #include <string.h>
 #include <stdbool.h>
 #include <math.h>
+#include <ctype.h>
 
 // macros
 #define size(arr) ((&arr)[1]-arr)
-#define max_len 40					// max # of chars for a line of assembly
+#define max_len 120		// max # of chars for a line of assembly
 
 // function declarations
 int isKeyword(char c[]);

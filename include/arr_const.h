@@ -28,6 +28,14 @@ const char *keyword[][16]={
 	"IN", "in", "PUTSP", "putsp"}
 };
 
+const char *pseudoop[][2]={
+	".ORIG", ".orig",
+	".END", ".end",
+	".STRINGZ", ".stringz",
+	".BLKW", ".blkw",
+	".FILL", ".fill"
+};
+
 
 
 // 16 bit one in binary (used by adder)
