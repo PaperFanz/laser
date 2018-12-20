@@ -1,0 +1,7 @@
+# ignore build artifacts
+*.o
+laser
+
+# ignore test files
+*.txt
+*.asm
