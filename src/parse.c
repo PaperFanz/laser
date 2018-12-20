@@ -2,7 +2,14 @@
 
 // takes a file pointer and parses each line one by one
 void parse_file(FILE *fp){
+
 	char str_buf[max_len+1], word_buf[10][12];
+	FILE *fp_st = fp;
+	
+//==============================================================================
+//	Pass 1 - Generate Symbol file
+//==============================================================================
+
 	while(fgets(str_buf, max_len+1, fp)!=NULL){
 		if(str_buf[0]!=0x3B){
 			int i=0, j=0, k=0;
@@ -22,10 +29,10 @@ void parse_file(FILE *fp){
 				}
 				i++;
 			}
-			for(i=0; i<=9; i++){
-				printf("%s ", word_buf[i]);
-			}
-			printf("\n");
 		}
-	}	
+	}
+
+//==============================================================================
+//	Pass 2 - Generate List, Binary, Hex, and Object files
+//==============================================================================
 }

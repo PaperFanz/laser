@@ -4,33 +4,43 @@
 
 int main(int argc, char *argv[]){
 	
-	// declarations
+//==============================================================================
+//	Declarations
+//==============================================================================
+
 	FILE *fp;
 	bool fileOpened = false;
+	int i=1;
 	
-	// parse arguments
+//==============================================================================
+//	Parse Arguments
+//==============================================================================
+
 	if(argc==1){
 		printf("%s: type 'laser -h' for help\n", argv[0]);
 	}
-	else if((strcmp(argv[1],"-v")==0) || (strcmp(argv[1],"--version")==0)){
-		printf("laser is at version %s\n", version_num);
-	}
-	else if((strcmp(argv[1],"-h")==0) || (strcmp(argv[1],"--help")==0)){
-		printf("%s", help);
-	}
-	else if(((strcmp(argv[1],"-f")==0) || (strcmp(argv[1],"--file"))==0) && argc==3){
-		printf("filename: %s\n", argv[2]);
-		fp = fopen(argv[2],"r+");
-		if(fp!=NULL){
-			parse_file(fp);
-			fileOpened = true;
-		}
-		else{
-			printf("unable to open %s\n", argv[2]);
-		}
-	}
 	else{
-		printf("invalid flags\n");
+		for(i=1; i<=argc-1; i++){
+			if(strcmp(argv[i],"-v")==0){
+				printf("laser is at version %s\n", version_num);
+			}
+			else if(strcmp(argv[i],"-h")==0){
+				printf("%s", help);
+			}
+			else if((strcmp(argv[i],"-a")==0)&&(argc>=i+1)){
+				fp=fopen(argv[i+1], "r+");
+				if(fp!=NULL){
+					fileOpened=true;
+					parse_file(fp);
+				}
+				else{
+					printf("Unable to open specified file: %s\n", argv[i+1]);
+				}
+			}
+			else{
+				printf("Invalid flags!\n");
+			}
+		}
 	}
 
 //
