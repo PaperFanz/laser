@@ -1,7 +1,10 @@
 #include "laser.h"
 
-// takes a file pointer and parses each line one by one
 void parse_file(FILE *fp){
+
+//==============================================================================
+//	Declarations
+//==============================================================================
 
 	char str_buf[max_len+1], word_buf[10][12];
 	FILE *fp_st = fp;

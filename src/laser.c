@@ -10,7 +10,6 @@ int main(int argc, char *argv[]){
 
 	FILE *fp;
 	bool fileOpened = false;
-	int i=1;
 	
 //==============================================================================
 //	Parse Arguments
@@ -20,6 +19,7 @@ int main(int argc, char *argv[]){
 		printf("%s: type 'laser -h' for help\n", argv[0]);
 	}
 	else{
+		int i=1;
 		for(i=1; i<=argc-1; i++){
 			if(strcmp(argv[i],"-v")==0){
 				printf("laser is at version %s\n", version_num);
@@ -36,6 +36,7 @@ int main(int argc, char *argv[]){
 				else{
 					printf("Unable to open specified file: %s\n", argv[i+1]);
 				}
+				i++;										// skip over file name in argv
 			}
 			else{
 				printf("Invalid flags!\n");
