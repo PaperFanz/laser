@@ -5,3 +5,5 @@ laser
 # ignore test files
 *.txt
 *.asm
+*.sym
+*.lst
