@@ -12,12 +12,9 @@ The completion of this tool will allow me to do everything LC3-related from VSCo
 
 NOTE: This project is not yet complete. Here are the things that still need to be implemented:
 
-~~1. Generating the symbol table~~ Completed as of 12/21/2018
-
+1. ~~Generating the symbol table~~ Completed as of 12/21/2018
 2. Generating the list file
-   
 3. Generating the binary file
-   
 4. Generating the object file
 
 ...That's literally everything that was supposed to be implemented. I've got a lot of work to do. Good thing winter break is forever.
