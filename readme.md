@@ -1,4 +1,4 @@
-# LASER - **L**c3 **AS**sembl**ER**
+# LASER - [**L**]c3 [**AS**]sembl[**ER**]
 
 ## Description
 
