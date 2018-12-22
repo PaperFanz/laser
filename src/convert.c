@@ -1,9 +1,9 @@
 #include "laser.h"
 #include "arr_const.h"
 
-//
-// File I/O Functions
-//
+//==============================================================================
+// Type Functions
+//==============================================================================
 
 int isKeyword(char c[]){
 	int i, j, max_dim;
@@ -37,10 +37,11 @@ int isPseuodoOp(char c[]){
 	return -1;
 }
 
-//
+//==============================================================================
 // Convert Functions
-//
+//==============================================================================
 
+// binary conversions
 int binToDec(int bin[], int size){
 	int i=0, r, n=0;
 	while(i<=size-1){
@@ -61,24 +62,7 @@ void zext(unsigned int n, int bin[], int size){
 	}
 }
 
-int twoCompToDec(int bin[], int size){
-	int dec_num=0, i=0, r, n=0;
-	while(i<=size-1){
-		n*=10;
-		n+=bin[i];
-		i++;
-	}
-	i=0;
-	while(n>0){
-		r=n%10;
-		n/=10;
-		dec_num+=r*pow(2, i);
-		i++;
-	}
-	if(bin[0]==1) dec_num-=r*pow(2, i);
-	return dec_num;
-}
-
+// binary operations
 void notArr(int bin[], int size){
 	int i=size-1;
 	while(i>=0){
@@ -122,6 +106,7 @@ void addArr(int bin1[], int s1, int bin2[], int s2, int bin3[], int s3){
 	}
 }
 
+// two's complement conversions
 void decToTwoComp(int n, int bin[], int size){
 	int i=size-1, carry=0, r;
 	bool neg=false;
@@ -138,7 +123,26 @@ void decToTwoComp(int n, int bin[], int size){
 	}
 }
 
-// note that hex_size should always be at least 1/4 of bin_size
+int twoCompToDec(int bin[], int size){
+	int dec_num=0, i=0, r, n=0;
+	while(i<=size-1){
+		n*=10;
+		n+=bin[i];
+		i++;
+	}
+	i=0;
+	while(n>0){
+		r=n%10;
+		n/=10;
+		dec_num+=r*pow(2, i);
+		i++;
+	}
+	if(bin[0]==1) dec_num-=r*pow(2, i);
+	return dec_num;
+}
+
+// hex conversions
+// note: hex_size should always be at least 1/4 of bin_size
 void binToHex(int bin[], int bin_size, char hex[], int hex_size){
 	int bin_seg[4], i=bin_size-1, j=3, k=hex_size-1, dec_num;
 	while(i>=0||k>=0){
@@ -154,5 +158,37 @@ void binToHex(int bin[], int bin_size, char hex[], int hex_size){
 		else if(bin[0]==0) hex[k]='0';
 		else hex[k]='F';
 		k--;
+	}
+}
+
+// note: bin_size should always be at least 4 times hex_size
+void hexToBin(int bin[], int bin_size, char hex[], int hex_size){
+
+}
+
+// note: only handles positive numbers, intended for use with addresses
+int hexToDec(char hex[]){
+	int i=0, j=1, dec_num=0;
+	for(j=1; j<=4; j++){
+		for(i=0; i<=15; i++){
+			if(hex[j]==hex_chars[i]){
+				dec_num=dec_num*16+i;
+			}
+		}
+	}
+	return dec_num;
+}
+
+// note: only handles positive numbers, intended for use with addresses
+// DO NOT use to calculate offsets
+void decToHex(char hex[], int dec_num){
+	int i=4, r;
+	hex[0]=0x78;			// x
+	hex[5]=0x00;			// null terminate
+	while(dec_num>0){
+		r=dec_num%16;
+		dec_num/=16;
+		hex[i]=hex_chars[r];
+		i--;
 	}
 }

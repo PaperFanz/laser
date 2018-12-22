@@ -10,13 +10,20 @@
 #define size(arr) ((&arr)[1]-arr)
 #define MAX_WORD_NUM 6		// max # of words per line (5+1 ICOI)
 #define MAX_WORD_SIZE 20	// max # of chars for a label or a filename
+#define TABSIZE 4
 
 // function declarations
 int isKeyword(char c[]);
 
 int isPseuodoOp(char c[]);
 
+int hexToDec(char hex[]);
+
+void decToHex(char hex[], int dec_num);
+
 void parse_file(FILE *fp, char *fname);
+
+void putSymbol(FILE *fp, char symbol[], char addr[]);
 
 void notArr(int bin[], int size);
 
