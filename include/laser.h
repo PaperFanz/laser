@@ -8,12 +8,15 @@
 
 // macros
 #define size(arr) ((&arr)[1]-arr)
-#define max_len 120		// max # of chars for a line of assembly
+#define MAX_WORD_NUM 6		// max # of words per line (5+1 ICOI)
+#define MAX_WORD_SIZE 20	// max # of chars for a label or a filename
 
 // function declarations
 int isKeyword(char c[]);
 
-void parse_file(FILE *fp);
+int isPseuodoOp(char c[]);
+
+void parse_file(FILE *fp, char *fname);
 
 void notArr(int bin[], int size);
 

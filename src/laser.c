@@ -31,12 +31,12 @@ int main(int argc, char *argv[]){
 				fp=fopen(argv[i+1], "r+");
 				if(fp!=NULL){
 					fileOpened=true;
-					parse_file(fp);
+					parse_file(fp, argv[i+1]);
 				}
 				else{
 					printf("Unable to open specified file: %s\n", argv[i+1]);
 				}
-				i++;										// skip over file name in argv
+				i++;	// skip over file name in argv
 			}
 			else{
 				printf("Invalid flags!\n");
@@ -67,25 +67,6 @@ int main(int argc, char *argv[]){
 //	END TESTING
 //
 
-	// cleanup
-	if(fileOpened) fclose(fp);
+	if(fileOpened) fclose(fp);		// clean up
 	return 0;
-}
-
-void printIntArr(int num[], int size){
-	int i=0;
-	while(i<=size-1){
-		printf("%i", num[i]);
-		i++;
-	}
-	printf("\n");
-}
-
-void printCharArr(char hex[], int size){
-	int i=0;
-	while(i<=size-1){
-		printf("%c", hex[i]);
-		i++;
-	}
-	printf("\n");
 }
