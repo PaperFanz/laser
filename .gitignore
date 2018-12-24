@@ -7,3 +7,6 @@ laser
 *.asm
 *.sym
 *.lst
+*.bin
+*.hex
+*.obj
