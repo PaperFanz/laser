@@ -8,12 +8,14 @@ void parse_file(FILE *fp, char *fname){
 
 	int MAX_LEN=MAX_WORD_NUM*MAX_WORD_SIZE;
 	int addr=0;
+	int bin_buf[16], opcode_buf[4];
 	char addr_str[6];					// "x", 4 hex chars and null
 	char line_buf[MAX_LEN+1];			// see definitions in laser.h
 	char word_buf[MAX_WORD_NUM][MAX_WORD_SIZE+2];	// room for null + size
 	char fname_buf[MAX_WORD_SIZE+5];
 	bool b_org=false;
 	FILE *fp_sym, *fp_lst, *fp_bin, *fp_hex, *fp_obj;
+	fpos_t pos;
 
 	//==========================================================================
 	//	Create files and write headers (where applicable)
@@ -84,6 +86,7 @@ void parse_file(FILE *fp, char *fname){
 			//look for .ORIG and subsequent starting address
 			if(!b_org&&(isPseuodoOp(word_buf[0])==0)){
 				addr=hexToDec(word_buf[1])-1;
+				fgetpos(fp, &pos);
 				b_org=true;
 			}
 			
@@ -111,7 +114,7 @@ void parse_file(FILE *fp, char *fname){
 	//	Pass 2 - Generate List, Binary, Hex, and Object files
 	//==========================================================================
 
-	fseek(fp, 0, SEEK_SET);
+	fsetpos(fp, &pos);		// sets starting pos to origin pos, save some reads
 
 	while(fgets(line_buf, MAX_LEN+1, fp)!=NULL){
 		if(line_buf[0]!=0x3B&&line_buf[0]!=0x00){
@@ -140,6 +143,22 @@ void parse_file(FILE *fp, char *fname){
 				}
 				i++;
 			}
+
+			//==================================================================
+			//	Generate Binary File
+			//==================================================================
+
+			while(word_buf[i][0]!=0x00){
+				int opcode=isPseuodoOp(word_buf[i]);
+				switch(opcode){
+					case 0:
+						bin_buf[15]=bin_buf[14]=bin_buf[13]=bin_buf[12]=0;
+					default:
+						break;
+				}
+				i++;
+			}
+
 		}
 	}
 }
