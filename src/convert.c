@@ -6,8 +6,8 @@
 //==============================================================================
 
 int isKeyword(char c[]){
-	int i, j, max_dim;
-	for(i=0; i<=15; i++){
+	int max_dim;
+	for(int i=0; i<=15; i++){
 		switch(i){
 			case 0: max_dim=15; break;
 			case 4: max_dim=3; break;
@@ -16,7 +16,7 @@ int isKeyword(char c[]){
 			case 15: max_dim=11; break;
 			default: max_dim=1; break;
 		}
-		for(j=0; j<=max_dim; j++){
+		for(int j=0; j<=max_dim; j++){
 			if(strcmp(c, keyword[i][j])==0){
 				return i;
 			}
@@ -26,15 +26,67 @@ int isKeyword(char c[]){
 }
 
 int isPseuodoOp(char c[]){
-	int i, j;
-	for(i=0; i<=4; i++){
-		for(j=0; j<=1; j++){
+	for(int i=0; i<=4; i++){
+		for(int j=0; j<=1; j++){
 			if(strcmp(c, pseudoop[i][j])==0){
 				return i;
 			}
 		}
 	}
 	return -1;
+}
+
+int isRegister(char c[]){
+	for(int i=0; i<=7; i++){
+		for(int j=0; j<=1; j++){
+			if(strcmp(c, regs[i][j])==0){
+				return i;
+			}
+		}
+	}
+	return -1;
+}
+
+int isHexChar(char c){
+	for(int i=0; i<=15; i++){
+		if(c==hex_chars[i]){
+			return i;
+		}
+	}
+	return -1;
+}
+
+// printf("Invalid hex number at line %d: %s\n", ln, c);
+// printf("Invalid binary number at line %d: %s\n", ln, c);
+
+int isValidOffset(char c[]){
+	int i=1;
+	if(c[0]==0x78){
+		while(c[i]!=0x00){
+			if(isHexChar(c[i])<0) return 0;
+			i++;
+		}
+		return 1;
+	}
+	else if(c[0]==0x62){
+		while(c[i]!=0x00){
+			if((c[i]!=0x30)&&(c[i]!=0x31)) return 0;
+			i++;
+		}
+		return 1;
+	}
+	else if((c[0]==0x2D)||isdigit(c[0])){
+		while(c[i]!=0x00){
+			if(!isdigit(c[i])) return 0;
+			i++;
+		}
+		return 1;
+	}
+}
+
+int isLabel(char c[]){
+	if((isKeyword(c)<0)&&(isPseuodoOp(c)<0)&&!isValidOffset(c)) return 1;
+	else return 0;
 }
 
 //==============================================================================
@@ -161,14 +213,21 @@ void binToHex(int bin[], int bin_size, char hex[], int hex_size){
 	}
 }
 
-// note: bin_size should always be at least 4 times hex_size
-void hexToBin(int bin[], int bin_size, char hex[], int hex_size){
-
+int hexToDec(char hex[]){
+	int i=1, dec_num=0;
+	while(hex[i]!=0x00){
+		dec_num=dec_num*16+isHexChar(hex[i]);
+		i++;
+	}
+	i--;
+	if(isHexChar(hex[1])>=8) dec_num=dec_num-pow(2, (4*i));
+	return dec_num;
 }
 
 // note: only handles positive numbers, intended for use with addresses
-int hexToDec(char hex[]){
-	int i=0, j=1, dec_num=0;
+// DO NOT use to calculate offsets
+int addrToDec(char hex[]){
+	int i, j, dec_num=0;
 	for(j=1; j<=4; j++){
 		for(i=0; i<=15; i++){
 			if(hex[j]==hex_chars[i]){
@@ -181,7 +240,7 @@ int hexToDec(char hex[]){
 
 // note: only handles positive numbers, intended for use with addresses
 // DO NOT use to calculate offsets
-void decToHex(char hex[], int dec_num){
+void decToAddr(char hex[], int dec_num){
 	int i=4, r;
 	hex[0]=0x78;			// x
 	hex[5]=0x00;			// null terminate
