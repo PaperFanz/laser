@@ -28,6 +28,17 @@ const char *keyword[][16]={
 	"IN", "in", "PUTSP", "putsp"}
 };
 
+const char *regs[][2]={
+	{"R0", "r0"},
+	{"R1", "r1"},
+	{"R2", "r2"},
+	{"R3", "r3"},
+	{"R4", "r4"},
+	{"R5", "r5"},
+	{"R6", "r6"},
+	{"R7", "r7"}
+};
+
 const char *pseudoop[][2]={
 	".ORIG", ".orig",
 	".END", ".end",
@@ -35,8 +46,6 @@ const char *pseudoop[][2]={
 	".BLKW", ".blkw",
 	".FILL", ".fill"
 };
-
-
 
 // 16 bit one in binary (used by adder)
 int one_16b[16]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1};

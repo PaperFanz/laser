@@ -93,6 +93,7 @@ int main(int argc, char *argv[]){
 //
 //	TESTING FUNCTIONS
 //
+	// printf("%d\n", hexToDec("xFA"));
 	// int bin_test=101010001;
 	// int bin[16];
 	// char hex[4];

@@ -17,9 +17,23 @@ int isKeyword(char c[]);
 
 int isPseuodoOp(char c[]);
 
+int isRegister(char c[]);
+
+int isLabel(char c[]);
+
+int isValidOffset(char c[]);
+
+int fillRegister(int r, int bin[], int n);
+
 int hexToDec(char hex[]);
 
-void decToHex(char hex[], int dec_num);
+int addrToDec(char hex[]);
+
+int binToDec(int bin[], int size);
+
+int twoCompToDec(int bin[], int size);
+
+void decToAddr(char hex[], int dec_num);
 
 void parse_file(FILE *fp, char *fname);
 
@@ -29,11 +43,11 @@ void notArr(int bin[], int size);
 
 void printIntArr(int num[], int size);
 
+void fprintIntArr(FILE *fp, int num[], int size);
+
 void printCharArr(char hex[], int size);
 
-int binToDec(int bin[], int size);
-
-int twoCompToDec(int bin[], int size);
+void fprintCharArr(FILE *fp, char hex[], int size);
 
 void decToTwoComp(int n, int bin[], int size);
 
