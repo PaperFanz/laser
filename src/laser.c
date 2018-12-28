@@ -65,7 +65,6 @@ int main(int argc, char *argv[]){
 						if(remove(fname_buf)!=0){
 							printf("Unable to delete %s!\n", fname_buf);
 						}		// remove filename.obj
-						break;
 					}
 					else{
 						fname_buf[j]=fname[j];
@@ -103,7 +102,7 @@ int main(int argc, char *argv[]){
 
 	// int num[16];
 	// zext(bin_test, num, size(num));
-	// decToTwoComp(36417, bin, size(bin));
+	// decToTwoComp(-10, bin, size(bin));
 	// printIntArr(bin, size(bin));
 	// binToHex(bin, size(bin), hex, size(hex));
 	// printIntArr(num, size(num));

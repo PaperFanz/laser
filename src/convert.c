@@ -13,7 +13,7 @@ int isKeyword(char c[]){
 			case 4: max_dim=3; break;
 			case 12: max_dim=3; break;
 			case 13: max_dim=0; break;
-			case 15: max_dim=11; break;
+			case 15: max_dim=13; break;
 			default: max_dim=1; break;
 		}
 		for(int j=0; j<=max_dim; j++){
@@ -62,6 +62,7 @@ int isHexChar(char c){
 int isValidOffset(char c[]){
 	int i=1;
 	if(c[0]==0x78){
+		if(c[MAX_WORD_SIZE+1]<2) return 0;
 		while(c[i]!=0x00){
 			if(isHexChar(c[i])<0) return 0;
 			i++;
@@ -69,23 +70,26 @@ int isValidOffset(char c[]){
 		return 1;
 	}
 	else if(c[0]==0x62){
+		if(c[MAX_WORD_SIZE+1]<2) return 0;
 		while(c[i]!=0x00){
 			if((c[i]!=0x30)&&(c[i]!=0x31)) return 0;
 			i++;
 		}
-		return 1;
+		return 2;
 	}
 	else if((c[0]==0x2D)||isdigit(c[0])){
+		if((c[0]==0x2D)&&(c[MAX_WORD_SIZE+1]<2)) return 0;
 		while(c[i]!=0x00){
 			if(!isdigit(c[i])) return 0;
 			i++;
 		}
-		return 1;
+		return 3;
 	}
+	else return 0;
 }
 
 int isLabel(char c[]){
-	if((isKeyword(c)<0)&&(isPseuodoOp(c)<0)&&!isValidOffset(c)) return 1;
+	if((isKeyword(c)<0)&&(isPseuodoOp(c)<0)&&(isValidOffset(c)==0)) return 1;
 	else return 0;
 }
 
@@ -104,7 +108,7 @@ int binToDec(int bin[], int size){
 	return n;
 }
 
-void zext(unsigned int n, int bin[], int size){
+void zext(int n, int bin[], int size){
 	int i=size-1, r;
 	while(i>=0){
 		r=n%10;
@@ -114,47 +118,47 @@ void zext(unsigned int n, int bin[], int size){
 	}
 }
 
+// assumes c[0] will be 'b'
+void sext(char c[], int char_size, int bin[]){
+	int i, j=15;
+	for(i=char_size-2; i>=1; i--){		// size-2 because c is null termed
+		bin[j]=c[i]-0x30;
+		j--;
+	}
+	i=j;
+	while(j>=0){
+		bin[j]=bin[i]-0x30;
+		j--;
+	}
+}
+
 // binary operations
 void notArr(int bin[], int size){
-	int i=size-1;
-	while(i>=0){
-		if(bin[i]==1) bin[i]==0;
-		else bin[i]==1;
+	for(int i=0; i<size; i++){
+		switch(bin[i]){
+			case 0: bin[i]=1; break;
+			case 1: bin[i]=0; break;
+		}
 	}
 }
 
 // bin3 is result array, bin1 and bin2 are operands
 void addArr(int bin1[], int s1, int bin2[], int s2, int bin3[], int s3){
 	int carry=0, i=s1-1, j=s2-1, k=s3-1, b1, b2;
-	if(s1>s3||s2>s3){
-		printf("\nArray size too small to store result.\n");
-	}
-	else{
-		while(k>=0){
-			if(i<0) b1=bin1[0];
-			else b1=bin1[i];
-			if(j<0) b2=bin2[0];
-			else b2=bin2[j];
-			if(b1+b2==2&&carry==1){
-				bin3[k]=1;
-				carry=1;
-			}
-			else if((b1+b2==2&&carry==0)||(b1+b2==1&&carry==1)){
-				bin3[k]=0;
-				carry=1;
-			}
-			else if((b1+b2==1&&carry==0)||(b1+b2==0&&carry==1)){
-				bin3[k]=1;
-				carry=0;
-			}
-			else if(b1+b2==0&&carry==0){
-				bin3[k]=1;
-				carry=0;
-			}
-			i--;
-			j--;
-			k--;
+	while(k>=0){
+		if(i<0) b1=bin1[0];
+		else b1=bin1[i];
+		if(j<0) b2=bin2[0];
+		else b2=bin2[j];
+		switch(b1+b2+carry){
+			case 0: bin3[k]=0; carry=0; break;
+			case 1: bin3[k]=1; carry=0; break;
+			case 2: bin3[k]=0; carry=1; break;
+			case 3: bin3[k]=1; carry=1; break;
 		}
+		i--;
+		j--;
+		k--;
 	}
 }
 
@@ -162,7 +166,7 @@ void addArr(int bin1[], int s1, int bin2[], int s2, int bin3[], int s3){
 void decToTwoComp(int n, int bin[], int size){
 	int i=size-1, carry=0, r;
 	bool neg=false;
-	if(n<0){n=-n;neg=true;}
+	if(n<0){n=-1*n;neg=true;}
 	while(i>=0){
 		r=n%2;
 		n/=2;
@@ -170,8 +174,8 @@ void decToTwoComp(int n, int bin[], int size){
 		i--;
 	}
 	if(neg){
-		notArr(bin, size(bin));
-		addArr(bin, size(bin), one_16b, size(one_16b), bin, size(bin));
+		notArr(bin, size);
+		addArr(bin, size, one_16b, 16, bin, size);
 	}
 }
 

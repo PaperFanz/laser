@@ -8,7 +8,7 @@ ODIR = obj
 _DEPS = laser.h str_const.h arr_const.h
 DEPS = $(patsubst %, $(IDIR)/%,$(_DEPS))
 
-_OBJ = laser.o convert.o parse.o
+_OBJ = laser.o convert.o parse.o calc.o
 OBJ = $(patsubst %, $(ODIR)/%,$(_OBJ))
 
 $(ODIR)/%.o: %.c $(DEPS)

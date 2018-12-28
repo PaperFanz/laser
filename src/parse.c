@@ -157,78 +157,106 @@ void parse_file(FILE *fp, char *fname){
 			memset(bin, 0, sizeof(int)*16);		// clear bin array
 			i=0;								// reset count
 			op=false;							// reset opcode indicator
+			char op1[MAX_WORD_SIZE+2];
+			char op2[MAX_WORD_SIZE+2];
+			char op3[MAX_WORD_SIZE+2];
 
 			while(word_buf[i][0]!=0x00){
 				int opcode=isKeyword(word_buf[i]);
 				switch(opcode){
 					case -1:	// not keyword
 						break;
-					case 0:		// check condition codes
+					case 0:		// BR, check condition codes
 						op=true;
 						break;
-					case 1:
+					case 1:		// ADD
 						op=true;
 						bin[3]=1;
-						i++;
-						if(!fillRegister(isRegister(word_buf[i]), bin, 0))
-							printf("Invalid register identifier at line %d: %s\n", ln, word_buf[i]);
-						i++;
-						if(!fillRegister(isRegister(word_buf[i]), bin, 1))
-							printf("Invalid register identifier at line %d: %s\n", ln, word_buf[i]);
-						i++;
-						if(!fillRegister(isRegister(word_buf[i]), bin, 2)){
-							// printf("Invalid register identifier at line %d: %s\n", ln, word_buf[i]);
+						memcpy(op1, word_buf[i+1], sizeof(char)*(MAX_WORD_SIZE+2));
+						memcpy(op2, word_buf[i+2], sizeof(char)*(MAX_WORD_SIZE+2));
+						memcpy(op3, word_buf[i+3], sizeof(char)*(MAX_WORD_SIZE+2));
+						if(!fillRegister(isRegister(op1), bin, 0))
+							printf("Error: (line %d) invalid operand for %s: %s\n", ln, word_buf[i], op1);
+						if(!fillRegister(isRegister(op2), bin, 1))
+							printf("Error: (line %d) invalid operand for %s: %s\n", ln, word_buf[i], op2);
+						if(!fillRegister(isRegister(op3), bin, 2)){
+							if(fillOffset(isValidOffset(op3), op3, 5, ln, bin)==1)
+								bin[10]=1;
+							else
+								printf("Error: (line %d) invalid operand for %s: %s\n", ln, word_buf[i], op3);
 						}
+						i+=3;
 						break;
-					case 2:
+					case 2:		// LD
 						op=true;
 						bin[2]=1;
 						break;
-					case 3:
+					case 3:		// ST
 						op=true;
 						bin[3]=bin[2]=1;
 						break;
-					case 4:		// check addr mode
+					case 4:		// JSR and JSRR, check addr mode
 						op=true;
 						bin[1]=1;
 						break;
-					case 5:
+					case 5:		// AND
 						op=true;
 						bin[1]=bin[3]=1;
+						memcpy(op1, word_buf[i+1], sizeof(char)*(MAX_WORD_SIZE+2));
+						memcpy(op2, word_buf[i+2], sizeof(char)*(MAX_WORD_SIZE+2));
+						memcpy(op3, word_buf[i+3], sizeof(char)*(MAX_WORD_SIZE+2));
+						if(!fillRegister(isRegister(op1), bin, 0))
+							printf("Error: (line %d) invalid operand for %s: %s\n", ln, word_buf[i], op1);
+						if(!fillRegister(isRegister(op2), bin, 1))
+							printf("Error: (line %d) invalid operand for %s: %s\n", ln, word_buf[i], op2);
+						if(!fillRegister(isRegister(op3), bin, 2)){
+							if(fillOffset(isValidOffset(op3), op3, 5, ln, bin)==1)
+								bin[10]=1;
+							else
+								printf("Error: (line %d) invalid operand for %s: %s\n", ln, word_buf[i], op3);
+						}
+						i+=3;
 						break;
-					case 6:
+					case 6:		// LDR
 						op=true;
 						bin[1]=bin[2]=1;
 						break;
-					case 7:
+					case 7:		// STR
 						op=true;
 						bin[1]=bin[2]=bin[3]=1;
 						break;
-					case 8:
+					case 8:		// RTI
 						op=true;
 						bin[0]=1;
 						break;
-					case 9:
+					case 9:		// NOT
 						op=true;
-						bin[0]=bin[3]=1;
+						bin[0]=bin[3]=bin[10]=bin[11]=bin[12]=bin[13]=bin[14]=bin[15]=1;
+						memcpy(op1, word_buf[i+1], sizeof(char)*(MAX_WORD_SIZE+2));
+						memcpy(op2, word_buf[i+2], sizeof(char)*(MAX_WORD_SIZE+2));
+						if(!fillRegister(isRegister(op1), bin, 0))
+							printf("Error: (line %d) invalid operand for %s: %s\n", ln, word_buf[i], op1);
+						if(!fillRegister(isRegister(op2), bin, 1))
+							printf("Error: (line %d) invalid operand for %s: %s\n", ln, word_buf[i], op2);
+						i+=3;
 						break;
-					case 10:
+					case 10:	// LDI
 						op=true;
 						bin[0]=bin[2]=1;
 						break;
-					case 11:
+					case 11:	// STI
 						op=true;
 						bin[0]=bin[2]=bin[3]=1;
 						break;
-					case 12:	// check shortcut
+					case 12:	// JMP and RET, check shortcut
 						op=true;
 						bin[0]=bin[1]=1;
 						break;
-					case 14:
+					case 14:		// LEA
 						op=true;
 						bin[0]=bin[1]=bin[2]=1;
 						break;
-					case 15:	// check shortcut
+					case 15:	// TRAP, check shortcuts
 						op=true;
 						bin[0]=bin[1]=bin[2]=bin[3]=1;
 						break;
@@ -243,64 +271,4 @@ void parse_file(FILE *fp, char *fname){
 			}
 		}
 	}
-}
-
-// print functions
-void printIntArr(int num[], int size){
-	int i=0;
-	while(i<=size-1){
-		printf("%d", num[i]);
-		i++;
-	}
-	printf("\n");
-}
-
-void fprintIntArr(FILE *fp, int num[], int size){
-	int i=0;
-	while(i<=size-1){
-		fprintf(fp, "%d", num[i]);
-		i++;
-	}
-	fprintf(fp, "\n");
-}
-
-void printCharArr(char hex[], int size){
-	int i=0;
-	while(i<=size-1){
-		printf("%c", hex[i]);
-		i++;
-	}
-	printf("\n");
-}
-
-void fprintCharArr(FILE *fp, char hex[], int size){
-	int i=0;
-	while(i<=size-1){
-		fprintf(fp, "%c", hex[i]);
-		i++;
-	}
-	fprintf(fp, "\n");
-}
-
-void putSymbol(FILE *fp, char symbol[], char addr[]){
-	int i=0;
-	fprintf(fp, "%s", symbol);
-	for(i=6-(symbol[MAX_WORD_SIZE+1]/TABSIZE); i>=0; i--) fprintf(fp, "\t");
-	fprintf(fp, "%s\n", addr);
-}
-
-int fillRegister(int r, int bin[], int n){
-	int m=4+(3*n);
-	switch(r){
-		case 0: break;
-		case 1: bin[m+2]=1; break;
-		case 2: bin[m+1]=1; break;
-		case 3: bin[m+2]=bin[m+1]=1; break;
-		case 4: bin[m]=1; break;
-		case 5: bin[m+2]=bin[m]=1; break;
-		case 6: bin[m+1]=bin[m]=1; break;
-		case 7: bin[m+2]=bin[m+1]=bin[m]=1; break;
-		default: return 0;
-	}
-	return 1;
 }
