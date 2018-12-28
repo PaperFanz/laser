@@ -13,6 +13,8 @@
 #define TABSIZE 4
 
 // function declarations
+int isHexChar(char c);
+
 int isKeyword(char c[]);
 
 int isPseuodoOp(char c[]);
@@ -24,6 +26,8 @@ int isLabel(char c[]);
 int isValidOffset(char c[]);
 
 int fillRegister(int r, int bin[], int n);
+
+int fillOffset(int type, char c[], int bits, int ln, int put_bin[]);
 
 int hexToDec(char hex[]);
 
@@ -51,7 +55,7 @@ void fprintCharArr(FILE *fp, char hex[], int size);
 
 void decToTwoComp(int n, int bin[], int size);
 
-void zext(unsigned int n, int bin[], int size);
+void zext(int n, int bin[], int size);
 
 void binToHex(int bin[], int bin_size, char hex[], int hex_size);
 

@@ -25,7 +25,7 @@ const char *keyword[][16]={
 	{"\0"},
 	{"LEA", "lea"},
 	{"TRAP", "trap", "GETC", "getc", "OUT", "out", "PUTS", "puts",
-	"IN", "in", "PUTSP", "putsp"}
+	"IN", "in", "PUTSP", "putsp", "HALT", "halt"}
 };
 
 const char *regs[][2]={
