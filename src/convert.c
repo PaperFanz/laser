@@ -47,11 +47,13 @@ int isRegister(char c[]){
 	return -1;
 }
 
+// extends isxdigit functionality by returning decimal value (0-16)
 int isHexChar(char c){
 	for(int i=0; i<=15; i++){
-		if(c==hex_chars[i]){
+		if((i<=9)&&(c==hex_chars[i]))
 			return i;
-		}
+		else if((i>9)&&((c==hex_chars[i])||(c==hex_chars[i]+0x20)))
+			return i;
 	}
 	return -1;
 }
@@ -115,20 +117,6 @@ void zext(int n, int bin[], int size){
 		n/=10;
 		bin[i]=r;
 		i--;
-	}
-}
-
-// assumes c[0] will be 'b'
-void sext(char c[], int char_size, int bin[]){
-	int i, j=15;
-	for(i=char_size-2; i>=1; i--){		// size-2 because c is null termed
-		bin[j]=c[i]-0x30;
-		j--;
-	}
-	i=j;
-	while(j>=0){
-		bin[j]=bin[i]-0x30;
-		j--;
 	}
 }
 
@@ -198,22 +186,12 @@ int twoCompToDec(int bin[], int size){
 }
 
 // hex conversions
-// note: hex_size should always be at least 1/4 of bin_size
+// note: hex_size should always be at 1/4 of bin_size
 void binToHex(int bin[], int bin_size, char hex[], int hex_size){
-	int bin_seg[4], i=bin_size-1, j=3, k=hex_size-1, dec_num;
-	while(i>=0||k>=0){
-		while(j>=0){
-			if(i>=0) bin_seg[j]=bin[i];
-			else bin_seg[j]=0;
-			i--;
-			j--;
+	if(bin_size==4*hex_size){
+		for(int i=0; i<hex_size; i++){
+			hex[i]=hex_chars[binToDec(&bin[4*i], 4)];
 		}
-		j=3;
-		dec_num=binToDec(bin_seg, size(bin_seg));
-		if(i>=0) hex[k]=hex_chars[dec_num];
-		else if(bin[0]==0) hex[k]='0';
-		else hex[k]='F';
-		k--;
 	}
 }
 
