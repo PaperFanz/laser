@@ -18,9 +18,7 @@ int fillRegister(int r, int bin[], int n){
 	return 1;
 }
 
-// calculate offset, bits refers to the number of bits the offset may be
-// expressed in, while type should be the output from isValidOffset,
-// then put it into the binary buffer
+// read a fixed offset or immediate value and express it in n bits
 int fillOffset(int type, char c[], int bits, int ln, int put_bin[]){
 	int off=0, bin[16];
 	memset(bin, 0, sizeof(int)*16);
@@ -30,12 +28,11 @@ int fillOffset(int type, char c[], int bits, int ln, int put_bin[]){
 		return 0;
 	}
 	else if(type==1){
-		if((4*(c[MAX_WORD_SIZE+1]-2))>bits)
-				printf("Warning: (line %d) %s will be truncated to %d bits; unexpeced errors may occur!\n", ln, c, bits);
-			decToTwoComp(hexToDec(c), bin, 16);
+		if((4*(c[MAX_WORD_SIZE+1]-1))>bits)
+			printf("Warning: (line %d) %s will be truncated to %d bits; unexpeced errors may occur!\n", ln, c, bits);
+		decToTwoComp(hexToDec(c), bin, 16);
 	}
 	else if(type==2){
-		printf("binary\n");
 		int i=1, j=15-c[MAX_WORD_SIZE+1]+2, k;
 		if((c[MAX_WORD_SIZE+1]-2)>bits)
 			printf("Warning: (line %d) %s will be truncated to %d bits; unexpeced errors may occur!\n", ln, c, bits);
@@ -67,15 +64,11 @@ int fillOffset(int type, char c[], int bits, int ln, int put_bin[]){
 		}
 		decToTwoComp(dec_num, bin, 16);
 	}
-
-	printIntArr(bin, 16);
 	
 	for(int i=0; i<bits; i++){
 		off+=bin[15-i]*pow(2, i);
 	}
 	off-=bin[15-bits]*pow(2, bits);
-
-	printf("%d\n", off);
 
 	if((off>(pow(2, bits-1)-1))||(off<-pow(2, bits))){
 		printf("Error: (line %d) %d cannot be expressed in %d bits!\n", ln, off, bits);

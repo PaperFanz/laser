@@ -7,8 +7,9 @@ void parse_file(FILE *fp, char *fname){
 	//==========================================================================
 
 	int MAX_LEN=MAX_WORD_NUM*MAX_WORD_SIZE;
-	int addr=0, ln=0, ln_st=0;
+	int org_addr=0, addr=0, ln=0, ln_st=0;
 	int bin[16];
+	char hex[4];
 	char addr_str[6];					// "x", 4 hex chars and null
 	char line_buf[MAX_LEN+1];			// see definitions in laser.h
 	char word_buf[MAX_WORD_NUM][MAX_WORD_SIZE+2];	// room for null + size
@@ -28,22 +29,22 @@ void parse_file(FILE *fp, char *fname){
 			fname_buf[i+3]=0x6D;		// m
 			fname_buf[i+4]=0x00;
 			fp_sym=fopen(fname_buf, "w");		// create or clear filename.sym
-			if(fp_sym==NULL) printf("Unable to open %s!\n", fname_buf);
+			if(fp_sym==NULL) printf("Error: Unable to open %s!\n", fname_buf);
 			fname_buf[i+1]=0x6C;		// l
 			fname_buf[i+2]=0x73;		// s
 			fname_buf[i+3]=0x74;		// t
 			fp_lst=fopen(fname_buf, "w");		// create or clear filename.lst
-			if(fp_lst==NULL) printf("Unable to open %s!\n", fname_buf);
+			if(fp_lst==NULL) printf("Error: Unable to open %s!\n", fname_buf);
 			fname_buf[i+1]=0x62;		// b
 			fname_buf[i+2]=0x69;		// i
 			fname_buf[i+3]=0x6E;		// n
 			fp_bin=fopen(fname_buf, "w");		// create or clear filename.bin
-			if(fp_bin==NULL) printf("Unable to open %s!\n", fname_buf);
+			if(fp_bin==NULL) printf("Error: Unable to open %s!\n", fname_buf);
 			fname_buf[i+1]=0x68;		// h
 			fname_buf[i+2]=0x65;		// e
 			fname_buf[i+3]=0x78;		// x
 			fp_hex=fopen(fname_buf, "w");		// create or clear filename.hex
-			if(fp_hex==NULL) printf("Unable to open %s!\n", fname_buf);
+			if(fp_hex==NULL) printf("Error: Unable to open %s!\n", fname_buf);
 			fname_buf[i+1]=0x6F;		// o
 			fname_buf[i+2]=0x62;		// b
 			fname_buf[i+3]=0x6A;		// j
@@ -55,11 +56,14 @@ void parse_file(FILE *fp, char *fname){
 		}
 	}
 
+	// symbol file header
 	if(fp_sym!=NULL) fprintf(fp_sym, "Symbol Name\t\t\t Page Address\n---------------------------------\n");
 	
 	//==========================================================================
 	//	Pass 1 - Generate Symbol file
 	//==========================================================================
+
+	printf("Pass 1: \n");
 
 	while(fgets(line_buf, MAX_LEN+1, fp)!=NULL){
 		ln++;
@@ -91,6 +95,10 @@ void parse_file(FILE *fp, char *fname){
 			//look for .ORIG and subsequent starting address
 			if(!b_org&&(isPseuodoOp(word_buf[0])==0)){
 				addr=addrToDec(word_buf[1])-1;
+				decToTwoComp(addr+1, bin, 16);
+				binToHex(bin, 16, hex, 4);
+				fprintIntArr(fp_bin, bin, 16);
+				fprintCharArr(fp_hex, hex, 4);
 				ln_st=ln;
 				fgetpos(fp, &pos);
 				b_org=true;
@@ -114,11 +122,11 @@ void parse_file(FILE *fp, char *fname){
 		}
 	}
 
-	printf("Pass 1: Clear\n");
-
 	//==========================================================================
 	//	Pass 2 - Generate List, Binary, Hex, and Object files
 	//==========================================================================
+
+	printf("Pass 2:\n");
 
 	fsetpos(fp, &pos);		// sets starting pos to origin pos, save some reads
 	ln=ln_st;
@@ -151,7 +159,7 @@ void parse_file(FILE *fp, char *fname){
 			}
 
 			//==================================================================
-			//	Generate Binary File
+			//	Generate Binary and Hex Files
 			//==================================================================
 
 			memset(bin, 0, sizeof(int)*16);		// clear bin array
@@ -162,93 +170,93 @@ void parse_file(FILE *fp, char *fname){
 			char op3[MAX_WORD_SIZE+2];
 
 			while(word_buf[i][0]!=0x00){
-				int opcode=isKeyword(word_buf[i]);
-				switch(opcode){
-					case -1:	// not keyword
-						break;
-					case 0:		// BR, check condition codes
+				switch(isKeyword(word_buf[i])){
+					case 0:			// BR, check condition codes
 						op=true;
 						break;
-					case 1:		// ADD
+					case 1:			// ADD
 						op=true;
 						bin[3]=1;
 						memcpy(op1, word_buf[i+1], sizeof(char)*(MAX_WORD_SIZE+2));
 						memcpy(op2, word_buf[i+2], sizeof(char)*(MAX_WORD_SIZE+2));
 						memcpy(op3, word_buf[i+3], sizeof(char)*(MAX_WORD_SIZE+2));
 						if(!fillRegister(isRegister(op1), bin, 0))
-							printf("Error: (line %d) invalid operand for %s: %s\n", ln, word_buf[i], op1);
+							printf("Error: (line %d) invalid operand for '%s': %s\n", ln, word_buf[i], op1);
 						if(!fillRegister(isRegister(op2), bin, 1))
-							printf("Error: (line %d) invalid operand for %s: %s\n", ln, word_buf[i], op2);
+							printf("Error: (line %d) invalid operand for '%s': %s\n", ln, word_buf[i], op2);
 						if(!fillRegister(isRegister(op3), bin, 2)){
 							if(fillOffset(isValidOffset(op3), op3, 5, ln, bin)==1)
 								bin[10]=1;
 							else
-								printf("Error: (line %d) invalid operand for %s: %s\n", ln, word_buf[i], op3);
+								printf("Error: (line %d) invalid operand for '%s': %s\n", ln, word_buf[i], op3);
 						}
-						i+=3;
+						if(word_buf[i+4][0]!=0x00)
+							printf("Warning: (line %d) '%s' only takes 3 operands!\n\t%s", ln, word_buf[i], line_buf);
 						break;
-					case 2:		// LD
+					case 2:			// LD
 						op=true;
 						bin[2]=1;
 						break;
-					case 3:		// ST
+					case 3:			// ST
 						op=true;
 						bin[3]=bin[2]=1;
 						break;
-					case 4:		// JSR and JSRR, check addr mode
+					case 4:			// JSR and JSRR, check addr mode
 						op=true;
 						bin[1]=1;
 						break;
-					case 5:		// AND
+					case 5:			// AND
 						op=true;
 						bin[1]=bin[3]=1;
 						memcpy(op1, word_buf[i+1], sizeof(char)*(MAX_WORD_SIZE+2));
 						memcpy(op2, word_buf[i+2], sizeof(char)*(MAX_WORD_SIZE+2));
 						memcpy(op3, word_buf[i+3], sizeof(char)*(MAX_WORD_SIZE+2));
 						if(!fillRegister(isRegister(op1), bin, 0))
-							printf("Error: (line %d) invalid operand for %s: %s\n", ln, word_buf[i], op1);
+							printf("Error: (line %d) invalid operand for '%s': %s\n", ln, word_buf[i], op1);
 						if(!fillRegister(isRegister(op2), bin, 1))
-							printf("Error: (line %d) invalid operand for %s: %s\n", ln, word_buf[i], op2);
+							printf("Error: (line %d) invalid operand for '%s': %s\n", ln, word_buf[i], op2);
 						if(!fillRegister(isRegister(op3), bin, 2)){
 							if(fillOffset(isValidOffset(op3), op3, 5, ln, bin)==1)
 								bin[10]=1;
 							else
-								printf("Error: (line %d) invalid operand for %s: %s\n", ln, word_buf[i], op3);
+								printf("Error: (line %d) invalid operand for '%s': %s\n", ln, word_buf[i], op3);
 						}
-						i+=3;
+						if(word_buf[i+4][0]!=0x00)
+							printf("Warning: (line %d) '%s' only takes 3 operands!\n\t%s", ln, word_buf[i], line_buf);
 						break;
-					case 6:		// LDR
+					case 6:			// LDR
 						op=true;
 						bin[1]=bin[2]=1;
 						break;
-					case 7:		// STR
+					case 7:			// STR
 						op=true;
 						bin[1]=bin[2]=bin[3]=1;
 						break;
-					case 8:		// RTI
+					case 8:			// RTI
 						op=true;
 						bin[0]=1;
 						break;
-					case 9:		// NOT
+					case 9:			// NOT
 						op=true;
 						bin[0]=bin[3]=bin[10]=bin[11]=bin[12]=bin[13]=bin[14]=bin[15]=1;
 						memcpy(op1, word_buf[i+1], sizeof(char)*(MAX_WORD_SIZE+2));
 						memcpy(op2, word_buf[i+2], sizeof(char)*(MAX_WORD_SIZE+2));
 						if(!fillRegister(isRegister(op1), bin, 0))
-							printf("Error: (line %d) invalid operand for %s: %s\n", ln, word_buf[i], op1);
+							printf("Error: (line %d) invalid operand for '%s': %s\n", ln, word_buf[i], op1);
 						if(!fillRegister(isRegister(op2), bin, 1))
-							printf("Error: (line %d) invalid operand for %s: %s\n", ln, word_buf[i], op2);
-						i+=3;
+							printf("Error: (line %d) invalid operand for '%s': %s\n", ln, word_buf[i], op2);
+						if(word_buf[i+3][0]!=0x00)
+							printf("Warning: (line %d) '%s' only takes 2 operands!\n\t%s", ln, word_buf[i], line_buf);
 						break;
-					case 10:	// LDI
+					case 10:		// LDI
 						op=true;
 						bin[0]=bin[2]=1;
 						break;
-					case 11:	// STI
+					case 11:		// STI
 						op=true;
 						bin[0]=bin[2]=bin[3]=1;
 						break;
-					case 12:	// JMP and RET, check shortcut
+					case 12:		// JMP and RET, check shortcut
 						op=true;
 						bin[0]=bin[1]=1;
 						break;
@@ -256,11 +264,25 @@ void parse_file(FILE *fp, char *fname){
 						op=true;
 						bin[0]=bin[1]=bin[2]=1;
 						break;
-					case 15:	// TRAP, check shortcuts
+					case 15:		// TRAP, check shortcuts
 						op=true;
 						bin[0]=bin[1]=bin[2]=bin[3]=1;
 						break;
-					default:
+					default:		// not keyword
+						switch(isPseuodoOp(word_buf[i])){
+							case 0:			// ORIG
+								break;
+							case 1:			// END
+								break;
+							case 2:			// STRINGZ
+								break;
+							case 3:			// BLKW
+								break;
+							case 4:			// FILL
+								break;
+							default:
+								break;
+						}
 						break;
 				}
 				i++;
@@ -268,6 +290,9 @@ void parse_file(FILE *fp, char *fname){
 			if(op){
 				fprintf(fp_bin, "%d\t", ln);
 				fprintIntArr(fp_bin, bin, 16);	// print only if opcode detected
+				fprintf(fp_hex, "%d\t", ln);
+				binToHex(bin, 16, hex, 4);
+				fprintCharArr(fp_hex, hex, 4);
 			}
 		}
 	}
