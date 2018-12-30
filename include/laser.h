@@ -29,6 +29,8 @@ int fillRegister(int r, int bin[], int n);
 
 int fillOffset(int type, char c[], int bits, int ln, int put_bin[]);
 
+int checkExt(const char *filename, const char *ext);
+
 int hexToDec(char hex[]);
 
 int addrToDec(char hex[]);

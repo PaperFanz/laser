@@ -9,7 +9,8 @@ int main(int argc, char *argv[]){
 //==============================================================================
 
 	FILE *fp;
-	bool fileOpened = false;
+	bool fileOpened=false;
+	bool assemble=false;
 	
 //==============================================================================
 //	Parse Arguments
@@ -28,63 +29,81 @@ int main(int argc, char *argv[]){
 				printf("%s", help);
 			}
 			else if(strcmp(argv[i], "-c")==0){
-				char fname[MAX_WORD_SIZE+5];
-				strcpy(fname, argv[i+1]);
-				char fname_buf[MAX_WORD_SIZE+5];
-				for(int j=0; j<=MAX_WORD_SIZE; j++){
-					if(fname[j]==0x2E){
-						fname_buf[j]=0x2E;			// .
-						fname_buf[j+1]=0x73;		// s
-						fname_buf[j+2]=0x79;		// y
-						fname_buf[j+3]=0x6D;		// m
-						fname_buf[j+4]=0x00;
-						if(remove(fname_buf)!=0){
-							printf("Unable to delete %s!\n", fname_buf);
-						}		// remove filename.sym
-						fname_buf[j+1]=0x6C;		// l
-						fname_buf[j+2]=0x73;		// s
-						fname_buf[j+3]=0x74;		// t
-						if(remove(fname_buf)!=0){
-							printf("Unable to delete %s!\n", fname_buf);
-						}		// remove filename.lst
-						fname_buf[j+1]=0x62;		// b
-						fname_buf[j+2]=0x69;		// i
-						fname_buf[j+3]=0x6E;		// n
-						if(remove(fname_buf)!=0){
-							printf("Unable to delete %s!\n", fname_buf);
-						}		// remove filename.bin
-						fname_buf[j+1]=0x68;		// h
-						fname_buf[j+2]=0x65;		// e
-						fname_buf[j+3]=0x78;		// x
-						if(remove(fname_buf)!=0){
-							printf("Unable to delete %s!\n", fname_buf);
-						}		// remove filename.hex
-						fname_buf[j+1]=0x6F;		// o
-						fname_buf[j+2]=0x62;		// b
-						fname_buf[j+3]=0x6A;		// j
-						if(remove(fname_buf)!=0){
-							printf("Unable to delete %s!\n", fname_buf);
-						}		// remove filename.obj
+				i++;
+				while(i<argc){
+					char fname[MAX_WORD_SIZE+5];
+					strcpy(fname, argv[i]);
+					char fname_buf[MAX_WORD_SIZE+5];
+					for(int j=0; j<=MAX_WORD_SIZE; j++){
+						if(fname[j]==0x2E){
+							fname_buf[j]=0x2E;			// .
+							fname_buf[j+1]=0x73;		// s
+							fname_buf[j+2]=0x79;		// y
+							fname_buf[j+3]=0x6D;		// m
+							fname_buf[j+4]=0x00;
+							printf("Deleting %s!\n", fname_buf);
+							if(remove(fname_buf)!=0){
+								printf("Unable to delete %s!\n", fname_buf);
+							}		// remove filename.sym
+							fname_buf[j+1]=0x6C;		// l
+							fname_buf[j+2]=0x73;		// s
+							fname_buf[j+3]=0x74;		// t
+							printf("Deleting %s!\n", fname_buf);
+							if(remove(fname_buf)!=0){
+								printf("Unable to delete %s!\n", fname_buf);
+							}		// remove filename.lst
+							fname_buf[j+1]=0x62;		// b
+							fname_buf[j+2]=0x69;		// i
+							fname_buf[j+3]=0x6E;		// n
+							printf("Deleting %s!\n", fname_buf);
+							if(remove(fname_buf)!=0){
+								printf("Unable to delete %s!\n", fname_buf);
+							}		// remove filename.bin
+							fname_buf[j+1]=0x68;		// h
+							fname_buf[j+2]=0x65;		// e
+							fname_buf[j+3]=0x78;		// x
+							printf("Deleting %s!\n", fname_buf);
+							if(remove(fname_buf)!=0){
+								printf("Unable to delete %s!\n", fname_buf);
+							}		// remove filename.hex
+							fname_buf[j+1]=0x6F;		// o
+							fname_buf[j+2]=0x62;		// b
+							fname_buf[j+3]=0x6A;		// j
+							printf("Deleting %s!\n", fname_buf);
+							if(remove(fname_buf)!=0){
+								printf("Unable to delete %s!\n", fname_buf);
+							}		// remove filename.obj
+						}
+						else{
+							fname_buf[j]=fname[j];
+						}
+					}
+					i++;
+				}
+			}
+			else if(strcmp(argv[i],"-a")==0){
+				i++;
+				while(i<argc){
+					if(checkExt(argv[i], ".asm")){
+						fp=fopen(argv[i], "r+");
+						if(fp!=NULL){
+							fileOpened=true;
+							parse_file(fp, argv[i]);
+						}
+						else{
+							printf("Unable to open file: %s\n", argv[i]);
+						}
 					}
 					else{
-						fname_buf[j]=fname[j];
+						printf("Invalid file extension: %s\n", strrchr(argv[i], '.'));
+						break;
 					}
+					i++;
 				}
-				i++;
-			}
-			else if((strcmp(argv[i],"-a")==0)&&(argc>=i+1)){
-				fp=fopen(argv[i+1], "r+");
-				if(fp!=NULL){
-					fileOpened=true;
-					parse_file(fp, argv[i+1]);
-				}
-				else{
-					printf("Unable to open specified file: %s\n", argv[i+1]);
-				}
-				i++;	// skip over file name in argv
 			}
 			else{
-				printf("Invalid flags!\n");
+				printf("Type 'laser -h' for help.\n");
+				break;
 			}
 		}
 	}

@@ -1,5 +1,11 @@
 #include "laser.h"
 
+int checkExt(const char *filename, const char *ext){
+	char *dot=strrchr(filename, '.');
+	if(strcmp(dot, ext)==0) return 1;
+	else return 0;
+}
+
 // .bin generator functions
 int fillRegister(int r, int bin[], int n){
 	if(n==2) n++;
@@ -121,7 +127,6 @@ void fprintCharArr(FILE *fp, char hex[], int size){
 void putSymbol(FILE *fp, char symbol[], char addr[]){
 	int i=0;
 	fprintf(fp, "%s", symbol);
-	printf("%d\n", symbol[MAX_WORD_SIZE+1]);
 	for(i=6-(symbol[MAX_WORD_SIZE+1]/TABSIZE); i>=0; i--) fprintf(fp, "\t");
 	fprintf(fp, "%s\n", addr);
 }
