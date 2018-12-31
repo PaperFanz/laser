@@ -128,5 +128,5 @@ void putSymbol(FILE *fp, char symbol[], char addr[]){
 	int i=0;
 	fprintf(fp, "%s", symbol);
 	for(i=6-(symbol[MAX_WORD_SIZE+1]/TABSIZE); i>=0; i--) fprintf(fp, "\t");
-	fprintf(fp, "%s\n", addr);
+	fprintf(fp, "x%s\n", addr);
 }

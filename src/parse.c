@@ -6,13 +6,14 @@ void parse_file(FILE *fp, char *fname){
 	//	Declarations
 	//==========================================================================
 
-	int MAX_LEN=MAX_WORD_NUM*MAX_WORD_SIZE;
 	int org_addr=0, addr=0, ln=0, ln_st=0;
 	int bin[16];
 	char hex[4];
-	char addr_str[6];					// "x", 4 hex chars and null
+	char addr_str[5];					// 4 hex chars and null
+	int MAX_LEN=MAX_WORD_NUM*MAX_WORD_SIZE;
 	char line_buf[MAX_LEN+1];			// see definitions in laser.h
 	char word_buf[MAX_WORD_NUM][MAX_WORD_SIZE+2];	// room for null + size
+	char *symbols;
 	char fname_buf[MAX_WORD_SIZE+5];
 	bool b_org=false, op=false;
 	FILE *fp_sym, *fp_lst, *fp_bin, *fp_hex, *fp_obj;
@@ -94,12 +95,12 @@ void parse_file(FILE *fp, char *fname){
 
 			//look for .ORIG and subsequent starting address
 			if(!b_org&&(isPseuodoOp(word_buf[0])==0)){
-				addr=addrToDec(word_buf[1])-1;
+				org_addr=addr=addrToDec(word_buf[1])-1;
+				ln_st=ln;
 				decToTwoComp(addr+1, bin, 16);
 				binToHex(bin, 16, hex, 4);
 				fprintIntArr(fp_bin, bin, 16);
 				fprintCharArr(fp_hex, hex, 4);
-				ln_st=ln;
 				fgetpos(fp, &pos);
 				b_org=true;
 			}
@@ -130,9 +131,11 @@ void parse_file(FILE *fp, char *fname){
 
 	fsetpos(fp, &pos);		// sets starting pos to origin pos, save some reads
 	ln=ln_st;
+	addr=org_addr;
 
 	while(fgets(line_buf, MAX_LEN+1, fp)!=NULL){
 		ln++;
+		addr++;
 		if(line_buf[0]!=0x3B&&line_buf[0]!=0x00){
 			int i=0, j=0, k=0;		// counter inits
 			bool prev=false, space=false, comma=false;
@@ -288,7 +291,7 @@ void parse_file(FILE *fp, char *fname){
 				i++;
 			}
 			if(op){
-				fprintf(fp_bin, "%d\t", ln);
+				fprintf(fp_bin, "%d\t%s\t", ln, decToAddr(hex, addr));
 				fprintIntArr(fp_bin, bin, 16);	// print only if opcode detected
 				fprintf(fp_hex, "%d\t", ln);
 				binToHex(bin, 16, hex, 4);

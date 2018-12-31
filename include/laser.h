@@ -39,7 +39,7 @@ int binToDec(int bin[], int size);
 
 int twoCompToDec(int bin[], int size);
 
-void decToAddr(char hex[], int dec_num);
+char* decToAddr(char hex[], int dec_num);
 
 void parse_file(FILE *fp, char *fname);
 

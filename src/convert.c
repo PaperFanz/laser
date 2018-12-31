@@ -222,14 +222,14 @@ int addrToDec(char hex[]){
 
 // note: only handles positive numbers, intended for use with addresses
 // DO NOT use to calculate offsets
-void decToAddr(char hex[], int dec_num){
-	int i=4, r;
-	hex[0]=0x78;			// x
-	hex[5]=0x00;			// null terminate
-	while(dec_num>0){
+char* decToAddr(char hex[], int dec_num){
+	int i=3, r;
+	hex[4]=0x00;			// null terminate
+	while(dec_num>0&&i>=0){
 		r=dec_num%16;
 		dec_num/=16;
 		hex[i]=hex_chars[r];
 		i--;
 	}
+	return hex;
 }
