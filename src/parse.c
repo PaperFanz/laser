@@ -13,7 +13,9 @@ void parse_file(FILE *fp, char *fname){
 	int MAX_LEN=MAX_WORD_NUM*MAX_WORD_SIZE;
 	char line_buf[MAX_LEN+1];			// see definitions in laser.h
 	char word_buf[MAX_WORD_NUM][MAX_WORD_SIZE+2];	// room for null + size
-	char *symbols;
+	int symbol_cnt=0;
+	char **symbol=malloc(sizeof(char*));
+	int *dec_addr=malloc(sizeof(int));
 	char fname_buf[MAX_WORD_SIZE+5];
 	bool b_org=false, op=false;
 	FILE *fp_sym, *fp_lst, *fp_bin, *fp_hex, *fp_obj;
@@ -112,6 +114,14 @@ void parse_file(FILE *fp, char *fname){
 			// check for label declarations and print to filename.sym
 			if(b_org){
 				if(isLabel(word_buf[0])){
+
+					symbol=realloc(symbol, (symbol_cnt+1)*sizeof(char*));
+					dec_addr=realloc(dec_addr, (symbol_cnt+1)*sizeof(int));
+					symbol[symbol_cnt]=malloc(sizeof(char)*(MAX_WORD_SIZE+2+5));
+					memcpy(symbol[symbol_cnt], word_buf[0], sizeof(char)*(MAX_WORD_SIZE+2));
+					dec_addr[symbol_cnt]=addr;
+					symbol_cnt++;
+
 					decToAddr(addr_str, addr);
 					putSymbol(fp_sym, word_buf[0], addr_str);
 					if((word_buf[1][0]!=0x00)) addr++;
@@ -299,4 +309,13 @@ void parse_file(FILE *fp, char *fname){
 			}
 		}
 	}
+
+	//==========================================================================
+	//	Cleanup
+	//==========================================================================
+
+	//free memory
+	for(int i=0; i<symbol_cnt; i++) free(symbol[i]);
+	free(symbol);
+	free(dec_addr);
 }
