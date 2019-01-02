@@ -1,5 +1,5 @@
-#include "laser.h"
-#include "arr_const.h"
+#include "convert.h"
+#include <stdio.h>
 
 //==============================================================================
 // Type Functions
@@ -9,17 +9,16 @@ int isKeyword(char c[]){
 	int max_dim;
 	for(int i=0; i<=15; i++){
 		switch(i){
-			case 0: max_dim=15; break;
-			case 4: max_dim=3; break;
-			case 12: max_dim=3; break;
-			case 13: max_dim=0; break;
-			case 15: max_dim=13; break;
-			default: max_dim=1; break;
+		case 0: max_dim=15; break;
+		case 4: max_dim=3; break;
+		case 12: max_dim=3; break;
+		case 13: max_dim=0; break;
+		case 15: max_dim=13; break;
+		default: max_dim=1; break;
 		}
 		for(int j=0; j<=max_dim; j++){
-			if(strcmp(c, keyword[i][j])==0){
+			if(strcmp(c, keyword[i][j])==0)
 				return i;
-			}
 		}
 	}
 	return -1;
@@ -28,9 +27,8 @@ int isKeyword(char c[]){
 int isPseuodoOp(char c[]){
 	for(int i=0; i<=4; i++){
 		for(int j=0; j<=1; j++){
-			if(strcmp(c, pseudoop[i][j])==0){
+			if(strcmp(c, pseudoop[i][j])==0)
 				return i;
-			}
 		}
 	}
 	return -1;
@@ -39,9 +37,8 @@ int isPseuodoOp(char c[]){
 int isRegister(char c[]){
 	for(int i=0; i<=7; i++){
 		for(int j=0; j<=1; j++){
-			if(strcmp(c, regs[i][j])==0){
+			if(strcmp(c, regs[i][j])==0)
 				return i;
-			}
 		}
 	}
 	return -1;
@@ -139,10 +136,10 @@ void addArr(int bin1[], int s1, int bin2[], int s2, int bin3[], int s3){
 		if(j<0) b2=bin2[0];
 		else b2=bin2[j];
 		switch(b1+b2+carry){
-			case 0: bin3[k]=0; carry=0; break;
-			case 1: bin3[k]=1; carry=0; break;
-			case 2: bin3[k]=0; carry=1; break;
-			case 3: bin3[k]=1; carry=1; break;
+		case 0: bin3[k]=0; carry=0; break;
+		case 1: bin3[k]=1; carry=0; break;
+		case 2: bin3[k]=0; carry=1; break;
+		case 3: bin3[k]=1; carry=1; break;
 		}
 		i--;
 		j--;
@@ -152,18 +149,18 @@ void addArr(int bin1[], int s1, int bin2[], int s2, int bin3[], int s3){
 
 // two's complement conversions
 void decToTwoComp(int n, int bin[], int size){
-	int i=size-1, carry=0, r;
-	bool neg=false;
-	if(n<0){n=-1*n;neg=true;}
+	int i=size-1, carry=0, r, m=n;
+	if(n<0)
+		m *= -1;
 	while(i>=0){
-		r=n%2;
-		n/=2;
+		r=m%2;
+		m/=2;
 		bin[i]=r;
 		i--;
 	}
-	if(neg){
-		notArr(bin, size);
-		addArr(bin, size, one_16b, 16, bin, size);
+	if(n<0){
+		notArr(bin, 16);
+		addArr(bin, 16, one_16b, 16, bin, 16);
 	}
 }
 

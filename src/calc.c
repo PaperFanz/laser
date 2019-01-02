@@ -1,30 +1,30 @@
-#include "laser.h"
+#include "calc.h"
 
-int checkExt(const char *filename, const char *ext){
+int checkExt (const char *filename, const char *ext){
 	char *dot=strrchr(filename, '.');
 	if(strcmp(dot, ext)==0) return 1;
 	else return 0;
 }
 
 // .bin generator functions
-int fillRegister(int r, int bin[], int n){
+int fillRegister (int r, int bin[], int n){
 	if(n==2) n++;
 	int m=4+(3*n);
 	switch(r){
-		case 0: break;
-		case 1: bin[m+2]=1; break;
-		case 2: bin[m+1]=1; break;
-		case 3: bin[m+2]=bin[m+1]=1; break;
-		case 4: bin[m]=1; break;
-		case 5: bin[m+2]=bin[m]=1; break;
-		case 6: bin[m+1]=bin[m]=1; break;
-		case 7: bin[m+2]=bin[m+1]=bin[m]=1; break;
-		default: return 0;
+	case 0: break;
+	case 1: bin[m+2]=1; break;
+	case 2: bin[m+1]=1; break;
+	case 3: bin[m+2]=bin[m+1]=1; break;
+	case 4: bin[m]=1; break;
+	case 5: bin[m+2]=bin[m]=1; break;
+	case 6: bin[m+1]=bin[m]=1; break;
+	case 7: bin[m+2]=bin[m+1]=bin[m]=1; break;
+	default: return 0;
 	}
 	return 1;
 }
 
-int fillDecOffset(int off, int bits, int ln, int put_bin[]){
+int fillDecOffset (int off, int bits, int ln, int put_bin[]){
 	if((off>(pow(2, bits-1)-1))||(off<-pow(2, bits))){
 		return 0;
 	}
@@ -41,7 +41,7 @@ int fillDecOffset(int off, int bits, int ln, int put_bin[]){
 }
 
 // read a fixed offset or immediate value and express it in n bits
-int fillOffset(int type, char c[], int bits, int ln, int put_bin[]){
+int fillOffset (int type, char c[], int bits, int ln, int put_bin[]){
 	int off=0, bin[16];
 	memset(bin, 0, sizeof(int)*16);
 
@@ -66,19 +66,14 @@ int fillOffset(int type, char c[], int bits, int ln, int put_bin[]){
 	}
 	else if(type==3){
 		int i=0, dec_num=0;
-		bool neg=false;
-
-		if(c[0]==0x2D){
-			neg=true;
+		if(c[0]==0x2D)
 			i++;
-		}
 		while(c[i]!=0x00){
 			dec_num=dec_num*10+(c[i]-0x30);
 			i++;
 		}
-		if(neg){
-			dec_num=-1*dec_num;
-		}
+		if(c[0]==0x2D)
+			dec_num = -1 * dec_num;
 		decToTwoComp(dec_num, bin, 16);
 	}
 	
@@ -99,45 +94,34 @@ int fillOffset(int type, char c[], int bits, int ln, int put_bin[]){
 }
 
 // print functions
-void printIntArr(int num[], int size){
-	int i=0;
-	while(i<=size-1){
+void printIntArr (int num[], int size){
+	for (int i = 0; i <= size - 1; i++)
 		printf("%d", num[i]);
-		i++;
-	}
 	printf("\n");
 }
 
-void fprintIntArr(FILE *fp, int num[], int size){
-	int i=0;
-	while(i<=size-1){
+void fprintIntArr (FILE *fp, int num[], int size){
+	for (int i = 0; i <= size - 1; i++)
 		fprintf(fp, "%d", num[i]);
-		i++;
-	}
 	fprintf(fp, "\n");
 }
 
-void printCharArr(char hex[], int size){
-	int i=0;
-	while(i<=size-1){
+void printCharArr (char hex[], int size){
+	for (int i = 0; i <= size-1; i++)
 		printf("%c", hex[i]);
-		i++;
-	}
 	printf("\n");
 }
 
-void fprintCharArr(FILE *fp, char hex[], int size){
-	int i=0;
-	while(i<=size-1){
-		fprintf(fp, "%c", hex[i]);
-		i++;
-	}
-	fprintf(fp, "\n");
+void fprintCharArr (FILE *fp, char hex[], int size){
+	for (int i = 0; i <= size - 1; i++)
+		fprintf (fp, "%c", hex[i]);
+	fprintf (fp, "\n");
 }
 
-void putSymbol(FILE *fp, char symbol[], char addr[]){
-	int i=0;
-	fprintf(fp, "%s", symbol);
-	for(i=6-(symbol[MAX_WORD_SIZE+1]/TABSIZE); i>=0; i--) fprintf(fp, "\t");
-	fprintf(fp, "x%s\n", addr);
+void putSymbol (FILE *fp, char symbol[], char addr[]){
+	int i = 0;
+	fprintf (fp, "%s", symbol);
+	for (i = 6 - (symbol[MAX_WORD_SIZE + 1] / TABSIZE); i >= 0; i--)
+		fprintf (fp, "\t");
+	fprintf (fp, "x%s\n", addr);
 }

@@ -22,9 +22,9 @@ Please read the notice below explaining what has and has not yet been completed.
 NOTE: This project is not yet complete. Here are the things that still need to be implemented:
 
 1. ~~Generating the symbol table~~ Completed 12/21/2018
-2. Generating the list file (maybe unecessary?)
-3. Generating the binary file	*in progress*
-4. Generating the hex file		*in progress*
+2. Generating the binary file	*in progress*
+3. Generating the hex file		*in progress*
+4. Generating the list file
 5. Generating the object file
 
 I've got a lot of work to do. Good thing winter break is forever.

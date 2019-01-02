@@ -1,4 +1,17 @@
 #include <string.h>
+#include <stdlib.h>
+#include <math.h>
+#include <ctype.h>
+
+// macros
+#define MAX_WORD_SIZE 20	// max # of chars for a label or a filename
+
+// function declarations
+int isHexChar(char c);
+
+void notArr(int bin[], int size);
+
+void addArr(int bin1[], int s1, int bin2[], int s2, int bin3[], int s3);
 
 // hex conversion array
 const char hex_chars[16]={'0','1','2','3',
