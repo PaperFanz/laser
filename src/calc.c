@@ -24,6 +24,22 @@ int fillRegister(int r, int bin[], int n){
 	return 1;
 }
 
+int fillDecOffset(int off, int bits, int ln, int put_bin[]){
+	if((off>(pow(2, bits-1)-1))||(off<-pow(2, bits))){
+		return 0;
+	}
+	else{
+		int bin[16];
+		memset(bin, 0, sizeof(int)*16);
+		decToTwoComp(off, bin, 16);
+
+		for(int i=1; i<=bits; i++){
+			put_bin[16-i]=bin[16-i];
+		}
+		return 1;
+	}
+}
+
 // read a fixed offset or immediate value and express it in n bits
 int fillOffset(int type, char c[], int bits, int ln, int put_bin[]){
 	int off=0, bin[16];
@@ -63,10 +79,6 @@ int fillOffset(int type, char c[], int bits, int ln, int put_bin[]){
 		}
 		if(neg){
 			dec_num=-1*dec_num;
-		}
-		if((dec_num>(pow(2, bits-1)-1))||(dec_num<-pow(2, bits))){
-			printf("Error: (line %d) %d cannot be expressed in %d bits!\n", ln, dec_num, bits);
-			return 0;
 		}
 		decToTwoComp(dec_num, bin, 16);
 	}

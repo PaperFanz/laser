@@ -145,7 +145,6 @@ void parse_file(FILE *fp, char *fname){
 
 	while(fgets(line_buf, MAX_LEN+1, fp)!=NULL){
 		ln++;
-		addr++;
 		if(line_buf[0]!=0x3B&&line_buf[0]!=0x00){
 			int i=0, j=0, k=0;		// counter inits
 			bool prev=false, space=false, comma=false;
@@ -171,13 +170,17 @@ void parse_file(FILE *fp, char *fname){
 				i++;
 			}
 
+			if(!(isLabel(word_buf[0])&&(word_buf[1][0]==0x00))) addr++;
+
 			//==================================================================
 			//	Generate Binary and Hex Files
 			//==================================================================
 
 			memset(bin, 0, sizeof(int)*16);		// clear bin array
-			i=0;								// reset count
+			i=j=0;								// reset counters
 			op=false;							// reset opcode indicator
+			int offset_bits=0;
+			bool match=false;
 			char op1[MAX_WORD_SIZE+2];
 			char op2[MAX_WORD_SIZE+2];
 			char op3[MAX_WORD_SIZE+2];
@@ -190,6 +193,7 @@ void parse_file(FILE *fp, char *fname){
 					case 1:			// ADD
 						op=true;
 						bin[3]=1;
+						offset_bits=5;
 						memcpy(op1, word_buf[i+1], sizeof(char)*(MAX_WORD_SIZE+2));
 						memcpy(op2, word_buf[i+2], sizeof(char)*(MAX_WORD_SIZE+2));
 						memcpy(op3, word_buf[i+3], sizeof(char)*(MAX_WORD_SIZE+2));
@@ -198,7 +202,7 @@ void parse_file(FILE *fp, char *fname){
 						if(!fillRegister(isRegister(op2), bin, 1))
 							printf("Error: (line %d) invalid operand for '%s': %s\n", ln, word_buf[i], op2);
 						if(!fillRegister(isRegister(op3), bin, 2)){
-							if(fillOffset(isValidOffset(op3), op3, 5, ln, bin)==1)
+							if(fillOffset(isValidOffset(op3), op3, offset_bits, ln, bin))
 								bin[10]=1;
 							else
 								printf("Error: (line %d) invalid operand for '%s': %s\n", ln, word_buf[i], op3);
@@ -209,10 +213,53 @@ void parse_file(FILE *fp, char *fname){
 					case 2:			// LD
 						op=true;
 						bin[2]=1;
+						offset_bits=9;
+
+						memcpy(op1, word_buf[i+1], sizeof(char)*(MAX_WORD_SIZE+2));
+						memcpy(op2, word_buf[i+2], sizeof(char)*(MAX_WORD_SIZE+2));
+						if(!fillRegister(isRegister(op1), bin, 0))
+							printf("Error: (line %d) invalid operand for '%s': %s\n", ln, word_buf[i], op1);
+						for(j=0; j<symbol_cnt; j++){
+							if(strcmp(op2, symbol[j])==0){
+								match=true;
+								break;
+							}
+						}
+						if(match){
+							printf("%d\t%d\n", dec_addr[j], addr);
+							if(!fillDecOffset((dec_addr[j]-(addr+1)), offset_bits, ln, bin))
+								printf("Error: (line %d) %d cannot be expressed in %d bits!\n", ln, (dec_addr[j]-(addr+1)), offset_bits);
+						}
+						else{
+							printf("Error: (line %d) Undeclared label '%s'!\n", ln, op2);
+						}
+						if(word_buf[i+3][0]!=0x00)
+							printf("Warning: (line %d) '%s' only takes 2 operands!\n\t%s", ln, word_buf[i], line_buf);
 						break;
 					case 3:			// ST
 						op=true;
 						bin[3]=bin[2]=1;
+						offset_bits=9;
+
+						memcpy(op1, word_buf[i+1], sizeof(char)*(MAX_WORD_SIZE+2));
+						memcpy(op2, word_buf[i+2], sizeof(char)*(MAX_WORD_SIZE+2));
+						if(!fillRegister(isRegister(op1), bin, 0))
+							printf("Error: (line %d) invalid operand for '%s': %s\n", ln, word_buf[i], op1);
+						for(j=0; j<symbol_cnt; j++){
+							if(strcmp(op2, symbol[j])==0){
+								match=true;
+								break;
+							}
+						}
+						if(match){
+							if(!fillDecOffset((dec_addr[j]-(addr+1)), offset_bits, ln, bin))
+								printf("Error: (line %d) %d cannot be expressed in %d bits!\n", ln, (dec_addr[j]-(addr+1)), offset_bits);
+						}
+						else{
+							printf("Error: (line %d) Undeclared label '%s'!\n", ln, op2);
+						}
+						if(word_buf[i+3][0]!=0x00)
+							printf("Warning: (line %d) '%s' only takes 2 operands!\n\t%s", ln, word_buf[i], line_buf);
 						break;
 					case 4:			// JSR and JSRR, check addr mode
 						op=true;
@@ -221,6 +268,8 @@ void parse_file(FILE *fp, char *fname){
 					case 5:			// AND
 						op=true;
 						bin[1]=bin[3]=1;
+						offset_bits=5;
+
 						memcpy(op1, word_buf[i+1], sizeof(char)*(MAX_WORD_SIZE+2));
 						memcpy(op2, word_buf[i+2], sizeof(char)*(MAX_WORD_SIZE+2));
 						memcpy(op3, word_buf[i+3], sizeof(char)*(MAX_WORD_SIZE+2));
@@ -229,7 +278,7 @@ void parse_file(FILE *fp, char *fname){
 						if(!fillRegister(isRegister(op2), bin, 1))
 							printf("Error: (line %d) invalid operand for '%s': %s\n", ln, word_buf[i], op2);
 						if(!fillRegister(isRegister(op3), bin, 2)){
-							if(fillOffset(isValidOffset(op3), op3, 5, ln, bin)==1)
+							if(fillOffset(isValidOffset(op3), op3, offset_bits, ln, bin)==1)
 								bin[10]=1;
 							else
 								printf("Error: (line %d) invalid operand for '%s': %s\n", ln, word_buf[i], op3);
