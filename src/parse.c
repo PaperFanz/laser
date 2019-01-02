@@ -7,17 +7,20 @@ void parse_file (FILE *fp, char *fname) {
 	//==========================================================================
 
 	int org_addr = 0, addr = 0, ln = 0, ln_st = 0;
+	bool orig = false, op = false;
 	int bin[16];
 	char hex[4];
 	char addr_str[5];					// 4 hex chars and null
+
 	int MAX_LEN = MAX_WORD_NUM * MAX_WORD_SIZE;
 	char line_buf[MAX_LEN + 1];			// see definitions in laser.h
 	char word_buf[MAX_WORD_NUM][MAX_WORD_SIZE + 2];	// room for null + size
+
 	int s_cnt = 0;
 	char **symbol = malloc(sizeof(char*));
 	int *dec_addr = malloc(sizeof(int));
+
 	char fname_buf[MAX_WORD_SIZE + 5];
-	bool orig = false, op = false;
 	FILE *fp_sym, *fp_lst, *fp_bin, *fp_hex, *fp_obj;
 	fpos_t pos;
 
@@ -136,6 +139,9 @@ skip_symbol_parse:
 		}
 	}
 
+	if (fp_sym != NULL)
+		fclose(fp_sym);
+
 	//==========================================================================
 	//	Pass 2 - Generate List, Binary, Hex, and Object files
 	//==========================================================================
@@ -146,14 +152,13 @@ skip_symbol_parse:
 	ln = ln_st;
 	addr = org_addr;
 
-skip_line_parse:
 	while(fgets(line_buf, MAX_LEN+1, fp)!=NULL){
 		ln++;
 		bool comment = (line_buf[0] == ';');
 		bool empty = (line_buf[0] == '\0');
 
 		if (comment || empty)
-			goto skip_line_parse;
+			continue;
 
 		memset (word_buf, 0, sizeof(word_buf));
 
@@ -180,9 +185,9 @@ skip_line_parse:
 		if(!(isLabel(word_buf[0]) && (word_buf[1][0] == 0x00)))
 			addr++;
 
-		//==================================================================
+		//======================================================================
 		//	Generate Binary and Hex Files
-		//==================================================================
+		//======================================================================
 
 		memset (bin, 0, sizeof(int) * 16);		// clear bin array
 		i = j = 0;								// reset counters
@@ -194,10 +199,30 @@ skip_line_parse:
 		char op2[MAX_WORD_SIZE + 2];
 		char op3[MAX_WORD_SIZE + 2];
 
-		while(isLabel (word_buf[i]))
+		while (isLabel (word_buf[i]))
 			i++;
+		
+		switch (isPseuodoOp (word_buf[i])){
+		case -1:
+			break;
+		case 0:			// ORIG
+			break;
+		case 1:			// END
+			break;
+		case 2:			// STRINGZ
+			break;
+		case 3:			// BLKW
+			break;
+		case 4:			// FILL
+			break;
+		default:
+			printf ("%d, Unhandled pseudoop exception!\n", isPseuodoOp (word_buf[i]));
+			break;
+		}
 
 		switch (isKeyword (word_buf[i])) {
+		case -1:
+			break;
 		case 0:			// BR, check condition codes
 			op = true;
 			break;
@@ -357,9 +382,9 @@ skip_line_parse:
 			}
 			break;
 		case 14:		// LEA
-			op=true;
-			bin[0]=bin[1]=bin[2]=1;
-			offset_bits=9;
+			op = true;
+			bin[0] = bin[1] = bin[2] = 1;
+			offset_bits = 9;
 			max_operands = 2;
 
 			memcpy (op1, word_buf[i + 1], sizeof(char) * (MAX_WORD_SIZE + 2));
@@ -369,24 +394,45 @@ skip_line_parse:
 			OPERAND_OFFSET (op2);
 			break;
 		case 15:		// TRAP, check shortcuts
-			op=true;
-			bin[0]=bin[1]=bin[2]=bin[3]=1;
-			break;
-		default:		// not keyword
-			switch(isPseuodoOp(word_buf[i])){
-				case 0:			// ORIG
-					break;
-				case 1:			// END
-					break;
-				case 2:			// STRINGZ
-					break;
-				case 3:			// BLKW
-					break;
-				case 4:			// FILL
-					break;
-				default:
-					break;
+			op = true;
+			bin[0] = bin[1] = bin[2] = bin[3] = 1;
+			offset_bits = 8;
+			max_operands = 0;
+			op1[MAX_WORD_SIZE+1] = 3;
+
+			switch (isTrap (word_buf[i])){
+			case -1:
+				break;
+			case 0 ... 1:
+				max_operands = 1;
+				memcpy (op1, word_buf[i + 1], sizeof(char) * (MAX_WORD_SIZE + 2));
+				break;
+			case 2 ... 3:
+				op1[0] = 'x'; op1[1] = '2'; op1[2] = '0';
+				break;
+			case 4 ... 5:
+				op1[0] = 'x'; op1[1] = '2'; op1[2] = '1';
+				break;
+			case 6 ... 7:
+				op1[0] = 'x'; op1[1] = '2'; op1[2] = '2';
+				break;
+			case 8 ... 9:
+				op1[0] = 'x'; op1[1] = '2'; op1[2] = '3';
+				break;
+			case 10 ... 11:
+				op1[0] = 'x'; op1[1] = '2'; op1[2] = '4';
+				break;
+			case 12 ... 13:
+				op1[0] = 'x'; op1[1] = '2'; op1[2] = '5';
+				break;
+			default:
+				break;
 			}
+
+			OPERAND_OFFSET (op1);
+			break;
+		default:
+			printf ("%d Unhandled keyword exception!\n", isKeyword (word_buf[i]));
 			break;
 		}
 
@@ -407,4 +453,13 @@ skip_line_parse:
 	for(int i=0; i<s_cnt; i++) free(symbol[i]);
 	free(symbol);
 	free(dec_addr);
+
+	if (fp_bin != NULL)
+		fclose(fp_bin);
+	if (fp_hex != NULL)
+		fclose(fp_hex);
+	if (fp_lst != NULL)
+		fclose(fp_lst);
+	if (fp_obj != NULL)
+		fclose(fp_obj);
 }

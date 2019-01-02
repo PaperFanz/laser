@@ -5,7 +5,8 @@
 // Type Functions
 //==============================================================================
 
-int isKeyword(char c[]){
+int isKeyword(char c[])
+{
 	int max_dim;
 	for(int i=0; i<=15; i++){
 		switch(i){
@@ -24,7 +25,8 @@ int isKeyword(char c[]){
 	return -1;
 }
 
-int isPseuodoOp(char c[]){
+int isPseuodoOp(char c[])
+{
 	for(int i=0; i<=4; i++){
 		for(int j=0; j<=1; j++){
 			if(strcmp(c, pseudoop[i][j])==0)
@@ -34,7 +36,8 @@ int isPseuodoOp(char c[]){
 	return -1;
 }
 
-int isRegister(char c[]){
+int isRegister(char c[])
+{
 	for(int i=0; i<=7; i++){
 		for(int j=0; j<=1; j++){
 			if(strcmp(c, regs[i][j])==0)
@@ -45,7 +48,8 @@ int isRegister(char c[]){
 }
 
 // extends isxdigit functionality by returning decimal value (0-16)
-int isHexChar(char c){
+int isHexChar(char c)
+{
 	for(int i=0; i<=15; i++){
 		if((i<=9)&&(c==hex_chars[i]))
 			return i;
@@ -58,7 +62,8 @@ int isHexChar(char c){
 // printf("Invalid hex number at line %d: %s\n", ln, c);
 // printf("Invalid binary number at line %d: %s\n", ln, c);
 
-int isValidOffset(char c[]){
+int isValidOffset(char c[])
+{
 	int i=1;
 	if(c[0]==0x78){
 		if(c[MAX_WORD_SIZE+1]<2) return 0;
@@ -87,9 +92,28 @@ int isValidOffset(char c[]){
 	else return 0;
 }
 
-int isLabel(char c[]){
+int isLabel(char c[])
+{
 	if((isKeyword(c)<0)&&(isPseuodoOp(c)<0)&&(isValidOffset(c)==0)) return 1;
 	else return 0;
+}
+
+int isTrap(char c[])
+{
+	for (int i = 0; i <= 13; i++) {
+		if (strcmp (c, keyword[15][i]) == 0)
+			return i;
+	}
+	return -1;
+}
+
+int isBranch(char c[])
+{
+	for (int i = 0; i <= 15; i++) {
+		if (strcmp (c, keyword[0][i]) == 0)
+			return i;
+	}
+	return -1;
 }
 
 //==============================================================================
@@ -97,7 +121,8 @@ int isLabel(char c[]){
 //==============================================================================
 
 // binary conversions
-int binToDec(int bin[], int size){
+int binToDec(int bin[], int size)
+{
 	int i=0, r, n=0;
 	while(i<=size-1){
 		n*=2;
@@ -107,7 +132,8 @@ int binToDec(int bin[], int size){
 	return n;
 }
 
-void zext(int n, int bin[], int size){
+void zext(int n, int bin[], int size)
+{
 	int i=size-1, r;
 	while(i>=0){
 		r=n%10;
@@ -118,7 +144,8 @@ void zext(int n, int bin[], int size){
 }
 
 // binary operations
-void notArr(int bin[], int size){
+void notArr(int bin[], int size)
+{
 	for(int i=0; i<size; i++){
 		switch(bin[i]){
 			case 0: bin[i]=1; break;
@@ -128,7 +155,8 @@ void notArr(int bin[], int size){
 }
 
 // bin3 is result array, bin1 and bin2 are operands
-void addArr(int bin1[], int s1, int bin2[], int s2, int bin3[], int s3){
+void addArr(int bin1[], int s1, int bin2[], int s2, int bin3[], int s3)
+{
 	int carry=0, i=s1-1, j=s2-1, k=s3-1, b1, b2;
 	while(k>=0){
 		if(i<0) b1=bin1[0];
@@ -148,7 +176,8 @@ void addArr(int bin1[], int s1, int bin2[], int s2, int bin3[], int s3){
 }
 
 // two's complement conversions
-void decToTwoComp(int n, int bin[], int size){
+void decToTwoComp(int n, int bin[], int size)
+{
 	int i=size-1, carry=0, r, m=n;
 	if(n<0)
 		m *= -1;
@@ -164,7 +193,8 @@ void decToTwoComp(int n, int bin[], int size){
 	}
 }
 
-int twoCompToDec(int bin[], int size){
+int twoCompToDec(int bin[], int size)
+{
 	int dec_num=0, i=0, r, n=0;
 	while(i<=size-1){
 		n*=10;
@@ -184,7 +214,8 @@ int twoCompToDec(int bin[], int size){
 
 // hex conversions
 // note: hex_size should always be at 1/4 of bin_size
-void binToHex(int bin[], int bin_size, char hex[], int hex_size){
+void binToHex(int bin[], int bin_size, char hex[], int hex_size)
+{
 	if(bin_size==4*hex_size){
 		for(int i=0; i<hex_size; i++){
 			hex[i]=hex_chars[binToDec(&bin[4*i], 4)];
@@ -192,7 +223,8 @@ void binToHex(int bin[], int bin_size, char hex[], int hex_size){
 	}
 }
 
-int hexToDec(char hex[]){
+int hexToDec(char hex[])
+{
 	int i=1, dec_num=0;
 	while(hex[i]!=0x00){
 		dec_num=dec_num*16+isHexChar(hex[i]);
@@ -205,7 +237,8 @@ int hexToDec(char hex[]){
 
 // note: only handles positive numbers, intended for use with addresses
 // DO NOT use to calculate offsets
-int addrToDec(char hex[]){
+int addrToDec(char hex[])
+{
 	int i, j, dec_num=0;
 	for(j=1; j<=4; j++){
 		for(i=0; i<=15; i++){
@@ -219,7 +252,8 @@ int addrToDec(char hex[]){
 
 // note: only handles positive numbers, intended for use with addresses
 // DO NOT use to calculate offsets
-char* decToAddr(char hex[], int dec_num){
+char* decToAddr(char hex[], int dec_num)
+{
 	int i=3, r;
 	hex[4]=0x00;			// null terminate
 	while(dec_num>0&&i>=0){

@@ -43,54 +43,52 @@ int main (int argc, char *argv[]) {
 						printf("Deleting %s!\n", fname_buf);
 						if(remove (fname_buf))
 							printf ("Unable to delete %s!\n", fname_buf);
-						fname_buf[j+1]='b';		// b
-						fname_buf[j+2]='i';		// i
-						fname_buf[j+3]='n';		// n
+						fname_buf[j + 1] = 'b';		// b
+						fname_buf[j + 2] = 'i';		// i
+						fname_buf[j + 3] = 'n';		// n
 						printf("Deleting %s!\n", fname_buf);
 						if(remove (fname_buf))
 							printf ("Unable to delete %s!\n", fname_buf);
-						fname_buf[j+1]=0x68;		// h
-						fname_buf[j+2]=0x65;		// e
-						fname_buf[j+3]=0x78;		// x
+						fname_buf[j + 1] = 'h';		// h
+						fname_buf[j + 2] = 'e';		// e
+						fname_buf[j + 3] = 'x';		// x
 						printf("Deleting %s!\n", fname_buf);
 						if(remove (fname_buf))
 							printf ("Unable to delete %s!\n", fname_buf);
-						fname_buf[j+1]=0x6F;		// o
-						fname_buf[j+2]=0x62;		// b
-						fname_buf[j+3]=0x6A;		// j
+						fname_buf[j + 1] = 'o';		// o
+						fname_buf[j + 2] = 'b';		// b
+						fname_buf[j + 3] = 'j';		// j
 						printf("Deleting %s!\n", fname_buf);
 						if(remove (fname_buf))
 							printf ("Unable to delete %s!\n", fname_buf);
-					}
-					else{
-						fname_buf[j]=fname[j];
+					} else {
+						fname_buf[j] = fname[j];
 					}
 				}
 				i++;
 			}
-		}
-		else if(strcmp(argv[i],"-a")==0){
+		} else if (strcmp (argv[i], "-a") == 0) {
 			i++;
-			while(i<argc){
-				if(checkExt(argv[i], ".asm")){
-					fp=fopen(argv[i], "r+");
-					if(fp!=NULL)
-						parse_file(fp, argv[i]);
+			while (i < argc) {
+				if (checkExt (argv[i], ".asm")) {
+					fp = fopen (argv[i], "r+");
+					if (fp != NULL)
+						parse_file (fp, argv[i]);
 					else
-						printf("Unable to open file: %s\n", argv[i]);
-				}
-				else{
-					printf("Invalid file extension: %s\n", strrchr(argv[i], '.'));
+						printf ("Unable to open file: %s\n", argv[i]);
+				} else {
+					printf ("Invalid file extension: %s\n", strrchr (argv[i], '.'));
 					break;
 				}
 				i++;
 			}
-		}
-		else{
-			printf("Type 'laser -h' for help.\n");
+		} else {
+			printf ("Type 'laser -h' for help.\n");
 			break;
 		}
 	}
 
+	if (fp != NULL)
+		fclose(fp);
 	return 0;
 }

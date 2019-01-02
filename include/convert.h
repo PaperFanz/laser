@@ -35,7 +35,7 @@ const char *keyword[][16]={
 	{"LDI", "ldi"},
 	{"STI", "sti"},
 	{"JMP", "jmp", "RET", "ret"},
-	{"\0"},
+	{"INVALID_OPCODE_EXCEPTION"},
 	{"LEA", "lea"},
 	{"TRAP", "trap", "GETC", "getc", "OUT", "out", "PUTS", "puts",
 	"IN", "in", "PUTSP", "putsp", "HALT", "halt"}

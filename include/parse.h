@@ -28,12 +28,6 @@
 	}\
 }
 
-// check for extra operands
-#define CHECK_OP_OVERFLOW(max){\
-	if(word_buf[i + max + 1][0] != '\0')\
-		printf("Warning: (line %d) '%s' only takes %d operands!\n\t%s", ln, word_buf[i], max, line_buf);\
-}
-
 // fill and error-check an offset
 #define OPERAND_OFFSET(operand){\
 	if(!fillOffset(isValidOffset(operand), operand, offset_bits, ln, bin)){\
@@ -58,6 +52,10 @@ int isRegister(char c[]);
 int isLabel(char c[]);
 
 int isValidOffset(char c[]);
+
+int isTrap(char c[]);
+
+int isBranch(char c[]);
 
 int fillRegister(int r, int bin[], int n);
 
