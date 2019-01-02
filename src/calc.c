@@ -46,7 +46,6 @@ int fillOffset(int type, char c[], int bits, int ln, int put_bin[]){
 	memset(bin, 0, sizeof(int)*16);
 
 	if(type==0){
-		printf("Error: (line %d) %s is an invalid offset!\n", ln, c);
 		return 0;
 	}
 	else if(type==1){

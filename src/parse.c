@@ -194,6 +194,7 @@ void parse_file(FILE *fp, char *fname){
 						op=true;
 						bin[3]=1;
 						offset_bits=5;
+
 						memcpy(op1, word_buf[i+1], sizeof(char)*(MAX_WORD_SIZE+2));
 						memcpy(op2, word_buf[i+2], sizeof(char)*(MAX_WORD_SIZE+2));
 						memcpy(op3, word_buf[i+3], sizeof(char)*(MAX_WORD_SIZE+2));
@@ -219,22 +220,18 @@ void parse_file(FILE *fp, char *fname){
 						memcpy(op2, word_buf[i+2], sizeof(char)*(MAX_WORD_SIZE+2));
 						if(!fillRegister(isRegister(op1), bin, 0))
 							printf("Error: (line %d) invalid operand for '%s': %s\n", ln, word_buf[i], op1);
-						for(j=0; j<symbol_cnt; j++){
-							if(strcmp(op2, symbol[j])==0){
-								match=true;
-								break;
+						if(!fillOffset(isValidOffset(op2), op2, offset_bits, ln, bin)){
+							for(j=0; j<symbol_cnt; j++){if(strcmp(op2, symbol[j])==0){match=true; break;}}
+							if(match){
+								if(!fillDecOffset((dec_addr[j]-(addr+1)), offset_bits, ln, bin))
+									printf("Error: (line %d) %d cannot be expressed in %d bits!\n", ln, (dec_addr[j]-(addr+1)), offset_bits);
 							}
+							else{
+								printf("Error: (line %d) Undeclared label '%s'!\n", ln, op2);
+							}
+							if(word_buf[i+3][0]!=0x00)
+								printf("Warning: (line %d) '%s' only takes 2 operands!\n\t%s", ln, word_buf[i], line_buf);
 						}
-						if(match){
-							printf("%d\t%d\n", dec_addr[j], addr);
-							if(!fillDecOffset((dec_addr[j]-(addr+1)), offset_bits, ln, bin))
-								printf("Error: (line %d) %d cannot be expressed in %d bits!\n", ln, (dec_addr[j]-(addr+1)), offset_bits);
-						}
-						else{
-							printf("Error: (line %d) Undeclared label '%s'!\n", ln, op2);
-						}
-						if(word_buf[i+3][0]!=0x00)
-							printf("Warning: (line %d) '%s' only takes 2 operands!\n\t%s", ln, word_buf[i], line_buf);
 						break;
 					case 3:			// ST
 						op=true;
@@ -245,25 +242,60 @@ void parse_file(FILE *fp, char *fname){
 						memcpy(op2, word_buf[i+2], sizeof(char)*(MAX_WORD_SIZE+2));
 						if(!fillRegister(isRegister(op1), bin, 0))
 							printf("Error: (line %d) invalid operand for '%s': %s\n", ln, word_buf[i], op1);
-						for(j=0; j<symbol_cnt; j++){
-							if(strcmp(op2, symbol[j])==0){
-								match=true;
-								break;
+						if(!fillOffset(isValidOffset(op2), op2, offset_bits, ln, bin)){
+							for(j=0; j<symbol_cnt; j++){if(strcmp(op2, symbol[j])==0){match=true; break;}}
+							if(match){
+								if(!fillDecOffset((dec_addr[j]-(addr+1)), offset_bits, ln, bin))
+									printf("Error: (line %d) %d cannot be expressed in %d bits!\n", ln, (dec_addr[j]-(addr+1)), offset_bits);
 							}
+							else{
+								printf("Error: (line %d) Undeclared label '%s'!\n", ln, op2);
+							}
+							if(word_buf[i+3][0]!=0x00)
+								printf("Warning: (line %d) '%s' only takes 2 operands!\n\t%s", ln, word_buf[i], line_buf);
 						}
-						if(match){
-							if(!fillDecOffset((dec_addr[j]-(addr+1)), offset_bits, ln, bin))
-								printf("Error: (line %d) %d cannot be expressed in %d bits!\n", ln, (dec_addr[j]-(addr+1)), offset_bits);
-						}
-						else{
-							printf("Error: (line %d) Undeclared label '%s'!\n", ln, op2);
-						}
-						if(word_buf[i+3][0]!=0x00)
-							printf("Warning: (line %d) '%s' only takes 2 operands!\n\t%s", ln, word_buf[i], line_buf);
 						break;
 					case 4:			// JSR and JSRR, check addr mode
 						op=true;
 						bin[1]=1;
+						if(strcmp(word_buf[i], "JSR")==0||strcmp(word_buf[i], "jsr")==0){
+							bin[4]=1;
+							offset_bits=11;
+
+							memcpy(op1, word_buf[i+1], sizeof(char)*(MAX_WORD_SIZE+2));
+							if(!fillOffset(isValidOffset(op1), op1, offset_bits, ln, bin)){
+								for(j=0; j<symbol_cnt; j++){if(strcmp(op1, symbol[j])==0){match=true; break;}}
+								if(match){
+									if(!fillDecOffset((dec_addr[j]-(addr+1)), offset_bits, ln, bin))
+										printf("Error: (line %d) %d cannot be expressed in %d bits!\n", ln, (dec_addr[j]-(addr+1)), offset_bits);
+								}
+								else{
+									printf("Error: (line %d) Undeclared label '%s'!\n", ln, op1);
+								}
+								if(word_buf[i+3][0]!=0x00)
+									printf("Warning: (line %d) '%s' only takes 2 operands!\n\t%s", ln, word_buf[i], line_buf);
+							}
+						}
+						else{
+							offset_bits=6;
+
+							memcpy(op1, word_buf[i+1], sizeof(char)*(MAX_WORD_SIZE+2));
+							memcpy(op2, word_buf[i+2], sizeof(char)*(MAX_WORD_SIZE+2));
+							if(!fillRegister(isRegister(op1), bin, 1))
+								printf("Error: (line %d) invalid operand for '%s': %s\n", ln, word_buf[i], op1);
+							if(!fillOffset(isValidOffset(op2), op2, offset_bits, ln, bin)){
+								for(j=0; j<symbol_cnt; j++){if(strcmp(op2, symbol[j])==0){match=true; break;}}
+								if(match){
+									if(!fillDecOffset((dec_addr[j]-(addr+1)), offset_bits, ln, bin))
+										printf("Error: (line %d) %d cannot be expressed in %d bits!\n", ln, (dec_addr[j]-(addr+1)), offset_bits);
+								}
+								else{
+									printf("Error: (line %d) Undeclared label '%s'!\n", ln, op2);
+								}
+								if(word_buf[i+3][0]!=0x00)
+									printf("Warning: (line %d) '%s' only takes 2 operands!\n\t%s", ln, word_buf[i], line_buf);
+							}
+						}
 						break;
 					case 5:			// AND
 						op=true;
@@ -289,10 +321,52 @@ void parse_file(FILE *fp, char *fname){
 					case 6:			// LDR
 						op=true;
 						bin[1]=bin[2]=1;
+						offset_bits=6;
+						
+						memcpy(op1, word_buf[i+1], sizeof(char)*(MAX_WORD_SIZE+2));
+						memcpy(op2, word_buf[i+2], sizeof(char)*(MAX_WORD_SIZE+2));
+						memcpy(op3, word_buf[i+3], sizeof(char)*(MAX_WORD_SIZE+2));
+						if(!fillRegister(isRegister(op1), bin, 0))
+							printf("Error: (line %d) invalid operand for '%s': %s\n", ln, word_buf[i], op1);
+						if(!fillRegister(isRegister(op2), bin, 1))
+							printf("Error: (line %d) invalid operand for '%s': %s\n", ln, word_buf[i], op2);
+						if(!fillOffset(isValidOffset(op3), op3, offset_bits, ln, bin)){
+							for(j=0; j<symbol_cnt; j++){if(strcmp(op3, symbol[j])==0){match=true; break;}}
+							if(match){
+								if(!fillDecOffset((dec_addr[j]-(addr+1)), offset_bits, ln, bin))
+									printf("Error: (line %d) %d cannot be expressed in %d bits!\n", ln, (dec_addr[j]-(addr+1)), offset_bits);
+							}
+							else{
+								printf("Error: (line %d) Undeclared label '%s'!\n", ln, op3);
+							}
+							if(word_buf[i+4][0]!=0x00)
+								printf("Warning: (line %d) '%s' only takes 3 operands!\n\t%s", ln, word_buf[i], line_buf);
+						}
 						break;
 					case 7:			// STR
 						op=true;
 						bin[1]=bin[2]=bin[3]=1;
+						offset_bits=6;
+						
+						memcpy(op1, word_buf[i+1], sizeof(char)*(MAX_WORD_SIZE+2));
+						memcpy(op2, word_buf[i+2], sizeof(char)*(MAX_WORD_SIZE+2));
+						memcpy(op3, word_buf[i+3], sizeof(char)*(MAX_WORD_SIZE+2));
+						if(!fillRegister(isRegister(op1), bin, 0))
+							printf("Error: (line %d) invalid operand for '%s': %s\n", ln, word_buf[i], op1);
+						if(!fillRegister(isRegister(op2), bin, 1))
+							printf("Error: (line %d) invalid operand for '%s': %s\n", ln, word_buf[i], op2);
+						if(!fillOffset(isValidOffset(op3), op3, offset_bits, ln, bin)){
+							for(j=0; j<symbol_cnt; j++){if(strcmp(op3, symbol[j])==0){match=true; break;}}
+							if(match){
+								if(!fillDecOffset((dec_addr[j]-(addr+1)), offset_bits, ln, bin))
+									printf("Error: (line %d) %d cannot be expressed in %d bits!\n", ln, (dec_addr[j]-(addr+1)), offset_bits);
+							}
+							else{
+								printf("Error: (line %d) Undeclared label '%s'!\n", ln, op3);
+							}
+							if(word_buf[i+4][0]!=0x00)
+								printf("Warning: (line %d) '%s' only takes 3 operands!\n\t%s", ln, word_buf[i], line_buf);
+						}
 						break;
 					case 8:			// RTI
 						op=true;
@@ -319,22 +393,18 @@ void parse_file(FILE *fp, char *fname){
 						memcpy(op2, word_buf[i+2], sizeof(char)*(MAX_WORD_SIZE+2));
 						if(!fillRegister(isRegister(op1), bin, 0))
 							printf("Error: (line %d) invalid operand for '%s': %s\n", ln, word_buf[i], op1);
-						for(j=0; j<symbol_cnt; j++){
-							if(strcmp(op2, symbol[j])==0){
-								match=true;
-								break;
+						if(!fillOffset(isValidOffset(op2), op2, offset_bits, ln, bin)){
+							for(j=0; j<symbol_cnt; j++){if(strcmp(op2, symbol[j])==0){match=true; break;}}
+							if(match){
+								if(!fillDecOffset((dec_addr[j]-(addr+1)), offset_bits, ln, bin))
+									printf("Error: (line %d) %d cannot be expressed in %d bits!\n", ln, (dec_addr[j]-(addr+1)), offset_bits);
 							}
+							else{
+								printf("Error: (line %d) Undeclared label '%s'!\n", ln, op2);
+							}
+							if(word_buf[i+3][0]!=0x00)
+								printf("Warning: (line %d) '%s' only takes 2 operands!\n\t%s", ln, word_buf[i], line_buf);
 						}
-						if(match){
-							printf("%d\t%d\n", dec_addr[j], addr);
-							if(!fillDecOffset((dec_addr[j]-(addr+1)), offset_bits, ln, bin))
-								printf("Error: (line %d) %d cannot be expressed in %d bits!\n", ln, (dec_addr[j]-(addr+1)), offset_bits);
-						}
-						else{
-							printf("Error: (line %d) Undeclared label '%s'!\n", ln, op2);
-						}
-						if(word_buf[i+3][0]!=0x00)
-							printf("Warning: (line %d) '%s' only takes 2 operands!\n\t%s", ln, word_buf[i], line_buf);
 						break;
 					case 11:		// STI
 						op=true;
@@ -345,25 +415,35 @@ void parse_file(FILE *fp, char *fname){
 						memcpy(op2, word_buf[i+2], sizeof(char)*(MAX_WORD_SIZE+2));
 						if(!fillRegister(isRegister(op1), bin, 0))
 							printf("Error: (line %d) invalid operand for '%s': %s\n", ln, word_buf[i], op1);
-						for(j=0; j<symbol_cnt; j++){
-							if(strcmp(op2, symbol[j])==0){
-								match=true;
-								break;
+						if(!fillOffset(isValidOffset(op2), op2, offset_bits, ln, bin)){
+							for(j=0; j<symbol_cnt; j++){if(strcmp(op2, symbol[j])==0){match=true; break;}}
+							if(match){
+								if(!fillDecOffset((dec_addr[j]-(addr+1)), offset_bits, ln, bin))
+									printf("Error: (line %d) %d cannot be expressed in %d bits!\n", ln, (dec_addr[j]-(addr+1)), offset_bits);
 							}
+							else{
+								printf("Error: (line %d) Undeclared label '%s'!\n", ln, op2);
+							}
+							if(word_buf[i+3][0]!=0x00)
+								printf("Warning: (line %d) '%s' only takes 2 operands!\n\t%s", ln, word_buf[i], line_buf);
 						}
-						if(match){
-							if(!fillDecOffset((dec_addr[j]-(addr+1)), offset_bits, ln, bin))
-								printf("Error: (line %d) %d cannot be expressed in %d bits!\n", ln, (dec_addr[j]-(addr+1)), offset_bits);
-						}
-						else{
-							printf("Error: (line %d) Undeclared label '%s'!\n", ln, op2);
-						}
-						if(word_buf[i+3][0]!=0x00)
-							printf("Warning: (line %d) '%s' only takes 2 operands!\n\t%s", ln, word_buf[i], line_buf);
 						break;
 					case 12:		// JMP and RET, check shortcut
 						op=true;
 						bin[0]=bin[1]=1;
+
+						if(strcmp(word_buf[i], "RET")==0||strcmp(word_buf[i], "ret")==0){
+							bin[7]=bin[8]=bin[9]=1;
+							if(word_buf[i+1][0]!=0x00)
+								printf("Warning: (line %d) '%s' takes no operands!\n\t%s", ln, word_buf[i], line_buf);
+						}
+						else{
+							memcpy(op1, word_buf[i+1], sizeof(char)*(MAX_WORD_SIZE+2));
+							if(!fillRegister(isRegister(op1), bin, 1))
+								printf("Error: (line %d) invalid operand for '%s': %s\n", ln, word_buf[i], op1);
+							if(word_buf[i+2][0]!=0x00)
+								printf("Warning: (line %d) '%s' only takes 1 operand!\n\t%s", ln, word_buf[i], line_buf);
+						}
 						break;
 					case 14:		// LEA
 						op=true;
