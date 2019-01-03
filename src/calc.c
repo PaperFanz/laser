@@ -11,17 +11,16 @@ int fillRegister (int r, int bin[], int n){
 	if(n==2) n++;
 	int m=4+(3*n);
 	switch(r){
-	case 0: break;
-	case 1: bin[m+2]=1; break;
-	case 2: bin[m+1]=1; break;
-	case 3: bin[m+2]=bin[m+1]=1; break;
-	case 4: bin[m]=1; break;
-	case 5: bin[m+2]=bin[m]=1; break;
-	case 6: bin[m+1]=bin[m]=1; break;
-	case 7: bin[m+2]=bin[m+1]=bin[m]=1; break;
+	case 0: return 1;
+	case 1: bin[m+2]=1; return 1;
+	case 2: bin[m+1]=1; return 1;
+	case 3: bin[m+2]=bin[m+1]=1; return 1;
+	case 4: bin[m]=1; return 1;
+	case 5: bin[m+2]=bin[m]=1; return 1;
+	case 6: bin[m+1]=bin[m]=1; return 1;
+	case 7: bin[m+2]=bin[m+1]=bin[m]=1; return 1;
 	default: return 0;
 	}
-	return 1;
 }
 
 int fillDecOffset (int off, int bits, int ln, int put_bin[]){
@@ -41,7 +40,8 @@ int fillDecOffset (int off, int bits, int ln, int put_bin[]){
 }
 
 // read a fixed offset or immediate value and express it in n bits
-int fillOffset (int type, char c[], int bits, int ln, int put_bin[]){
+int offset (int type, char c[], int bits)
+{
 	int off=0, bin[16];
 	memset(bin, 0, sizeof(int)*16);
 
@@ -49,14 +49,10 @@ int fillOffset (int type, char c[], int bits, int ln, int put_bin[]){
 		return 0;
 	}
 	else if(type==1){
-		if((4*(c[MAX_WORD_SIZE+1]-1))>bits)
-			printf("Warning: (line %d) %s will be truncated to %d bits; unexpeced errors may occur!\n", ln, c, bits);
 		decToTwoComp(hexToDec(c), bin, 16);
 	}
 	else if(type==2){
 		int i=1, j=15-c[MAX_WORD_SIZE+1]+2, k;
-		if((c[MAX_WORD_SIZE+1]-2)>bits)
-			printf("Warning: (line %d) %s will be truncated to %d bits; unexpeced errors may occur!\n", ln, c, bits);
 		for(k=0; k<j; k++) bin[k]=c[1]-0x30;		// sext input binary
 		while(c[i]!=0x00){
 			bin[j]=c[i]-0x30;
@@ -82,15 +78,7 @@ int fillOffset (int type, char c[], int bits, int ln, int put_bin[]){
 	}
 	off-=bin[15-bits]*pow(2, bits);
 
-	if((off>(pow(2, bits-1)-1))||(off<-pow(2, bits))){
-		printf("Error: (line %d) %d cannot be expressed in %d bits!\n", ln, off, bits);
-		return 0;
-	}
-
-	for(int i=1; i<=bits; i++){
-		put_bin[16-i]=bin[16-i];
-	}
-	return 1;
+	return off;
 }
 
 // print functions

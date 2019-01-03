@@ -12,35 +12,17 @@
 #define MAX_WORD_SIZE 20	// max # of chars for a label or a filename
 #define TABSIZE 4
 
-// fill and error-check a regiser
-#define OPERAND_REGISTER(operand, loc) {\
-	if (!fillRegister (isRegister(operand), bin, loc))\
-		printf ("Error: (line %d) invalid operand for '%s': %s\n", ln, word_buf[i], operand);\
-}
+// types
+struct Symbol {
+	char label[MAX_WORD_SIZE+2];
+	int addr;
+};
 
-// fill and error-check a register or immediate
-#define OPERAND_REGISTER_IMMEDIATE(operand, loc) {\
-	if (!fillRegister (isRegister(operand), bin, loc)){\
-		if(fillOffset (isValidOffset(operand), operand, offset_bits, ln, bin))\
-			bin[10]=1;\
-		else\
-			printf("Error: (line %d) invalid operand for '%s': %s\n", ln, word_buf[i], operand);\
-	}\
-}
-
-// fill and error-check an offset
-#define OPERAND_OFFSET(operand){\
-	if(!fillOffset(isValidOffset(operand), operand, offset_bits, ln, bin)){\
-		for(j=0; j<s_cnt; j++){if(strcmp(operand, symbol[j])==0){match=true; break;}}\
-		if(match){\
-			if(!fillDecOffset((dec_addr[j]-(addr+1)), offset_bits, ln, bin))\
-				printf("Error: (line %d) %d cannot be expressed in %d bits!\n", ln, (dec_addr[j]-(addr+1)), offset_bits);\
-		}\
-		else{\
-			printf("Error: (line %d) Undeclared label '%s'!\n", ln, operand);\
-		}\
-	}\
-}
+struct Alert {
+	int warn;
+	int err;
+	int exception;
+};
 
 // function declarations
 int isKeyword(char c[]);
@@ -57,9 +39,11 @@ int isTrap(char c[]);
 
 int isBranch(char c[]);
 
+int isQuote(char c);
+
 int fillRegister(int r, int bin[], int n);
 
-int fillOffset(int type, char c[], int bits, int ln, int put_bin[]);
+int offset (int type, char c[], int bits);
 
 int fillDecOffset(int off, int bits, int ln, int put_bin[]);
 
@@ -76,3 +60,9 @@ void fprintCharArr(FILE *fp, char hex[], int size);
 void decToTwoComp(int n, int bin[], int size);
 
 void binToHex(int bin[], int bin_size, char hex[], int hex_size);
+
+void op_reg_imm(char *keyword, char *op, int *bin, int loc, int offset_bits, int ln, struct Alert alert);
+
+void op_register(char *keyword, char *op, int loc, int *bin, int ln, struct Alert alert);
+
+void op_offset(char *keyword, char *op, int offset_bits, int ln, int *bin, int s_cnt, struct Symbol *symbols, int addr, struct Alert alert);

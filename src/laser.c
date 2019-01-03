@@ -23,7 +23,7 @@ int main (int argc, char *argv[]) {
 			printf ("%s", help);
 		} else if (strcmp (argv[i], "-c") == 0) {
 			i++;
-			while (i < argc) {
+			while (checkExt (argv[i], ".asm")) {
 				char fname[MAX_WORD_SIZE+5];
 				strcpy (fname, argv[i]);
 				char fname_buf[MAX_WORD_SIZE+5];
