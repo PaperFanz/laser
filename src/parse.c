@@ -7,9 +7,8 @@ void parseFile (FILE *fp, char *fname) {
 	//==========================================================================
 
 	int org_addr = 0, addr = 0, ln = 0, ln_st = 0;
-	bool orig = false, op = false;
+	bool orig = false, op = false, src = true;
 	int bin[16];
-	char addr_str[5];
 
 	char line_buf[MAX_LEN + 1];			// see definitions in laser.h
 	char word_buf[MAX_WORD_NUM][MAX_WORD_SIZE + 2];	// room for null + size
@@ -50,8 +49,8 @@ void parseFile (FILE *fp, char *fname) {
 	if (file.obj == NULL)
 		printf ("Error: Unable to open %s!\n", fname);
 
-	// symbol file header
 	fprintf (file.sym, "Symbol Name\t\t\t Page Address\n---------------------------------\n");
+	fprintf (file.lst, "Addr\tHex Op\tLine\tSource\n");
 	
 	//==========================================================================
 	//	Pass 1 - Generate Symbol file
@@ -71,11 +70,11 @@ void parseFile (FILE *fp, char *fname) {
 		lineToWords (line_buf, word_buf);
 
 		//look for .ORIG and subsequent starting address
-		if (!orig && (isPseuodoOp (word_buf[0]) == 0)) {
+		if (!orig && isPseuodoOp (word_buf[0]) == 0) {
 			org_addr = addr = addrToDec (word_buf[1]) - 1;
 			ln_st = ln;
 			decToTwoComp (addr + 1, bin, 16);
-			fprintAsm (file, bin);
+			//fprintAsm (file, bin);
 			fgetpos (fp, &pos);
 			orig = true;
 		}
@@ -88,7 +87,8 @@ void parseFile (FILE *fp, char *fname) {
 			memcpy (symbols[s_cnt].label, word_buf[0], sizeof(char) * (MAX_WORD_SIZE + 2));
 			symbols[s_cnt].addr = addr;
 			s_cnt++;
-
+			
+			char addr_str[4];
 			decToAddr (addr_str, addr);
 			putSymbol (file.sym, word_buf[0], addr_str);
 			if (word_buf[1][0] != 0x00)
@@ -115,8 +115,12 @@ void parseFile (FILE *fp, char *fname) {
 		bool comment = (line_buf[0] == ';');
 		bool empty = (line_buf[0] == '\0');
 
-		if (comment || empty)
+		if (comment || empty){
+			op = false;
+			fprintAsm (file, bin, addr, ln, line_buf, op, src);
 			continue;
+		}
+
 
 		memset (word_buf, 0, sizeof(word_buf));
 		lineToWords (line_buf, word_buf);
@@ -141,6 +145,7 @@ void parseFile (FILE *fp, char *fname) {
 		case -1:
 			break;
 		case 0:			// ORIG
+			alert.err++;
 			printf("Error: (line %d) Multiple .ORIG declaration\n\t%s", ln, line_buf);
 			break;
 		case 1:			// END, clean up and return
@@ -155,37 +160,46 @@ void parseFile (FILE *fp, char *fname) {
 				fclose(file.obj);
 			return;
 		case 2:			// STRINGZ
+			op = true;
 			memcpy (op1, word_buf[i + 1], sizeof(char) * (MAX_WORD_SIZE + 2));
 			if (isQuote (op1[0])) {
 				int i = 1;
 				while (op1[i] != '\0') {
 					if (isQuote (op1[i])){
 						memset (bin, 0, sizeof(int) * 16);
-						fprintAsm (file, bin);
+						fprintAsm (file, bin, addr, ln, line_buf, op, src);
+						src = true;
 						break;
-					}	
+					}
 					decToTwoComp (op1[i], bin, 16);
-					fprintAsm (file, bin);
+					fprintAsm (file, bin, addr, ln, line_buf, op, src);
+					if (src) src = false;
 					addr++;
 					i++;
 				}
 			} else {
+				alert.err++;
 				printf ("Error: (line %d) invalid operand for '%s': %s\n", ln, word_buf[i], op1);
 			}
 			break;
 		case 3:			// BLKW
+			op = true;
 			memcpy (op1, word_buf[i + 1], sizeof(char) * (MAX_WORD_SIZE + 2));
 			off_type = isValidOffset (op1);
 			if (off_type == 0){
+				alert.err++;
 				printf ("Error: (line %d) invalid operand for '%s': %s\n", ln, word_buf[i], op1);
 			} else {
 				for (off = offset (off_type, op1, 15); off > 0; off--){
-					fprintAsm (file, bin);
+					fprintAsm (file, bin, addr, ln, line_buf, op, src);
+					if (src) src = false;
 					addr++;
 				}
+				src = true;
 			}
 			break;
 		case 4:			// FILL
+			op = true;
 			memcpy (op1, word_buf[i + 1], sizeof(char) * (MAX_WORD_SIZE + 2));
 			off_type = isValidOffset (op1);
 			int label_addr = labelAddress (symbols, s_cnt, op1);
@@ -195,9 +209,10 @@ void parseFile (FILE *fp, char *fname) {
 			} else if (label_addr >= 0) {
 				decToTwoComp (label_addr, bin, 16);
 			} else {
+				alert.err++;
 				printf ("Error: (line %d) invalid operand for '%s': %s\n", ln, word_buf[i], op1);
 			}
-			fprintAsm (file, bin);
+			fprintAsm (file, bin, addr, ln, line_buf, op, src);
 			break;
 		default:
 			printf ("%d, Unhandled pseudoop exception!\n", isPseuodoOp (word_buf[i]));
@@ -453,8 +468,8 @@ void parseFile (FILE *fp, char *fname) {
 			break;
 		}
 
+		fprintAsm (file, bin, addr, ln, line_buf, op, src);
 		if(op){
-			fprintAsm (file, bin);
 			addr++;
 		}
 	}
@@ -482,9 +497,11 @@ void op_reg_imm (char *keyword, char *op, int *bin, int loc,
 		if(fillDecOffset (off, offset_bits, ln, bin)) {
 			bin[10]=1;
 		} else {
+			alert.err++;
 			printf("Error: (line %d) %d cannot be expressed in %d bits!\n", ln, off, offset_bits);
 		}
 	} else {
+		alert.err++;
 		printf ("Error: (line %d) invalid operand for '%s': %s\n", ln, keyword, op);
 	}
 }
@@ -495,6 +512,7 @@ void op_register (char *keyword, char *op, int loc, int *bin, int ln, struct Ale
 	if (reg >= 0) {
 		fillRegister (reg, bin, loc);
 	} else {
+		alert.err++;
 		printf ("Error: (line %d) invalid operand for '%s': %s\n", ln, keyword, op);
 	}
 }
@@ -510,9 +528,12 @@ void op_offset (char *keyword, char *op, int offset_bits, int ln,
 		int label_addr = labelAddress (symbols, s_cnt, op);
 		if (label_addr >= 0) {
 			int off = label_addr-(addr+1);
-			if(!fillDecOffset(off, offset_bits, ln, bin))
+			if(!fillDecOffset(off, offset_bits, ln, bin)){
+				alert.err++;
 				printf("Error: (line %d) %d cannot be expressed in %d bits!\n", ln, off, offset_bits);
+			}
 		} else {
+			alert.err++;
 			printf("Error: (line %d) Undeclared label '%s'!\n", ln, op);
 		}
 	}
@@ -541,10 +562,33 @@ void lineToWords (char *line_buf, char word_buf[][MAX_WORD_SIZE + 2])
 	}
 }
 
-void fprintAsm (struct File file, int *bin)
+void fprintAsm (struct File file, int *bin, int addr, int ln, char *line_buf, bool op, bool src)
 {
 	char hex[4];
-	fprintIntArr(file.bin, bin, 16);
-	binToHex(bin, 16, hex, 4);
-	fprintCharArr(file.hex, hex, 4);
+	if (op) {
+		fprintIntArr (file.bin, bin, 16);
+		fprintf (file.bin, "\n");
+		binToHex (bin, 16, hex, 4);
+		fprintCharArr (file.hex, hex, 4);
+		fprintf (file.hex, "\n");
+	}
+
+	if (op) {
+		printf ("%d\t", addr);
+		decToAddr (hex, addr);
+		printf ("%c%c%c%c\n", hex[0], hex[1], hex[2], hex[3]);
+		fprintCharArr (file.lst, hex, 4);
+		fprintf (file.lst, "\t");
+		binToHex (bin, 16, hex, 4);
+		fprintCharArr (file.lst, hex, 4);
+		fprintf (file.lst, "\t");
+	} else {
+		fprintf (file.lst, "\t\t\t\t");
+	}
+
+	if (src) {
+		fprintf (file.lst, "%d\t%s", ln, line_buf);
+	} else {
+		fprintf (file.lst, "\n");
+	}
 }

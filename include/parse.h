@@ -38,7 +38,7 @@ void lineToWords (char *line_buf, char word_buf[][MAX_WORD_SIZE + 2]);
 
 char *replaceExt (char *filename, const char *ext);
 
-void fprintAsm (struct File file, int *bin);
+void fprintAsm (struct File file, int *bin, int addr, int ln, char *line_buf, bool op, bool src);
 
 int isKeyword(char c[]);
 

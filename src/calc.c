@@ -107,7 +107,6 @@ void fprintIntArr (FILE *fp, int num[], int size)
 {
 	for (int i = 0; i <= size - 1; i++)
 		fprintf(fp, "%d", num[i]);
-	fprintf(fp, "\n");
 }
 
 void printCharArr (char hex[], int size)
@@ -121,7 +120,6 @@ void fprintCharArr (FILE *fp, char hex[], int size)
 {
 	for (int i = 0; i <= size - 1; i++)
 		fprintf (fp, "%c", hex[i]);
-	fprintf (fp, "\n");
 }
 
 void putSymbol (FILE *fp, char symbol[], char addr[])
@@ -130,5 +128,7 @@ void putSymbol (FILE *fp, char symbol[], char addr[])
 	fprintf (fp, "%s", symbol);
 	for (i = 6 - (symbol[MAX_WORD_SIZE + 1] / TABSIZE); i >= 0; i--)
 		fprintf (fp, "\t");
-	fprintf (fp, "x%s\n", addr);
+	fprintf (fp, "x");
+	fprintCharArr(fp, addr, 4);
+	fprintf (fp, "\n");
 }
