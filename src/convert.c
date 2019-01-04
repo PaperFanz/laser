@@ -89,10 +89,15 @@ int isValidOffset(char c[])
 	else return 0;
 }
 
-int isLabel(char c[])
+int isLabel(char *c)
 {
-	if((isKeyword(c)<0)&&(isPseuodoOp(c)<0)&&(isValidOffset(c)==0)) return 1;
-	else return 0;
+	int keyword = isKeyword (c);
+	int pseudoop = isPseuodoOp (c);
+	int off_type = isValidOffset (c);
+	if(keyword < 0 && pseudoop < 0 && off_type == 0 && c[0] != '\0')
+		return 1;
+	else
+		return 0;
 }
 
 int isTrap(char c[])
@@ -119,6 +124,24 @@ int isQuote(char c)
 		return 1;
 	else
 		return 0;
+}
+
+int isOrig (char word_buf[][22])
+{
+	for (int i = 0; i < MAX_WORD_NUM; i++) {
+		if (isPseuodoOp (word_buf[i]) == 0)
+			return i;
+	}
+	return -1;
+}
+
+int isEnd (char word_buf[][22])
+{
+	for (int i = 0; i < MAX_WORD_NUM; i++) {
+		if (isPseuodoOp (word_buf[i]) == 1)
+			return 1;
+	}
+	return -1;
 }
 
 //==============================================================================
@@ -238,6 +261,14 @@ int hexToDec(char hex[])
 	i--;
 	if(isHexChar(hex[1])>=8) dec_num=dec_num-pow(2, (4*i));
 	return dec_num;
+}
+
+unsigned char byteValue (char hex[2])
+{
+	unsigned char value = 0;
+	value += isHexChar (hex[0]) * 16;
+	value += isHexChar (hex[1]);
+	return value;
 }
 
 // note: only handles positive numbers, intended for use with addresses

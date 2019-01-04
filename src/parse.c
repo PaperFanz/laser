@@ -10,7 +10,7 @@ void parseFile (FILE *fp, char *fname) {
 	bool orig = false, op = false, src = true;
 	int bin[16];
 
-	char line_buf[MAX_LEN + 1];			// see definitions in laser.h
+	char line_buf[MAX_LEN + 1];
 	char word_buf[MAX_WORD_NUM][MAX_WORD_SIZE + 2];	// room for null + size
 
 	int s_cnt = 0;
@@ -48,9 +48,10 @@ void parseFile (FILE *fp, char *fname) {
 	file.obj = fopen (fname, "w");
 	if (file.obj == NULL)
 		printf ("Error: Unable to open %s!\n", fname);
+	replaceExt(fname, ".asm");
 
 	fprintf (file.sym, "Symbol Name\t\t\t Page Address\n---------------------------------\n");
-	fprintf (file.lst, "Addr\tHex Op\tLine\tSource\n");
+	fprintf (file.lst, " Addr |  Hex  | Line |\tSource\n");
 	
 	//==========================================================================
 	//	Pass 1 - Generate Symbol file
@@ -60,6 +61,7 @@ void parseFile (FILE *fp, char *fname) {
 
 	while(fgets (line_buf, MAX_LEN + 1, fp) != NULL) {
 		ln++;
+
 		bool comment = (line_buf[0] == ';');
 		bool empty = (line_buf[0] == '\0');
 
@@ -69,34 +71,188 @@ void parseFile (FILE *fp, char *fname) {
 		memset (word_buf, 0, sizeof(word_buf));
 		lineToWords (line_buf, word_buf);
 
-		//look for .ORIG and subsequent starting address
-		if (!orig && isPseuodoOp (word_buf[0]) == 0) {
-			org_addr = addr = addrToDec (word_buf[1]) - 1;
-			ln_st = ln;
-			decToTwoComp (addr + 1, bin, 16);
-			//fprintAsm (file, bin);
-			fgetpos (fp, &pos);
-			orig = true;
-		}
-		if (isPseuodoOp (word_buf[0]) == 1) {
+		if (!orig) {
+			op = false;
+			src = true;
+			int o = isOrig (word_buf);
+			if (o >= 0) {
+				op = true;
+				org_addr = addr = addrToDec (word_buf[o + 1]);
+				ln_st = ln;
+				decToTwoComp (addr, bin, 16);
+				fgetpos (fp, &pos);
+				orig = true;
+			}
+			fprintAsm (file, bin, addr, ln, line_buf, op, src);
+		} else if (isEnd (word_buf) >= 0) {
 			break;
-		}
-		
-		if (orig && isLabel(word_buf[0])) {
-			symbols = realloc (symbols, (s_cnt + 1) * sizeof (struct Symbol));
-			memcpy (symbols[s_cnt].label, word_buf[0], sizeof(char) * (MAX_WORD_SIZE + 2));
-			symbols[s_cnt].addr = addr;
-			s_cnt++;
-			
-			char addr_str[4];
-			decToAddr (addr_str, addr);
-			putSymbol (file.sym, word_buf[0], addr_str);
-			if (word_buf[1][0] != 0x00)
-				addr++;
-		} else if (orig){
-			addr++;
+		} else {
+			int i;
+			int keyword, pseudoop, label;
+			for (i = 0; i < MAX_WORD_NUM; i++) {
+				char *c = word_buf[i];
+				keyword = isKeyword (word_buf[i]);
+				pseudoop = isPseuodoOp (word_buf[i]);
+				label = isLabel (word_buf[i]);
+				if (label && i == 0) {
+					symbols = realloc (symbols, (s_cnt + 1) * sizeof (struct Symbol));
+					memcpy (symbols[s_cnt].label, c, sizeof(char) * (MAX_WORD_SIZE + 2));
+					symbols[s_cnt].addr = addr;
+					s_cnt++;
+					
+					char addr_str[4];
+					decToAddr (addr_str, addr);
+					putSymbol (file.sym, c, addr_str);
+				} else if (label && i >= 0) {
+					symbols = realloc (symbols, (s_cnt + 1) * sizeof (struct Symbol));
+					memcpy (symbols[s_cnt].label, c, sizeof(char) * (MAX_WORD_SIZE + 2));
+					symbols[s_cnt].addr = addr;
+					s_cnt++;
+					
+					char addr_str[4];
+					decToAddr (addr_str, addr);
+					putSymbol (file.sym, c, addr_str);
+
+					alert.warn++;
+					printf ("Warning: (%s line %d) ", fname, ln);
+					printf ("multiple label declaration!\n%s", line_buf);
+					printf ("\tConsider consolidating labels.\n");
+				} else if (word_buf[i][0] == '\0') {
+					break;
+				} else if (!isValidOffset (word_buf[i])) {
+					addr++;
+					break;
+				} else {
+					alert.err++;
+					printf ("Error: (%s line %d) ", fname, ln);
+					printf ("Unrecognized syntax!\n%s", line_buf);
+					break;
+				}
+			}
+
+			int op_num = 0;
+			int off = 0;
+
+			switch (pseudoop) {
+			case -1:
+				break;
+			case 0:		// ORIG
+				op_num = 1;
+				alert.err++;
+				printf ("Error: (%s line %d) ", fname, ln);
+				printf ("Multiple .ORIG declaration!\n%s", line_buf);
+				break;
+			case 1:		// END
+				alert.exception++;
+				printf ("%d: Unhandled exception!\n", pseudoop);
+				break;
+			case 2:		// STRINGZ
+				op_num = 1;
+				for (int j = word_buf[i][MAX_WORD_SIZE+1] - 4; j >=0; j--) {
+					addr++;
+				}
+				break;
+			case 3:		// BLKW
+				op_num = 1;
+				off = offset (isValidOffset (word_buf[i + 1]), word_buf[i + 1], 15);
+				for (int j = off; j > 0; j--) {
+					addr++;
+				}
+				break;
+			case 4:		// FILL
+				op_num = 1;
+				break;
+			default:
+				alert.exception++;
+				printf ("%d: Unhandled exception!\n", pseudoop);
+				break;
+			}
+
+			switch (keyword) {
+			case -1:
+				break;
+			case 0:		// BR
+				op_num = 1;
+				break;
+			case 1:		// ADD
+				op_num = 3;
+				break;
+			case 2:		// LD
+				op_num = 2;
+				break;
+			case 3:		// ST
+				op_num = 2;
+				break;
+			case 4:		// JSR & JSRR
+				op_num = 1;
+				break;
+			case 5:		// AND
+				op_num = 3;
+				break;
+			case 6:		// LDR
+				op_num = 3;
+				break;
+			case 7:		// STR
+				op_num = 3;
+				break;
+			case 8:		// RTI
+				op_num = 0;
+				break;
+			case 9:		// NOT
+				op_num = 2;
+				break;
+			case 10:	// LDI
+				op_num = 2;
+				break;
+			case 11:	// STI
+				op_num = 2;
+				break;
+			case 12:	// JMP & RET
+				if(strcmp(word_buf[i], "RET")==0||strcmp(word_buf[i], "ret")==0)
+					op_num = 0;
+				else
+					op_num = 1;
+				break;
+			case 14:	// LEA
+				op_num = 2;
+				break;
+			case 15:	// TRAP
+				if (isTrap (word_buf[i]) > 1)
+					op_num = 0;
+				else
+					op_num = 1;
+				break;
+			default:
+				alert.exception++;
+				printf ("%d: Unhandled exception!\n", keyword);
+				break;
+			}
+
+			if (pseudoop >= 0 || keyword >= 0)
+				i++;
+
+			char c;
+			if (op_num == 1)
+				c = '\0';
+			else
+				c = 's';
+
+			if ((countWords (i, word_buf) - op_num) > 0) {
+				alert.warn++;
+				printf ("Warning: (%s line %d) ", fname, ln);
+				printf ("'%s' takes %d operand%c!\n", word_buf[i-1], op_num, c);
+				printf ("%s", line_buf);
+			} else if ((countWords (i, word_buf) - op_num) < 0) {
+				alert.err++;
+				printf ("Error: (%s line %d) ", fname, ln);
+				printf ("'%s' takes %d operand%c!\n", word_buf[i-1], op_num, c);
+				printf ("%s", line_buf);
+			}
 		}
 	}
+
+	printAlertSummary (alert);
+
 	if (file.sym != NULL)
 		fclose(file.sym);
 
@@ -106,9 +262,17 @@ void parseFile (FILE *fp, char *fname) {
 
 	printf ("Pass 2:\n");
 
+	struct Alert alert_st;
+	alert_st.err = alert.err;
+	alert_st.exception = alert.exception;
+
+	alert.warn = 0;
+	alert.err = 0;
+	alert.exception = 0;
+
 	fsetpos (fp, &pos);		// sets starting pos to origin pos, save some reads
 	ln = ln_st;
-	addr = org_addr + 1;
+	addr = org_addr;
 
 	while(fgets(line_buf, MAX_LEN+1, fp)!=NULL){
 		ln++;
@@ -130,13 +294,16 @@ void parseFile (FILE *fp, char *fname) {
 		//======================================================================
 
 		memset (bin, 0, sizeof(int) * 16);		// clear bin array
-		int i = 0;
-		op = false;							// reset opcode indicator
+		
+		op = false;
+		src = true;
 		int offset_bits = 0;
 		int off, off_type;
-		char op1[MAX_WORD_SIZE + 2];
-		char op2[MAX_WORD_SIZE + 2];
-		char op3[MAX_WORD_SIZE + 2];
+		char *op1;
+		char *op2;
+		char *op3;
+
+		int i = 0;
 
 		while (labelAddress (symbols, s_cnt, word_buf[i]) >= 0)
 			i++;
@@ -146,9 +313,14 @@ void parseFile (FILE *fp, char *fname) {
 			break;
 		case 0:			// ORIG
 			alert.err++;
-			printf("Error: (line %d) Multiple .ORIG declaration\n\t%s", ln, line_buf);
+			printf ("Error: (%s line %d) ", fname, ln);
+			printf ("Multiple .ORIG declaration\n%s", line_buf);
 			break;
 		case 1:			// END, clean up and return
+			printAlertSummary (alert);
+			alert.err += alert_st.err;
+			alert.exception += alert_st.exception;
+
 			free(symbols);
 			if (file.bin != NULL)
 				fclose(file.bin);
@@ -158,17 +330,40 @@ void parseFile (FILE *fp, char *fname) {
 				fclose(file.lst);
 			if (file.obj != NULL)
 				fclose(file.obj);
+
+			if (alert.err > 0 || alert.exception > 0) {	// clear written files
+				replaceExt(fname, ".sym");
+				file.sym = fopen (fname, "w");
+				replaceExt(fname, ".bin");
+				file.bin = fopen (fname, "w");
+				replaceExt(fname, ".hex");
+				file.hex = fopen (fname, "w");
+				replaceExt(fname, ".lst");
+				file.lst = fopen (fname, "w");
+				replaceExt(fname, ".obj");
+				file.obj = fopen (fname, "w");
+
+				if (file.bin != NULL)
+					fclose(file.bin);
+				if (file.hex != NULL)
+					fclose(file.hex);
+				if (file.lst != NULL)
+					fclose(file.lst);
+				if (file.obj != NULL)
+					fclose(file.obj);
+			}
+
 			return;
 		case 2:			// STRINGZ
 			op = true;
-			memcpy (op1, word_buf[i + 1], sizeof(char) * (MAX_WORD_SIZE + 2));
+			op1 = word_buf[i + 1];
 			if (isQuote (op1[0])) {
 				int i = 1;
 				while (op1[i] != '\0') {
 					if (isQuote (op1[i])){
 						memset (bin, 0, sizeof(int) * 16);
 						fprintAsm (file, bin, addr, ln, line_buf, op, src);
-						src = true;
+						addr++;
 						break;
 					}
 					decToTwoComp (op1[i], bin, 16);
@@ -179,28 +374,35 @@ void parseFile (FILE *fp, char *fname) {
 				}
 			} else {
 				alert.err++;
-				printf ("Error: (line %d) invalid operand for '%s': %s\n", ln, word_buf[i], op1);
+				printf ("Error: (%s line %d) ", fname, ln);
+				printf ("invalid operand for '%s': %s\n", word_buf[i], op1);
 			}
+			op = false;
 			break;
 		case 3:			// BLKW
 			op = true;
-			memcpy (op1, word_buf[i + 1], sizeof(char) * (MAX_WORD_SIZE + 2));
+			src = true;
+			op1 = word_buf[i + 1];
 			off_type = isValidOffset (op1);
 			if (off_type == 0){
 				alert.err++;
-				printf ("Error: (line %d) invalid operand for '%s': %s\n", ln, word_buf[i], op1);
+				printf ("Error: (%s line %d) ", fname, ln);
+				printf ("invalid operand for '%s': %s\n", word_buf[i], op1);
 			} else {
+				addr++;
 				for (off = offset (off_type, op1, 15); off > 0; off--){
 					fprintAsm (file, bin, addr, ln, line_buf, op, src);
 					if (src) src = false;
 					addr++;
 				}
-				src = true;
 			}
+			op = false;
+			src = false;
 			break;
 		case 4:			// FILL
 			op = true;
-			memcpy (op1, word_buf[i + 1], sizeof(char) * (MAX_WORD_SIZE + 2));
+			src = true;
+			op1 = word_buf[i + 1];
 			off_type = isValidOffset (op1);
 			int label_addr = labelAddress (symbols, s_cnt, op1);
 			if (off_type > 0) {
@@ -210,9 +412,9 @@ void parseFile (FILE *fp, char *fname) {
 				decToTwoComp (label_addr, bin, 16);
 			} else {
 				alert.err++;
-				printf ("Error: (line %d) invalid operand for '%s': %s\n", ln, word_buf[i], op1);
+				printf ("Error: (%s line %d) ", fname, ln);
+				printf ("invalid operand for '%s': %s\n", word_buf[i], op1);
 			}
-			fprintAsm (file, bin, addr, ln, line_buf, op, src);
 			break;
 		default:
 			printf ("%d, Unhandled pseudoop exception!\n", isPseuodoOp (word_buf[i]));
@@ -254,9 +456,9 @@ void parseFile (FILE *fp, char *fname) {
 				break;
 			}
 
-			memcpy (op1, word_buf[i + 1], sizeof(char) * (MAX_WORD_SIZE + 2));
+			op1 = word_buf[i + 1];
 
-			op_offset (word_buf[i], op1, offset_bits, ln, bin, s_cnt, symbols, addr, alert);
+			op_offset (word_buf[i], op1, offset_bits, ln, bin, s_cnt, symbols, addr, &alert, fname);
 			break;
 		case 1:			// ADD
 			op = true;
@@ -264,13 +466,13 @@ void parseFile (FILE *fp, char *fname) {
 			offset_bits = 5;
 			
 
-			memcpy (op1, word_buf[i + 1], sizeof(char) * (MAX_WORD_SIZE + 2));
-			memcpy (op2, word_buf[i + 2], sizeof(char) * (MAX_WORD_SIZE + 2));
-			memcpy (op3, word_buf[i + 3], sizeof(char) * (MAX_WORD_SIZE + 2));
+			op1 = word_buf[i + 1];
+			op2 = word_buf[i + 2];
+			op3 = word_buf[i + 3];
 
-			op_register (word_buf[i], op1, 0, bin, ln, alert);
-			op_register (word_buf[i], op2, 1, bin, ln, alert);
-			op_reg_imm (word_buf[i], op3, bin, 2, offset_bits, ln, alert);
+			op_register (word_buf[i], op1, 0, bin, ln, &alert, fname);
+			op_register (word_buf[i], op2, 1, bin, ln, &alert, fname);
+			op_reg_imm (word_buf[i], op3, bin, 2, offset_bits, ln, &alert, fname);
 			break;
 		case 2:			// LD
 			op = true;
@@ -278,11 +480,11 @@ void parseFile (FILE *fp, char *fname) {
 			offset_bits = 9;
 			
 
-			memcpy (op1, word_buf[i + 1], sizeof(char) * (MAX_WORD_SIZE + 2));
-			memcpy (op2, word_buf[i + 2], sizeof(char) * (MAX_WORD_SIZE + 2));
+			op1 = word_buf[i + 1];
+			op2 = word_buf[i + 2];
 
-			op_register (word_buf[i], op1, 0, bin, ln, alert);
-			op_offset (word_buf[i], op2, offset_bits, ln, bin, s_cnt, symbols, addr, alert);
+			op_register (word_buf[i], op1, 0, bin, ln, &alert, fname);
+			op_offset (word_buf[i], op2, offset_bits, ln, bin, s_cnt, symbols, addr, &alert, fname);
 			break;
 		case 3:			// ST
 			op = true;
@@ -290,11 +492,11 @@ void parseFile (FILE *fp, char *fname) {
 			offset_bits = 9;
 			
 
-			memcpy (op1, word_buf[i + 1], sizeof(char) * (MAX_WORD_SIZE + 2));
-			memcpy (op2, word_buf[i + 2], sizeof(char) * (MAX_WORD_SIZE + 2));
+			op1 = word_buf[i + 1];
+			op2 = word_buf[i + 2];
 
-			op_register (word_buf[i], op1, 0, bin, ln, alert);
-			op_offset (word_buf[i], op2, offset_bits, ln, bin, s_cnt, symbols, addr, alert);
+			op_register (word_buf[i], op1, 0, bin, ln, &alert, fname);
+			op_offset (word_buf[i], op2, offset_bits, ln, bin, s_cnt, symbols, addr, &alert, fname);
 			break;
 		case 4:			// JSR and JSRR, check addr mode
 			op = true;
@@ -302,20 +504,14 @@ void parseFile (FILE *fp, char *fname) {
 			if (strcmp (word_buf[i], "JSR") == 0 || strcmp (word_buf[i], "jsr") == 0) {
 				bin[4] = 1;
 				offset_bits = 11;
-				
 
-				memcpy (op1, word_buf[i + 1], sizeof(char) * (MAX_WORD_SIZE + 2));
+				op1 = word_buf[i + 1];
 
-				//OPERAND_OFFSET (op1);
+				op_offset( word_buf[i], op1, offset_bits, ln, bin, s_cnt, symbols, addr, &alert, fname);
 			} else {
-				offset_bits = 6;
-				
+				op1 = word_buf[i + 1];
 
-				memcpy (op1, word_buf[i + 1], sizeof(char) * (MAX_WORD_SIZE + 2));
-				memcpy (op2, word_buf[i + 2], sizeof(char) * (MAX_WORD_SIZE + 2));
-
-				op_register (word_buf[i], op1, 1, bin, ln, alert);
-				op_offset (word_buf[i], op2, offset_bits, ln, bin, s_cnt, symbols, addr, alert);
+				op_register (word_buf[i], op1, 1, bin, ln, &alert, fname);
 			}
 			break;
 		case 5:			// AND
@@ -324,13 +520,13 @@ void parseFile (FILE *fp, char *fname) {
 			offset_bits = 5;
 			
 
-			memcpy (op1, word_buf[i + 1], sizeof(char) * (MAX_WORD_SIZE + 2));
-			memcpy (op2, word_buf[i + 2], sizeof(char) * (MAX_WORD_SIZE + 2));
-			memcpy (op3, word_buf[i + 3], sizeof(char) * (MAX_WORD_SIZE + 2));
+			op1 = word_buf[i + 1];
+			op2 = word_buf[i + 2];
+			op3 = word_buf[i + 3];
 
-			op_register (word_buf[i], op1, 0, bin, ln, alert);
-			op_register (word_buf[i], op2, 1, bin, ln, alert);
-			op_reg_imm (word_buf[i], op3, bin, 2, offset_bits, ln, alert);
+			op_register (word_buf[i], op1, 0, bin, ln, &alert, fname);
+			op_register (word_buf[i], op2, 1, bin, ln, &alert, fname);
+			op_reg_imm (word_buf[i], op3, bin, 2, offset_bits, ln, &alert, fname);
 			break;
 		case 6:			// LDR
 			op = true;
@@ -338,13 +534,13 @@ void parseFile (FILE *fp, char *fname) {
 			offset_bits = 6;
 			
 			
-			memcpy (op1, word_buf[i + 1], sizeof(char) * (MAX_WORD_SIZE + 2));
-			memcpy (op2, word_buf[i + 2], sizeof(char) * (MAX_WORD_SIZE + 2));
-			memcpy (op3, word_buf[i + 3], sizeof(char) * (MAX_WORD_SIZE + 2));
+			op1 = word_buf[i + 1];
+			op2 = word_buf[i + 2];
+			op3 = word_buf[i + 3];
 
-			op_register (word_buf[i], op1, 0, bin, ln, alert);
-			op_register (word_buf[i], op2, 1, bin, ln, alert);
-			op_offset (word_buf[i], op3, offset_bits, ln, bin, s_cnt, symbols, addr, alert);
+			op_register (word_buf[i], op1, 0, bin, ln, &alert, fname);
+			op_register (word_buf[i], op2, 1, bin, ln, &alert, fname);
+			op_offset (word_buf[i], op3, offset_bits, ln, bin, s_cnt, symbols, addr, &alert, fname);
 			break;
 		case 7:			// STR
 			op = true;
@@ -352,13 +548,13 @@ void parseFile (FILE *fp, char *fname) {
 			offset_bits = 6;
 			
 			
-			memcpy (op1, word_buf[i + 1], sizeof(char) * (MAX_WORD_SIZE + 2));
-			memcpy (op2, word_buf[i + 2], sizeof(char) * (MAX_WORD_SIZE + 2));
-			memcpy (op3, word_buf[i + 3], sizeof(char) * (MAX_WORD_SIZE + 2));
+			op1 = word_buf[i + 1];
+			op2 = word_buf[i + 2];
+			op3 = word_buf[i + 3];
 
-			op_register (word_buf[i], op1, 0, bin, ln, alert);
-			op_register (word_buf[i], op2, 1, bin, ln, alert);
-			op_offset (word_buf[i], op3, offset_bits, ln, bin, s_cnt, symbols, addr, alert);
+			op_register (word_buf[i], op1, 0, bin, ln, &alert, fname);
+			op_register (word_buf[i], op2, 1, bin, ln, &alert, fname);
+			op_offset (word_buf[i], op3, offset_bits, ln, bin, s_cnt, symbols, addr, &alert, fname);
 			break;
 		case 8:			// RTI
 			op = true;
@@ -369,11 +565,11 @@ void parseFile (FILE *fp, char *fname) {
 			bin[0] = bin[3] = bin[10] = bin[11] = bin[12] = bin[13] = bin[14] = bin[15] = 1;
 			
 
-			memcpy (op1, word_buf[i + 1], sizeof(char) * (MAX_WORD_SIZE + 2));
-			memcpy (op2, word_buf[i + 2], sizeof(char) * (MAX_WORD_SIZE + 2));
+			op1 = word_buf[i + 1];
+			op2 = word_buf[i + 2];
 
-			op_register (word_buf[i], op1, 0, bin, ln, alert);
-			op_register (word_buf[i], op2, 1, bin, ln, alert);
+			op_register (word_buf[i], op1, 0, bin, ln, &alert, fname);
+			op_register (word_buf[i], op2, 1, bin, ln, &alert, fname);
 			break;
 		case 10:		// LDI
 			op = true;
@@ -381,11 +577,11 @@ void parseFile (FILE *fp, char *fname) {
 			offset_bits = 9;
 			
 
-			memcpy (op1, word_buf[i + 1], sizeof(char) * (MAX_WORD_SIZE + 2));
-			memcpy (op2, word_buf[i + 2], sizeof(char) * (MAX_WORD_SIZE + 2));
+			op1 = word_buf[i + 1];
+			op2 = word_buf[i + 2];
 
-			op_register (word_buf[i], op1, 0, bin, ln, alert);
-			op_offset (word_buf[i], op2, offset_bits, ln, bin, s_cnt, symbols, addr, alert);
+			op_register (word_buf[i], op1, 0, bin, ln, &alert, fname);
+			op_offset (word_buf[i], op2, offset_bits, ln, bin, s_cnt, symbols, addr, &alert, fname);
 			break;
 		case 11:		// STI
 			op=true;
@@ -393,24 +589,22 @@ void parseFile (FILE *fp, char *fname) {
 			offset_bits=9;
 			
 
-			memcpy (op1, word_buf[i + 1], sizeof(char) * (MAX_WORD_SIZE + 2));
-			memcpy (op2, word_buf[i + 2], sizeof(char) * (MAX_WORD_SIZE + 2));
+			op1 = word_buf[i + 1];
+			op2 = word_buf[i + 2];
 
-			op_register (word_buf[i], op1, 0, bin, ln, alert);
-			op_offset (word_buf[i], op2, offset_bits, ln, bin, s_cnt, symbols, addr, alert);
+			op_register (word_buf[i], op1, 0, bin, ln, &alert, fname);
+			op_offset (word_buf[i], op2, offset_bits, ln, bin, s_cnt, symbols, addr, &alert, fname);
 			break;
 		case 12:		// JMP and RET, check shortcut
 			op=true;
 			bin[0]=bin[1]=1;
 
 			if(strcmp(word_buf[i], "RET")==0||strcmp(word_buf[i], "ret")==0){
-				
 				bin[7]=bin[8]=bin[9]=1;
 			}
 			else{
-				
-				memcpy (op1, word_buf[i + 1], sizeof(char) * (MAX_WORD_SIZE + 2));
-				op_register (word_buf[i], op1, 1, bin, ln, alert);
+				op1 = word_buf[i + 1];
+				op_register (word_buf[i], op1, 1, bin, ln, &alert, fname);
 			}
 			break;
 		case 14:		// LEA
@@ -419,11 +613,11 @@ void parseFile (FILE *fp, char *fname) {
 			offset_bits = 9;
 			
 
-			memcpy (op1, word_buf[i + 1], sizeof(char) * (MAX_WORD_SIZE + 2));
-			memcpy (op2, word_buf[i + 2], sizeof(char) * (MAX_WORD_SIZE + 2));
+			op1 = word_buf[i + 1];
+			op2 = word_buf[i + 2];
 
-			op_register (word_buf[i], op1, 0, bin, ln, alert);
-			op_offset (word_buf[i], op2, offset_bits, ln, bin, s_cnt, symbols, addr, alert);
+			op_register (word_buf[i], op1, 0, bin, ln, &alert, fname);
+			op_offset (word_buf[i], op2, offset_bits, ln, bin, s_cnt, symbols, addr, &alert, fname);
 			break;
 		case 15:		// TRAP, check shortcuts
 			op = true;
@@ -436,8 +630,7 @@ void parseFile (FILE *fp, char *fname) {
 			case -1:
 				break;
 			case 0 ... 1:
-				
-				memcpy (op1, word_buf[i + 1], sizeof(char) * (MAX_WORD_SIZE + 2));
+				op1 = word_buf[i + 1];
 				break;
 			case 2 ... 3:
 				op1[0] = 'x'; op1[1] = '2'; op1[2] = '0';
@@ -461,7 +654,7 @@ void parseFile (FILE *fp, char *fname) {
 				break;
 			}
 
-			op_offset (word_buf[i], op1, offset_bits, ln, bin, s_cnt, symbols, addr, alert);
+			op_offset (word_buf[i], op1, offset_bits, ln, bin, s_cnt, symbols, addr, &alert, fname);
 			break;
 		default:
 			printf ("%d Unhandled keyword exception!\n", isKeyword (word_buf[i]));
@@ -469,9 +662,8 @@ void parseFile (FILE *fp, char *fname) {
 		}
 
 		fprintAsm (file, bin, addr, ln, line_buf, op, src);
-		if(op){
+		if(op)
 			addr++;
-		}
 	}
 }
 
@@ -485,7 +677,7 @@ int labelAddress (struct Symbol *symbols, int s_cnt, char *label)
 }
 
 void op_reg_imm (char *keyword, char *op, int *bin, int loc,
-				int offset_bits, int ln, struct Alert alert)
+				int offset_bits, int ln, struct Alert *alert, char *fname)
 {
 	int off;
 	int reg = isRegister (op);
@@ -497,28 +689,31 @@ void op_reg_imm (char *keyword, char *op, int *bin, int loc,
 		if(fillDecOffset (off, offset_bits, ln, bin)) {
 			bin[10]=1;
 		} else {
-			alert.err++;
-			printf("Error: (line %d) %d cannot be expressed in %d bits!\n", ln, off, offset_bits);
+			alert->err++;
+			printf ("Error: (%s line %d) ", fname, ln);
+			printf ("%d cannot be expressed in %d bits!\n", off, offset_bits);
 		}
 	} else {
-		alert.err++;
-		printf ("Error: (line %d) invalid operand for '%s': %s\n", ln, keyword, op);
+		alert->err++;
+		printf ("Error: (%s line %d) ", fname, ln);
+		printf ("invalid operand for '%s': %s\n", keyword, op);
 	}
 }
 
-void op_register (char *keyword, char *op, int loc, int *bin, int ln, struct Alert alert)
+void op_register (char *keyword, char *op, int loc, int *bin, int ln, struct Alert *alert, char *fname)
 {
 	int reg = isRegister(op);
 	if (reg >= 0) {
 		fillRegister (reg, bin, loc);
 	} else {
-		alert.err++;
-		printf ("Error: (line %d) invalid operand for '%s': %s\n", ln, keyword, op);
+		alert->err++;
+		printf ("Error: (%s line %d) ", fname, ln);
+		printf ("invalid operand for '%s': %s\n", keyword, op);
 	}
 }
 
 void op_offset (char *keyword, char *op, int offset_bits, int ln,
-				int *bin, int s_cnt, struct Symbol *symbols, int addr, struct Alert alert)
+				int *bin, int s_cnt, struct Symbol *symbols, int addr, struct Alert *alert, char *fname)
 {
 	int off_type = isValidOffset (op);
 	if (off_type > 0) {
@@ -529,12 +724,14 @@ void op_offset (char *keyword, char *op, int offset_bits, int ln,
 		if (label_addr >= 0) {
 			int off = label_addr-(addr+1);
 			if(!fillDecOffset(off, offset_bits, ln, bin)){
-				alert.err++;
-				printf("Error: (line %d) %d cannot be expressed in %d bits!\n", ln, off, offset_bits);
+				alert->err++;
+				printf ("Error: (%s line %d) ", fname, ln);
+				printf ("%d cannot be expressed in %d bits!\n", off, offset_bits);
 			}
 		} else {
-			alert.err++;
-			printf("Error: (line %d) Undeclared label '%s'!\n", ln, op);
+			alert->err++;
+			printf ("Error: (%s line %d) ", fname, ln);
+			printf ("Undeclared label '%s'!\n", op);
 		}
 	}
 }
@@ -562,33 +759,91 @@ void lineToWords (char *line_buf, char word_buf[][MAX_WORD_SIZE + 2])
 	}
 }
 
+int countWords (int offset, char word_buf[][MAX_WORD_SIZE + 2])
+{
+	int i;
+	for (i = 0; i < MAX_WORD_NUM; i++){
+		if (word_buf[i][0] == '\0')
+			break;
+	}
+	return i - offset;
+}
+
 void fprintAsm (struct File file, int *bin, int addr, int ln, char *line_buf, bool op, bool src)
 {
 	char hex[4];
 	if (op) {
+		char byte[2];
+		unsigned char value;
 		fprintIntArr (file.bin, bin, 16);
 		fprintf (file.bin, "\n");
 		binToHex (bin, 16, hex, 4);
 		fprintCharArr (file.hex, hex, 4);
 		fprintf (file.hex, "\n");
+
+		byte[0] = hex[0];
+		byte[1] = hex[1];
+		value = byteValue (byte);
+		fwrite (&value, sizeof(value), 1, file.obj);
+
+		byte[0] = hex[2];
+		byte[1] = hex[3];
+		value = byteValue (byte);
+		fwrite (&value, sizeof(value), 1, file.obj);
 	}
 
 	if (op) {
-		printf ("%d\t", addr);
+		fprintf(file.lst, " ");
 		decToAddr (hex, addr);
-		printf ("%c%c%c%c\n", hex[0], hex[1], hex[2], hex[3]);
 		fprintCharArr (file.lst, hex, 4);
-		fprintf (file.lst, "\t");
+		fprintf (file.lst, " | x");
 		binToHex (bin, 16, hex, 4);
 		fprintCharArr (file.lst, hex, 4);
-		fprintf (file.lst, "\t");
-	} else {
-		fprintf (file.lst, "\t\t\t\t");
+		fprintf (file.lst, " | ");
+	} else if (src) {
+		fprintf (file.lst, "      |       | ");
 	}
 
 	if (src) {
-		fprintf (file.lst, "%d\t%s", ln, line_buf);
-	} else {
-		fprintf (file.lst, "\n");
+		fprintf (file.lst, "%d", ln);
+		int n = ln;
+		while (n < 10000){
+			fprintf (file.lst, " ");
+			n *= 10;
+		}
+		fprintf (file.lst, "|\t%s", line_buf);
+	} else if (op) {
+		fprintf (file.lst, "     |\n");
 	}
+}
+
+void addSymbol (struct Symbol *symbols, int s_cnt, char *c, int addr, struct File file)
+{
+	symbols = realloc (symbols, (s_cnt + 1) * sizeof (struct Symbol));
+	memcpy (symbols[s_cnt].label, c, sizeof(char) * (MAX_WORD_SIZE + 2));
+	symbols[s_cnt].addr = addr;
+	
+	char addr_str[4];
+	decToAddr (addr_str, addr);
+	putSymbol (file.sym, c, addr_str);
+}
+
+void printAlertSummary (struct Alert alert)
+{
+	char warn, err, exception;
+	if (alert.err == 1)
+		err = '\0';
+	else
+		err = 's';
+	if (alert.exception == 1)
+		exception = '\0';
+	else
+		exception = 's';
+	if (alert.warn == 1)
+		warn = '\0';
+	else
+		warn = 's';
+	printf ("%d error%c,", alert.err, err);
+	printf (" %d warning%c,", alert.warn, warn);
+	printf (" and %d exception%c!\n", alert.exception, exception);
 }
