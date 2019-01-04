@@ -59,9 +59,6 @@ int isHexChar(char c)
 	return -1;
 }
 
-// printf("Invalid hex number at line %d: %s\n", ln, c);
-// printf("Invalid binary number at line %d: %s\n", ln, c);
-
 int isValidOffset(char c[])
 {
 	int i=1;

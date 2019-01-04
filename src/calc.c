@@ -1,13 +1,26 @@
 #include "calc.h"
 
-int checkExt (const char *filename, const char *ext){
+int checkExt (const char *filename, const char *ext)
+{
 	char *dot=strrchr(filename, '.');
 	if(strcmp(dot, ext)==0) return 1;
 	else return 0;
 }
 
+char *replaceExt (char *filename, const char *ext)
+{
+	char *dot=strrchr(filename, '.');
+	int i=0;
+	while (dot[i] != '\0') {
+		dot[i] = ext [i];
+		i++;
+	}
+	return filename;
+}
+
 // .bin generator functions
-int fillRegister (int r, int bin[], int n){
+int fillRegister (int r, int bin[], int n)
+{
 	if(n==2) n++;
 	int m=4+(3*n);
 	switch(r){
@@ -23,7 +36,8 @@ int fillRegister (int r, int bin[], int n){
 	}
 }
 
-int fillDecOffset (int off, int bits, int ln, int put_bin[]){
+int fillDecOffset (int off, int bits, int ln, int put_bin[])
+{
 	if((off>(pow(2, bits-1)-1))||(off<-pow(2, bits))){
 		return 0;
 	}
@@ -82,31 +96,36 @@ int offset (int type, char c[], int bits)
 }
 
 // print functions
-void printIntArr (int num[], int size){
+void printIntArr (int num[], int size)
+{
 	for (int i = 0; i <= size - 1; i++)
 		printf("%d", num[i]);
 	printf("\n");
 }
 
-void fprintIntArr (FILE *fp, int num[], int size){
+void fprintIntArr (FILE *fp, int num[], int size)
+{
 	for (int i = 0; i <= size - 1; i++)
 		fprintf(fp, "%d", num[i]);
 	fprintf(fp, "\n");
 }
 
-void printCharArr (char hex[], int size){
+void printCharArr (char hex[], int size)
+{
 	for (int i = 0; i <= size-1; i++)
 		printf("%c", hex[i]);
 	printf("\n");
 }
 
-void fprintCharArr (FILE *fp, char hex[], int size){
+void fprintCharArr (FILE *fp, char hex[], int size)
+{
 	for (int i = 0; i <= size - 1; i++)
 		fprintf (fp, "%c", hex[i]);
 	fprintf (fp, "\n");
 }
 
-void putSymbol (FILE *fp, char symbol[], char addr[]){
+void putSymbol (FILE *fp, char symbol[], char addr[])
+{
 	int i = 0;
 	fprintf (fp, "%s", symbol);
 	for (i = 6 - (symbol[MAX_WORD_SIZE + 1] / TABSIZE); i >= 0; i--)
