@@ -87,7 +87,7 @@ int isValidOffset(char c[])
 			i++;
 		}
 		return 2;
-	} else if (isdigit (c[i])){
+	} else if (c[i] == '#' || isdigit (c[i])){
 		i++;
 		if (c[MAX_WORD_SIZE + 1] < 1 + j)
 			return 0;

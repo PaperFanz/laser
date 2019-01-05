@@ -151,7 +151,7 @@ void parseFile (FILE *fp, char *fname) {
 				char *string = word_buf[i + 1];
 				int j = 1;
 				while (string[j] != '\0') {
-					if (isQuote (string[j])){
+					if (string[j] == '\"'){
 						break;
 					} else if (string[j] == '\\') {
 						addr++;
@@ -367,10 +367,10 @@ void parseFile (FILE *fp, char *fname) {
 		case 2:			// STRINGZ
 			op = true;
 			op1 = word_buf[i + 1];
-			if (isQuote (op1[0])) {
+			if (op1[0] == '\"') {
 				int i = 1;
 				while (op1[i] != '\0') {
-					if (isQuote (op1[i])){
+					if (op1[i] == '\"'){
 						memset (bin, 0, sizeof(int) * 16);
 						fprintAsm (file, bin, addr, ln, line_buf, op, src);
 						addr++;
@@ -763,10 +763,10 @@ void lineToWords (char *line_buf, char word_buf[][MAX_WORD_SIZE + 2])
 	bool quote = false;
 
 	while (i <= MAX_LEN && !(line_buf[i] == '\0') && !(line_buf[i] == ';')) {
-		if (isQuote (line_buf[i]))
+		if (line_buf[i] == '\"')
 			quote = !quote;
 		bool space = isspace (line_buf[i]);
-		bool comma = line_buf[i] == 0x2C;
+		bool comma = line_buf[i] == ',';
 		if (quote || (!space && !comma)) {
 			word_buf[j][k] = line_buf[i];
 			k++;

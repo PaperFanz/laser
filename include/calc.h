@@ -3,10 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
-
-// macros
-#define MAX_WORD_SIZE 40	// max # of chars for a label or a filename
-#define TABSIZE 4
+#include "config.h"
 
 // function declarations
 int hexToDec (char hex[]);

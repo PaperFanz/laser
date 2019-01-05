@@ -91,13 +91,15 @@ int offset (int type, char c[], int bits)
 	}
 	else if(type==3){
 		int i=0, dec_num=0;
-		if(c[0] == '-')
+		if(c[0] == '-' || c[0] == '#')
 			i++;
+		else if (c[0] == '#' && c[1] == '-')
+			i+=2;
 		while(c[i]!=0x00){
 			dec_num=dec_num*10+(c[i]-0x30);
 			i++;
 		}
-		if(c[0]==0x2D)
+		if(c[0] == '-' || c[1] == '-')
 			dec_num = -1 * dec_num;
 		decToTwoComp(dec_num, bin, 16);
 	}

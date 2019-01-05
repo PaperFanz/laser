@@ -5,7 +5,7 @@ IDIR = ../include
 LDIR = ../lib
 ODIR = obj
 
-_DEPS = laser.h convert.h parse.h calc.h
+_DEPS = laser.h convert.h parse.h calc.h config.h
 DEPS = $(patsubst %, $(IDIR)/%,$(_DEPS))
 
 _OBJ = laser.o convert.o parse.o calc.o
