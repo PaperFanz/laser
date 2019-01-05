@@ -644,13 +644,14 @@ void parseFile (FILE *fp, char *fname) {
 			bin[0] = bin[1] = bin[2] = bin[3] = 1;
 			offset_bits = 8;
 			
+			op1 = word_buf[i + 1];
 			op1[MAX_WORD_SIZE+1] = 3;
+			op1[3] = '\0';
 
 			switch (isTrap (word_buf[i])){
 			case -1:
 				break;
 			case 0 ... 1:
-				op1 = word_buf[i + 1];
 				break;
 			case 2 ... 3:
 				op1[0] = 'x'; op1[1] = '2'; op1[2] = '0';

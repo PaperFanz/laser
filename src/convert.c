@@ -62,44 +62,134 @@ int isHexChar(char c)
 int isValidOffset(char c[])
 {
 	int i = 0, j = 0;
-	if (c[0] == '-'){
-		i++;
-		j++;
-	}
-
-	if (c[i] == 'x'){
-		i++;
-		if (c[MAX_WORD_SIZE + 1] < 2 + j)
-			return 0;
-		while (c[i]!='\0'){
-			if (isHexChar(c[i])<0)
+	if (c[0] == '-') {
+		if (c[1] == 'x') {
+			i = 2;
+			if (c[MAX_WORD_SIZE+1] < i + 1)
 				return 0;
-			i++;
-		}
-		return 1;
-	} else if (c[i] == 'b'){
-		i++;
-		if (c[MAX_WORD_SIZE+1] < 2 + j)
-			return 0;
-		while (c[i]!='\0') {
-			if (c[i] != '0' && c[i] != '1')
+			while (c[i] != '\0') {
+				if (isHexChar (c[i]) < 0)
+					return 0;
+				i++;
+			}
+			return 1;
+		} else if (c[1] == 'b') {
+			i = 2;
+			if (c[MAX_WORD_SIZE+1] < i + 1)
 				return 0;
-			i++;
-		}
-		return 2;
-	} else if (c[i] == '#' || isdigit (c[i])){
-		i++;
-		if (c[MAX_WORD_SIZE + 1] < 1 + j)
-			return 0;
-		while(c[i]!='\0'){
-			if(!isdigit (c[i]))
+			while (c[i] != '\0') {
+				if (c[i] != '0' && c[i] != '1')
+					return 0;
+				i++;
+			}
+			return 2;
+		} else if (c[1] == '#') {
+			i = 2;
+			if (c[MAX_WORD_SIZE+1] < i + 1)
 				return 0;
-			i++;
+			while (c[i] != '\0') {
+				if (!isdigit (c[i]))
+					return 0;
+				i++;
+			}
+			return 3;
+		} else if (isdigit (c[1])) {
+			i = 1;
+			if (c[MAX_WORD_SIZE+1] < i + 1)
+				return 0;
+			while (c[i] != '\0') {
+				if (!isdigit (c[i]))
+					return 0;
+				i++;
+			}
+			return 4;
 		}
-		return 3;
+	} else if (c[1] == '-') {
+		if (c[0] == 'x') {
+			i = 2;
+			if (c[MAX_WORD_SIZE+1] < i + 1)
+				return 0;
+			while (c[i] != '\0') {
+				if (isHexChar (c[i]) < 0)
+					return 0;
+				i++;
+			}
+			return 1;
+		} else if (c[0] == 'b') {
+			i = 2;
+			if (c[MAX_WORD_SIZE+1] < i + 1)
+				return 0;
+			while (c[i] != '\0') {
+				if (c[i] != '0' && c[i] != '1')
+					return 0;
+				i++;
+			}
+			return 2;
+		} else if (c[0] == '#') {
+			i = 2;
+			if (c[MAX_WORD_SIZE+1] < i + 1)
+				return 0;
+			while (c[i] != '\0') {
+				if (!isdigit (c[i]))
+					return 0;
+				i++;
+			}
+			return 3;
+		} else if (isdigit (c[0])) {
+			i = 1;
+			if (c[MAX_WORD_SIZE+1] < i + 1)
+				return 0;
+			while (c[i] != '\0') {
+				if (!isdigit (c[i]))
+					return 0;
+				i++;
+			}
+			return 4;
+		}
 	} else {
-		return 0;
+		if (c[0] == 'x') {
+			i = 1;
+			if (c[MAX_WORD_SIZE+1] < i + 1)
+				return 0;
+			while (c[i] != '\0') {
+				if (isHexChar (c[i]) < 0)
+					return 0;
+				i++;
+			}
+			return 1;
+		} else if (c[0] == 'b') {
+			i = 1;
+			if (c[MAX_WORD_SIZE+1] < i + 1)
+				return 0;
+			while (c[i] != '\0') {
+				if (c[i] != '0' && c[i] != '1')
+					return 0;
+				i++;
+			}
+			return 2;
+		} else if (c[0] == '#') {
+			i = 1;
+			if (c[MAX_WORD_SIZE+1] < i + 1)
+				return 0;
+			while (c[i] != '\0') {
+				if (!isdigit (c[i]))
+					return 0;
+				i++;
+			}
+			return 3;
+		} else if (isdigit (c[0])) {
+			i = 0;
+			if (c[MAX_WORD_SIZE+1] < i + 1)
+				return 0;
+			while (c[i] != '\0') {
+				if (!isdigit (c[i]))
+					return 0;
+				i++;
+			}
+			return 4;
+		}
 	}
+	return 0;
 }
 
 int isLabel(char *c)

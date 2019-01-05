@@ -63,7 +63,7 @@ int offset (int type, char c[], int bits)
 		return 0;
 	}
 	else if(type==1){
-		if (c[0] == '-'){
+		if (c[0] == '-' || c[1] == '-'){
 			decToTwoComp(-1 * hexToDec(&c[1]), bin, 16);
 		} else {
 			decToTwoComp(hexToDec(c), bin, 16);
@@ -72,10 +72,10 @@ int offset (int type, char c[], int bits)
 	}
 	else if(type==2){
 		int i, j=15-c[MAX_WORD_SIZE+1]+2;
-		if (c[0] == '-') {
-			int i = 2;
+		if (c[0] == '-' || c[1] == '-') {
+			i = 2;
 		} else {
-			int i = 1;
+			i = 1;
 		}
 		for (int k = 0; k < j; k++) 
 			bin[k] = c[1] - 0x30;		// sext input binary
@@ -84,19 +84,31 @@ int offset (int type, char c[], int bits)
 			j++;
 			i++;
 		}
-		if (c[0] == '-') {
+		if (c[0] == '-' || c[1] == '-') {
 			notArr (bin, 16);
 			addArr (bin, 16, addone, 16, bin, 16);
 		}
-	}
-	else if(type==3){
-		int i=0, dec_num=0;
-		if(c[0] == '-' || c[0] == '#')
+	} else if(type == 3) {
+		int i, dec_num=0;
+		if(c[0] == '-' || c[1] == '-')
+			i = 2;
+		else
+			i = 1;
+		while(c[i] != '\0'){
+			dec_num = dec_num * 10 + c[i]-0x30;
 			i++;
-		else if (c[0] == '#' && c[1] == '-')
-			i+=2;
-		while(c[i]!=0x00){
-			dec_num=dec_num*10+(c[i]-0x30);
+		}
+		if(c[0] == '-' || c[1] == '-')
+			dec_num = -1 * dec_num;
+		decToTwoComp(dec_num, bin, 16);
+	} else if (type == 4) {
+		int i, dec_num=0;
+		if(c[0] == '-' || c[1] == '-')
+			i = 1;
+		else
+			i = 0;
+		while(c[i] != '\0'){
+			dec_num = dec_num * 10 + c[i]-0x30;
 			i++;
 		}
 		if(c[0] == '-' || c[1] == '-')
