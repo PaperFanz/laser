@@ -7,7 +7,7 @@
 // macros
 #define size(arr) ((&arr)[1]-arr)
 #define MAX_WORD_NUM 6		// max # of words per line (5+1 ICOI)
-#define MAX_WORD_SIZE 20	// max # of chars for a label or a filename
+#define MAX_WORD_SIZE 40	// max # of chars for a label or a filename
 #define TABSIZE 4
 
 // version number

@@ -148,14 +148,24 @@ void parseFile (FILE *fp, char *fname) {
 				break;
 			case 2:		// STRINGZ
 				op_num = 1;
-				for (int j = word_buf[i][MAX_WORD_SIZE+1] - 4; j >=0; j--) {
-					addr++;
+				char *string = word_buf[i + 1];
+				int j = 1;
+				while (string[j] != '\0') {
+					if (isQuote (string[j])){
+						break;
+					} else if (string[j] == '\\') {
+						addr++;
+						j += 2;
+					} else {
+						addr++;
+						j++;
+					}
 				}
 				break;
 			case 3:		// BLKW
 				op_num = 1;
 				off = offset (isValidOffset (word_buf[i + 1]), word_buf[i + 1], 15);
-				for (int j = off; j > 0; j--) {
+				for (int j = off; j > 1; j--) {
 					addr++;
 				}
 				break;
@@ -365,12 +375,23 @@ void parseFile (FILE *fp, char *fname) {
 						fprintAsm (file, bin, addr, ln, line_buf, op, src);
 						addr++;
 						break;
+					} else if (op1[i] == '\\' && escapeValue (op1[i+1])) {
+						decToTwoComp (escapeValue (op1[i+1]), bin, 16);
+						fprintAsm (file, bin, addr, ln, line_buf, op, src);
+						if (src) src = false;
+						addr++;
+						i += 2;
+					} else if (op1[i] == '\\' && !escapeValue (op1[i+1])) {
+						alert.err++;
+						printf ("Error: (%s line %d) ", fname, ln);
+						printf ("invalid escape sequence in string %s\n", op1);
+					} else {
+						decToTwoComp (op1[i], bin, 16);
+						fprintAsm (file, bin, addr, ln, line_buf, op, src);
+						if (src) src = false;
+						addr++;
+						i++;
 					}
-					decToTwoComp (op1[i], bin, 16);
-					fprintAsm (file, bin, addr, ln, line_buf, op, src);
-					if (src) src = false;
-					addr++;
-					i++;
 				}
 			} else {
 				alert.err++;
@@ -389,7 +410,6 @@ void parseFile (FILE *fp, char *fname) {
 				printf ("Error: (%s line %d) ", fname, ln);
 				printf ("invalid operand for '%s': %s\n", word_buf[i], op1);
 			} else {
-				addr++;
 				for (off = offset (off_type, op1, 15); off > 0; off--){
 					fprintAsm (file, bin, addr, ln, line_buf, op, src);
 					if (src) src = false;
@@ -740,15 +760,18 @@ void lineToWords (char *line_buf, char word_buf[][MAX_WORD_SIZE + 2])
 {
 	int i = 0, j = 0, k = 0;		// counter inits
 	bool prev = false;
+	bool quote = false;
 
 	while (i <= MAX_LEN && !(line_buf[i] == '\0') && !(line_buf[i] == ';')) {
-		bool space = isspace(line_buf[i]);
+		if (isQuote (line_buf[i]))
+			quote = !quote;
+		bool space = isspace (line_buf[i]);
 		bool comma = line_buf[i] == 0x2C;
-		if (!space && !comma) {
+		if (quote || (!space && !comma)) {
 			word_buf[j][k] = line_buf[i];
 			k++;
 			prev = true;
-		} else if ((space||comma)&&prev) {		// commas also denote EOW
+		} else if (!quote && (space||comma) && prev) {
 			word_buf[j][k] = 0x00;
 			word_buf[j][MAX_WORD_SIZE + 1] = k;
 			j++;

@@ -9,8 +9,8 @@
 // macros
 #define size(arr) ((&arr)[1]-arr)
 #define MAX_WORD_NUM 6		// max # of words per line (5+1 ICOI)
-#define MAX_WORD_SIZE 20	// max # of chars for a label or a filename
-#define MAX_LEN 120
+#define MAX_WORD_SIZE 40	// max # of chars for a label or a filename
+#define MAX_LEN 240
 #define TABSIZE 4
 
 // types
@@ -40,9 +40,9 @@ int countWords (int offset, char word_buf[][MAX_WORD_SIZE + 2]);
 
 void printAlertSummary (struct Alert alert);
 
-int isOrig (char word_buf[][22]);
+int isOrig (char word_buf[][MAX_WORD_SIZE + 2]);
 
-int isEnd (char word_buf[][22]);
+int isEnd (char word_buf[][MAX_WORD_SIZE + 2]);
 
 char *replaceExt (char *filename, const char *ext);
 
@@ -65,6 +65,8 @@ int isTrap(char c[]);
 int isBranch(char c[]);
 
 int isQuote(char c);
+
+int escapeValue (char c);
 
 int fillRegister(int r, int bin[], int n);
 

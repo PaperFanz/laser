@@ -63,20 +63,35 @@ int offset (int type, char c[], int bits)
 		return 0;
 	}
 	else if(type==1){
-		decToTwoComp(hexToDec(c), bin, 16);
+		if (c[0] == '-'){
+			decToTwoComp(-1 * hexToDec(&c[1]), bin, 16);
+		} else {
+			decToTwoComp(hexToDec(c), bin, 16);
+		}
+
 	}
 	else if(type==2){
-		int i=1, j=15-c[MAX_WORD_SIZE+1]+2, k;
-		for(k=0; k<j; k++) bin[k]=c[1]-0x30;		// sext input binary
-		while(c[i]!=0x00){
-			bin[j]=c[i]-0x30;
+		int i, j=15-c[MAX_WORD_SIZE+1]+2;
+		if (c[0] == '-') {
+			int i = 2;
+		} else {
+			int i = 1;
+		}
+		for (int k = 0; k < j; k++) 
+			bin[k] = c[1] - 0x30;		// sext input binary
+		while(c[i] != 0x00){
+			bin[j] = c[i] - 0x30;
 			j++;
 			i++;
+		}
+		if (c[0] == '-') {
+			notArr (bin, 16);
+			addArr (bin, 16, addone, 16, bin, 16);
 		}
 	}
 	else if(type==3){
 		int i=0, dec_num=0;
-		if(c[0]==0x2D)
+		if(c[0] == '-')
 			i++;
 		while(c[i]!=0x00){
 			dec_num=dec_num*10+(c[i]-0x30);

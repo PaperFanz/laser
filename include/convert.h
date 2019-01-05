@@ -5,7 +5,7 @@
 
 // macros
 #define MAX_WORD_NUM 6		// max # of words per line (5+1 ICOI)
-#define MAX_WORD_SIZE 20	// max # of chars for a label or a filename
+#define MAX_WORD_SIZE 40	// max # of chars for a label or a filename
 
 // function declarations
 int isHexChar(char c);
@@ -15,10 +15,14 @@ void notArr(int bin[], int size);
 void addArr(int bin1[], int s1, int bin2[], int s2, int bin3[], int s3);
 
 // hex conversion array
-const char hex_chars[16]={'0','1','2','3',
-						  '4','5','6','7',
-						  '8','9','A','B',
-						  'C','D','E','F'};
+const char hex_chars[16] = {'0','1','2','3',
+							'4','5','6','7',
+							'8','9','A','B',
+							'C','D','E','F'};
+
+const char escapeChars[] = {'\'', '\"', '\?', '\\', 'a', 'b', 'f', 'n', 'r', 't', 'v'};
+
+const int escapeVals[] = {0x27, 0x22, 0x3F, 0x5C, 0x07, 0x08, 0x0C, 0x0A, 0x0D, 0x09, 0x0B};
 
 // keyword array used to parse text file
 const char *keyword[][16]={
