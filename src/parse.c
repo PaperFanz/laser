@@ -143,9 +143,11 @@ void parseFile (FILE *fp, char *fname) {
 			int off = 0;
 
 			switch (pseudoop) {
-			case -1:
+			case NO_OP:
+			{
 				break;
-			case 0:		// ORIG
+			}
+			case ORIG:
 			{
 				op_num = 1;
 				alert.err++;
@@ -153,13 +155,13 @@ void parseFile (FILE *fp, char *fname) {
 				printf ("Multiple .ORIG declaration!\n%s", line_buf);
 				break;
 			}
-			case 1:		// END
+			case END:
 			{
 				alert.exception++;
 				printf ("%d: Unhandled exception!\n", pseudoop);
 				break;
 			}
-			case 2:		// STRINGZ
+			case STRINGZ:
 			{
 				op_num = 1;
 				char *string = word_buf[i + 1];
@@ -177,7 +179,7 @@ void parseFile (FILE *fp, char *fname) {
 				}
 				break;
 			}
-			case 3:		// BLKW
+			case BLKW:
 			{
 				op_num = 1;
 				off = offset (isValidOffset (word_buf[i + 1]), word_buf[i + 1], 15);
@@ -186,12 +188,12 @@ void parseFile (FILE *fp, char *fname) {
 				}
 				break;
 			}
-			case 4:		// FILL
+			case FILL:
 			{
 				op_num = 1;
 				break;
 			}
-			case 5:
+			case ALIAS:
 			{
 				op_num = 2;
 				alert.err++;
@@ -208,63 +210,97 @@ void parseFile (FILE *fp, char *fname) {
 			}
 
 			switch (keyword) {
-			case -1:
+			case NO_OP:
+			{
 				break;
-			case 0:		// BR
+			}
+			case BR:
+			{
 				op_num = 1;
 				break;
-			case 1:		// ADD
+			}
+			case ADD:
+			{
 				op_num = 3;
 				break;
-			case 2:		// LD
+			}
+			case LD:
+			{
 				op_num = 2;
 				break;
-			case 3:		// ST
+			}
+			case ST:
+			{
 				op_num = 2;
 				break;
-			case 4:		// JSR & JSRR
+			}
+			case JSR:
+			{
 				op_num = 1;
 				break;
-			case 5:		// AND
+			}
+			case AND:
+			{
 				op_num = 3;
 				break;
-			case 6:		// LDR
+			}
+			case LDR:
+			{
 				op_num = 3;
 				break;
-			case 7:		// STR
+			}
+			case STR:
+			{
 				op_num = 3;
 				break;
-			case 8:		// RTI
+			}
+			case RTI:
+			{
 				op_num = 0;
 				break;
-			case 9:		// NOT
+			}
+			case NOT:
+			{
 				op_num = 2;
 				break;
-			case 10:	// LDI
+			}
+			case LDI:
+			{
 				op_num = 2;
 				break;
-			case 11:	// STI
+			}
+			case STI:
+			{
 				op_num = 2;
 				break;
-			case 12:	// JMP & RET
+			}
+			case JMP:
+			{
 				if(strcmp(word_buf[i], "RET")==0||strcmp(word_buf[i], "ret")==0)
 					op_num = 0;
 				else
 					op_num = 1;
 				break;
-			case 14:	// LEA
+			}
+			case LEA:
+			{
 				op_num = 2;
 				break;
-			case 15:	// TRAP
+			}
+			case TRAP:
+			{
 				if (isTrap (word_buf[i]) > 1)
 					op_num = 0;
 				else
 					op_num = 1;
 				break;
+			}
 			default:
+			{
 				alert.exception++;
 				printf ("%d: Unhandled exception!\n", keyword);
 				break;
+			}
 			}
 
 			if (pseudoop >= 0 || keyword >= 0)
@@ -353,18 +389,18 @@ void parseFile (FILE *fp, char *fname) {
 		}
 		
 		switch (isPseuodoOp (word_buf[i])) {
-		case -1:
+		case NO_OP:
 		{
 			break;
 		}
-		case 0:			// ORIG
+		case ORIG:
 		{
 			alert.err++;
 			printf ("Error: (%s line %d) ", fname, ln);
 			printf ("Multiple .ORIG declaration\n%s", line_buf);
 			break;			
 		}
-		case 1:			// END, clean up and return
+		case END:		// clean up and return
 		{
 			printAlertSummary (alert);
 			alert.err += alert_st.err;
@@ -404,7 +440,7 @@ void parseFile (FILE *fp, char *fname) {
 
 			return;
 		}
-		case 2:			// STRINGZ
+		case STRINGZ:
 		{
 			op = true;
 			op1 = word_buf[i + 1];
@@ -442,7 +478,7 @@ void parseFile (FILE *fp, char *fname) {
 			op = false;
 			break;
 		}
-		case 3:			// BLKW
+		case BLKW:
 		{
 			op = true;
 			src = true;
@@ -463,7 +499,7 @@ void parseFile (FILE *fp, char *fname) {
 			src = false;
 			break;
 		}
-		case 4:			// FILL
+		case FILL:
 		{
 			op = true;
 			src = true;
@@ -482,7 +518,7 @@ void parseFile (FILE *fp, char *fname) {
 			}
 			break;
 		}
-		case 5:
+		case ALIAS:
 		{
 			break;
 		}
@@ -494,11 +530,11 @@ void parseFile (FILE *fp, char *fname) {
 		}
 
 		switch (isKeyword (word_buf[i])) {
-		case -1:
+		case NO_OP:
 		{
 			break;
 		}
-		case 0:			// BR
+		case BR:
 		{
 			op = true;
 			offset_bits = 9;
@@ -509,7 +545,7 @@ void parseFile (FILE *fp, char *fname) {
 			op_offset (word_buf[i], op1, offset_bits, ln, bin, s_cnt, symbols, addr, &alert, fname);
 			break;
 		}
-		case 1:			// ADD
+		case ADD:
 		{
 			op = true;
 			bin[3] = 1;
@@ -523,7 +559,7 @@ void parseFile (FILE *fp, char *fname) {
 			op_reg_imm (word_buf[i], op3, bin, 2, offset_bits, ln, &alert, fname);
 			break;
 		}
-		case 2:			// LD
+		case LD:
 		{
 			op = true;
 			bin[2] = 1;
@@ -535,7 +571,7 @@ void parseFile (FILE *fp, char *fname) {
 			op_offset (word_buf[i], op2, offset_bits, ln, bin, s_cnt, symbols, addr, &alert, fname);
 			break;
 		}
-		case 3:			// ST
+		case ST:
 		{
 			op = true;
 			bin[3] = bin[2] = 1;
@@ -547,7 +583,7 @@ void parseFile (FILE *fp, char *fname) {
 			op_offset (word_buf[i], op2, offset_bits, ln, bin, s_cnt, symbols, addr, &alert, fname);
 			break;
 		}
-		case 4:			// JSR and JSRR, check addr mode
+		case JSR:
 		{
 			op = true;
 			bin[1] = 1;
@@ -563,7 +599,7 @@ void parseFile (FILE *fp, char *fname) {
 			}
 			break;
 		}
-		case 5:			// AND
+		case AND:
 		{
 			op = true;
 			bin[1] = bin[3] = 1;
@@ -577,7 +613,7 @@ void parseFile (FILE *fp, char *fname) {
 			op_reg_imm (word_buf[i], op3, bin, 2, offset_bits, ln, &alert, fname);
 			break;
 		}
-		case 6:			// LDR
+		case LDR:
 		{
 			op = true;
 			bin[1] = bin[2] = 1;
@@ -591,7 +627,7 @@ void parseFile (FILE *fp, char *fname) {
 			op_offset (word_buf[i], op3, offset_bits, ln, bin, s_cnt, symbols, addr, &alert, fname);
 			break;
 		}
-		case 7:			// STR
+		case STR:
 		{
 			op = true;
 			bin[1] = bin[2] = bin[3] = 1;
@@ -605,13 +641,13 @@ void parseFile (FILE *fp, char *fname) {
 			op_offset (word_buf[i], op3, offset_bits, ln, bin, s_cnt, symbols, addr, &alert, fname);
 			break;
 		}
-		case 8:			// RTI
+		case RTI:
 		{
 			op = true;
 			bin[0] = 1;
 			break;
 		}
-		case 9:			// NOT
+		case NOT:
 		{
 			op = true;
 			bin[0] = bin[3] = bin[10] = bin[11] = bin[12] = bin[13] = bin[14] = bin[15] = 1;
@@ -622,7 +658,7 @@ void parseFile (FILE *fp, char *fname) {
 			op_register (word_buf[i], op2, 1, bin, ln, &alert, fname);
 			break;
 		}
-		case 10:		// LDI
+		case LDI:
 		{
 			op = true;
 			bin[0] = bin[2] = 1;
@@ -634,7 +670,7 @@ void parseFile (FILE *fp, char *fname) {
 			op_offset (word_buf[i], op2, offset_bits, ln, bin, s_cnt, symbols, addr, &alert, fname);
 			break;
 		}
-		case 11:		// STI
+		case STI:
 		{
 			op=true;
 			bin[0]=bin[2]=bin[3]=1;
@@ -646,7 +682,7 @@ void parseFile (FILE *fp, char *fname) {
 			op_offset (word_buf[i], op2, offset_bits, ln, bin, s_cnt, symbols, addr, &alert, fname);
 			break;
 		}
-		case 12:		// JMP and RET, check shortcut
+		case JMP:
 		{
 			op=true;
 			bin[0]=bin[1]=1;
@@ -660,7 +696,7 @@ void parseFile (FILE *fp, char *fname) {
 			}
 			break;
 		}
-		case 14:		// LEA
+		case LEA:
 		{
 			op = true;
 			bin[0] = bin[1] = bin[2] = 1;
@@ -674,7 +710,7 @@ void parseFile (FILE *fp, char *fname) {
 			op_offset (word_buf[i], op2, offset_bits, ln, bin, s_cnt, symbols, addr, &alert, fname);
 			break;
 		}
-		case 15:		// TRAP, check shortcuts
+		case TRAP:
 		{
 			op = true;
 			bin[0] = bin[1] = bin[2] = bin[3] = 1;

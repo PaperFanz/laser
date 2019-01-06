@@ -35,6 +35,32 @@ struct Alias {
 	int count;
 };
 
+enum ops {
+	NO_OP = -1,
+	ORIG = 0,
+	END = 1,
+	STRINGZ = 2,
+	BLKW = 3,
+	FILL = 4,
+	ALIAS = 5,
+	BR = 0,
+	ADD = 1,
+	LD = 2,
+	ST = 3,
+	JSR = 4,
+	AND = 5,
+	LDR = 6,
+	STR = 7,
+	RTI = 8,
+	NOT = 9,
+	LDI = 10,
+	STI = 11,
+	JMP = 12,
+	INVALID_OPCODE_EXCEPTION = 13,
+	LEA = 14,
+	TRAP = 15
+};
+
 void parseFile (FILE *fp, char *fname);
 
 int labelAddress (struct Symbol *symbols, int s_cnt, char *label);
