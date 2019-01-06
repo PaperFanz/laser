@@ -37,6 +37,7 @@ int parseArgs(int argc, char **argv)
 				FILE *fp;
 				fp = fopen (file, "r+");
 				if (fp != NULL) {
+					printf ("\nAssembling %s...\n", file);
 					parseFile (fp, file);
 					fclose (fp);
 				} else {

@@ -61,6 +61,10 @@ int isTrap(char c[]);
 
 int isBranch(char c[]);
 
+void branchCondition (char *c, int *bin);
+
+void trapShortcut (char *op, char *trapvect);
+
 int isQuote(char c);
 
 int escapeValue (char c);

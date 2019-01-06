@@ -28,24 +28,19 @@ void parseFile (FILE *fp, char *fname) {
 	//	Create files and write headers (where applicable)
 	//==========================================================================
 
-	replaceExt(fname, ".sym");
-	file.sym = fopen (fname, "w");
+	file.sym = fopen (replaceExt(fname, ".sym"), "w");
 	if (file.sym == NULL)
 		printf ("Error: Unable to open %s!\n", fname);
-	replaceExt(fname, ".bin");
-	file.bin = fopen (fname, "w");
+	file.bin = fopen (replaceExt(fname, ".bin"), "w");
 	if (file.bin == NULL)
 		printf ("Error: Unable to open %s!\n", fname);
-	replaceExt(fname, ".hex");
-	file.hex = fopen (fname, "w");
+	file.hex = fopen (replaceExt(fname, ".hex"), "w");
 	if (file.hex == NULL)
 		printf ("Error: Unable to open %s!\n", fname);
-	replaceExt(fname, ".lst");
-	file.lst = fopen (fname, "w");
+	file.lst = fopen (replaceExt(fname, ".lst"), "w");
 	if (file.lst == NULL)
 		printf ("Error: Unable to open %s!\n", fname);
-	replaceExt(fname, ".obj");
-	file.obj = fopen (fname, "w");
+	file.obj = fopen (replaceExt(fname, ".obj"), "w");
 	if (file.obj == NULL)
 		printf ("Error: Unable to open %s!\n", fname);
 	replaceExt(fname, ".asm");
@@ -320,13 +315,18 @@ void parseFile (FILE *fp, char *fname) {
 		
 		switch (isPseuodoOp (word_buf[i])){
 		case -1:
+		{
 			break;
+		}
 		case 0:			// ORIG
+		{
 			alert.err++;
 			printf ("Error: (%s line %d) ", fname, ln);
 			printf ("Multiple .ORIG declaration\n%s", line_buf);
-			break;
+			break;			
+		}
 		case 1:			// END, clean up and return
+		{
 			printAlertSummary (alert);
 			alert.err += alert_st.err;
 			alert.exception += alert_st.exception;
@@ -364,7 +364,9 @@ void parseFile (FILE *fp, char *fname) {
 			}
 
 			return;
+		}
 		case 2:			// STRINGZ
+		{
 			op = true;
 			op1 = word_buf[i + 1];
 			if (op1[0] == '\"') {
@@ -400,7 +402,9 @@ void parseFile (FILE *fp, char *fname) {
 			}
 			op = false;
 			break;
+		}
 		case 3:			// BLKW
+		{
 			op = true;
 			src = true;
 			op1 = word_buf[i + 1];
@@ -419,7 +423,9 @@ void parseFile (FILE *fp, char *fname) {
 			op = false;
 			src = false;
 			break;
+		}
 		case 4:			// FILL
+		{
 			op = true;
 			src = true;
 			op1 = word_buf[i + 1];
@@ -436,89 +442,70 @@ void parseFile (FILE *fp, char *fname) {
 				printf ("invalid operand for '%s': %s\n", word_buf[i], op1);
 			}
 			break;
+		}
 		default:
+		{
 			printf ("%d, Unhandled pseudoop exception!\n", isPseuodoOp (word_buf[i]));
 			break;
+		}
 		}
 
 		switch (isKeyword (word_buf[i])) {
 		case -1:
+		{
 			break;
+		}
 		case 0:			// BR
+		{
 			op = true;
 			offset_bits = 9;
-			
 			// set condition codes
-			switch (isBranch (word_buf[i])) {
-			case -1:
-				break;
-			case 0 ... 3:
-				bin[4] = bin[5] = bin[6] = 1;
-				break;
-			case 4 ... 5:
-				bin[4] = bin[5] = 1;
-				break;
-			case 6 ... 7:
-				bin[4] = 1;
-				break;
-			case 8 ... 9:
-				bin[4] = bin[6] = 1;
-				break;
-			case 10 ... 11:
-				bin[5] = bin[6] = 1;
-			case 12 ... 13:
-				bin[5] = 1;
-				break;
-			case 14 ... 15:
-				bin[6] = 1;
-				break;
-			default:
-				break;
-			}
+			branchCondition (word_buf[i], bin);
 
 			op1 = word_buf[i + 1];
-
 			op_offset (word_buf[i], op1, offset_bits, ln, bin, s_cnt, symbols, addr, &alert, fname);
 			break;
+		}
 		case 1:			// ADD
+		{
 			op = true;
 			bin[3] = 1;
 			offset_bits = 5;
-			
 
 			op1 = word_buf[i + 1];
 			op2 = word_buf[i + 2];
 			op3 = word_buf[i + 3];
-
 			op_register (word_buf[i], op1, 0, bin, ln, &alert, fname);
 			op_register (word_buf[i], op2, 1, bin, ln, &alert, fname);
 			op_reg_imm (word_buf[i], op3, bin, 2, offset_bits, ln, &alert, fname);
 			break;
+		}
 		case 2:			// LD
+		{
 			op = true;
 			bin[2] = 1;
 			offset_bits = 9;
-			
 
 			op1 = word_buf[i + 1];
 			op2 = word_buf[i + 2];
-
 			op_register (word_buf[i], op1, 0, bin, ln, &alert, fname);
 			op_offset (word_buf[i], op2, offset_bits, ln, bin, s_cnt, symbols, addr, &alert, fname);
 			break;
+		}
 		case 3:			// ST
+		{
 			op = true;
 			bin[3] = bin[2] = 1;
 			offset_bits = 9;
-			
 
 			op1 = word_buf[i + 1];
 			op2 = word_buf[i + 2];
-
 			op_register (word_buf[i], op1, 0, bin, ln, &alert, fname);
 			op_offset (word_buf[i], op2, offset_bits, ln, bin, s_cnt, symbols, addr, &alert, fname);
 			break;
+		}
 		case 4:			// JSR and JSRR, check addr mode
+		{
 			op = true;
 			bin[1] = 1;
 			if (strcmp (word_buf[i], "JSR") == 0 || strcmp (word_buf[i], "jsr") == 0) {
@@ -526,96 +513,98 @@ void parseFile (FILE *fp, char *fname) {
 				offset_bits = 11;
 
 				op1 = word_buf[i + 1];
-
 				op_offset( word_buf[i], op1, offset_bits, ln, bin, s_cnt, symbols, addr, &alert, fname);
 			} else {
 				op1 = word_buf[i + 1];
-
 				op_register (word_buf[i], op1, 1, bin, ln, &alert, fname);
 			}
 			break;
+		}
 		case 5:			// AND
+		{
 			op = true;
 			bin[1] = bin[3] = 1;
 			offset_bits = 5;
-			
 
 			op1 = word_buf[i + 1];
 			op2 = word_buf[i + 2];
 			op3 = word_buf[i + 3];
-
 			op_register (word_buf[i], op1, 0, bin, ln, &alert, fname);
 			op_register (word_buf[i], op2, 1, bin, ln, &alert, fname);
 			op_reg_imm (word_buf[i], op3, bin, 2, offset_bits, ln, &alert, fname);
 			break;
+		}
 		case 6:			// LDR
+		{
 			op = true;
 			bin[1] = bin[2] = 1;
 			offset_bits = 6;
-			
-			
+
 			op1 = word_buf[i + 1];
 			op2 = word_buf[i + 2];
 			op3 = word_buf[i + 3];
-
 			op_register (word_buf[i], op1, 0, bin, ln, &alert, fname);
 			op_register (word_buf[i], op2, 1, bin, ln, &alert, fname);
 			op_offset (word_buf[i], op3, offset_bits, ln, bin, s_cnt, symbols, addr, &alert, fname);
 			break;
+		}
 		case 7:			// STR
+		{
 			op = true;
 			bin[1] = bin[2] = bin[3] = 1;
 			offset_bits = 6;
 			
-			
 			op1 = word_buf[i + 1];
 			op2 = word_buf[i + 2];
 			op3 = word_buf[i + 3];
-
 			op_register (word_buf[i], op1, 0, bin, ln, &alert, fname);
 			op_register (word_buf[i], op2, 1, bin, ln, &alert, fname);
 			op_offset (word_buf[i], op3, offset_bits, ln, bin, s_cnt, symbols, addr, &alert, fname);
 			break;
+		}
 		case 8:			// RTI
+		{
 			op = true;
 			bin[0] = 1;
 			break;
+		}
 		case 9:			// NOT
+		{
 			op = true;
 			bin[0] = bin[3] = bin[10] = bin[11] = bin[12] = bin[13] = bin[14] = bin[15] = 1;
-			
 
 			op1 = word_buf[i + 1];
 			op2 = word_buf[i + 2];
-
 			op_register (word_buf[i], op1, 0, bin, ln, &alert, fname);
 			op_register (word_buf[i], op2, 1, bin, ln, &alert, fname);
 			break;
+		}
 		case 10:		// LDI
+		{
 			op = true;
 			bin[0] = bin[2] = 1;
 			offset_bits = 9;
-			
 
 			op1 = word_buf[i + 1];
 			op2 = word_buf[i + 2];
-
 			op_register (word_buf[i], op1, 0, bin, ln, &alert, fname);
 			op_offset (word_buf[i], op2, offset_bits, ln, bin, s_cnt, symbols, addr, &alert, fname);
 			break;
+		}
 		case 11:		// STI
+		{
 			op=true;
 			bin[0]=bin[2]=bin[3]=1;
 			offset_bits=9;
-			
 
 			op1 = word_buf[i + 1];
 			op2 = word_buf[i + 2];
-
 			op_register (word_buf[i], op1, 0, bin, ln, &alert, fname);
 			op_offset (word_buf[i], op2, offset_bits, ln, bin, s_cnt, symbols, addr, &alert, fname);
 			break;
+		}
 		case 12:		// JMP and RET, check shortcut
+		{
 			op=true;
 			bin[0]=bin[1]=1;
 
@@ -627,7 +616,9 @@ void parseFile (FILE *fp, char *fname) {
 				op_register (word_buf[i], op1, 1, bin, ln, &alert, fname);
 			}
 			break;
+		}
 		case 14:		// LEA
+		{
 			op = true;
 			bin[0] = bin[1] = bin[2] = 1;
 			offset_bits = 9;
@@ -639,44 +630,18 @@ void parseFile (FILE *fp, char *fname) {
 			op_register (word_buf[i], op1, 0, bin, ln, &alert, fname);
 			op_offset (word_buf[i], op2, offset_bits, ln, bin, s_cnt, symbols, addr, &alert, fname);
 			break;
+		}
 		case 15:		// TRAP, check shortcuts
+		{
 			op = true;
 			bin[0] = bin[1] = bin[2] = bin[3] = 1;
 			offset_bits = 8;
-			
+
 			op1 = word_buf[i + 1];
-			op1[MAX_WORD_SIZE+1] = 3;
-			op1[3] = '\0';
-
-			switch (isTrap (word_buf[i])){
-			case -1:
-				break;
-			case 0 ... 1:
-				break;
-			case 2 ... 3:
-				op1[0] = 'x'; op1[1] = '2'; op1[2] = '0';
-				break;
-			case 4 ... 5:
-				op1[0] = 'x'; op1[1] = '2'; op1[2] = '1';
-				break;
-			case 6 ... 7:
-				op1[0] = 'x'; op1[1] = '2'; op1[2] = '2';
-				break;
-			case 8 ... 9:
-				op1[0] = 'x'; op1[1] = '2'; op1[2] = '3';
-				break;
-			case 10 ... 11:
-				op1[0] = 'x'; op1[1] = '2'; op1[2] = '4';
-				break;
-			case 12 ... 13:
-				op1[0] = 'x'; op1[1] = '2'; op1[2] = '5';
-				break;
-			default:
-				break;
-			}
-
+			trapShortcut (word_buf[i], op1);
 			op_offset (word_buf[i], op1, offset_bits, ln, bin, s_cnt, symbols, addr, &alert, fname);
 			break;
+		}
 		default:
 			printf ("%d Unhandled keyword exception!\n", isKeyword (word_buf[i]));
 			break;
@@ -870,4 +835,71 @@ void printAlertSummary (struct Alert alert)
 	printf ("%d error%c,", alert.err, err);
 	printf (" %d warning%c,", alert.warn, warn);
 	printf (" and %d exception%c!\n", alert.exception, exception);
+}
+
+void branchCondition (char *c, int *bin)
+{
+	switch (isBranch (c)) {
+	case -1:
+		break;
+	case 0 ... 3:
+		bin[4] = bin[5] = bin[6] = 1;
+		break;
+	case 4 ... 5:
+		bin[4] = bin[5] = 1;
+		break;
+	case 6 ... 7:
+		bin[4] = 1;
+		break;
+	case 8 ... 9:
+		bin[4] = bin[6] = 1;
+		break;
+	case 10 ... 11:
+		bin[5] = bin[6] = 1;
+	case 12 ... 13:
+		bin[5] = 1;
+		break;
+	case 14 ... 15:
+		bin[6] = 1;
+		break;
+	default:
+		break;
+	}
+	return;
+}
+
+void trapShortcut (char *op, char *trapvect)
+{
+	switch (isTrap (op)){
+	case -1:
+		break;
+	case 0 ... 1:
+		break;
+	case 2 ... 3:
+		trapvect[MAX_WORD_SIZE+1] = 3;
+		trapvect[0] = 'x'; trapvect[1] = '2'; trapvect[2] = '0'; trapvect[3] = '\0';
+		break;
+	case 4 ... 5:
+		trapvect[MAX_WORD_SIZE+1] = 3;
+		trapvect[0] = 'x'; trapvect[1] = '2'; trapvect[2] = '1'; trapvect[3] = '\0';
+		break;
+	case 6 ... 7:
+		trapvect[MAX_WORD_SIZE+1] = 3;
+		trapvect[0] = 'x'; trapvect[1] = '2'; trapvect[2] = '2'; trapvect[3] = '\0';
+		break;
+	case 8 ... 9:
+		trapvect[MAX_WORD_SIZE+1] = 3;
+		trapvect[0] = 'x'; trapvect[1] = '2'; trapvect[2] = '3'; trapvect[3] = '\0';
+		break;
+	case 10 ... 11:
+		trapvect[MAX_WORD_SIZE+1] = 3;
+		trapvect[0] = 'x'; trapvect[1] = '2'; trapvect[2] = '4'; trapvect[3] = '\0';
+		break;
+	case 12 ... 13:
+		trapvect[MAX_WORD_SIZE+1] = 3;
+		trapvect[0] = 'x'; trapvect[1] = '2'; trapvect[2] = '5'; trapvect[3] = '\0';
+		break;
+	default:
+		break;
+	}
 }
