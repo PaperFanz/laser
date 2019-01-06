@@ -38,12 +38,14 @@ You can use the command `laser -a *.asm` or `laser -c *.asm` to assemble or clea
 
 ## Building from Source
 
-Please read the notice below explaining what has and has not yet been completed. If you would like to try out the parts that have been completed, here are the steps to building on Mac, Linux, or MINGW:
+If you would like to give `laser` a try, here are the instructions for building on Mac, Linux, or Windows Subsystem Linux. Mac users must have `xcode` installed, and Linux users must have `build-essential` installed. Open a terminal, and execute the following commands:
 
 1. Clone this repository: `git clone https://github.com/PaperFanz/laser.git`
-2. `cd laser/src`
-3. `make`
-4. `sudo make install` (if you want to use it without selecting the directory and using ./laser)
+2. Go to the `src` directory: `cd laser/src`
+3. Build the project using the included Makefile: `make`
+4. `sudo make install` (if you want to use `laser` without selecting the directory and using ./laser)
+
+This last step might not work for Mac users, but Linux users (including Windows Subsystem Linux) should have no issues. Alternatively, you may choose to manually copy the compiled binary to your `bin` directory of choice.
 
 ## Notice
 
