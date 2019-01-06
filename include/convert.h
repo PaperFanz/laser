@@ -2,65 +2,76 @@
 #include <stdlib.h>
 #include <math.h>
 #include <ctype.h>
+#include <stdio.h>
 #include "config.h"
 
-// function declarations
+#ifndef CONVERT_H
+#define CONVERT_H
+//==============================================================================
+// Type Functions
+//==============================================================================
+
+int isKeyword(char c[]);
+
+int isPseuodoOp(char c[]);
+
+int isRegister(char c[]);
+
+// extends isxdigit functionality by returning decimal value (0-16)
 int isHexChar(char c);
 
+int isValidOffset(char c[]);
+
+int isLabel(char *c);
+
+int isTrap(char c[]);
+
+int isBranch(char c[]);
+
+int isQuote(char c);
+
+int isOrig (char word_buf[][MAX_WORD_SIZE+2]);
+
+int isEnd (char word_buf[][MAX_WORD_SIZE+2]);
+
+int isAlias (char word_buf[][MAX_WORD_SIZE+2]);
+
+int escapeValue (char c);
+
+//==============================================================================
+// Convert Functions
+//==============================================================================
+
+// binary conversions
+int binToDec(int bin[], int size);
+
+void zext(int n, int bin[], int size);
+
+// binary operations
 void notArr(int bin[], int size);
 
+// bin3 is result array, bin1 and bin2 are operands
 void addArr(int bin1[], int s1, int bin2[], int s2, int bin3[], int s3);
 
-// hex conversion array
-const char hex_chars[16] = {'0','1','2','3',
-							'4','5','6','7',
-							'8','9','A','B',
-							'C','D','E','F'};
+// two's complement conversions
+void decToTwoComp(int n, int bin[], int size);
 
-const char escapeChars[] = {'\'', '\"', '\?', '\\', 'a', 'b', 'f', 'n', 'r', 't', 'v'};
+int twoCompToDec(int bin[], int size);
 
-const int escapeVals[] = {0x27, 0x22, 0x3F, 0x5C, 0x07, 0x08, 0x0C, 0x0A, 0x0D, 0x09, 0x0B};
+// hex conversions
+// note: hex_size should always be at 1/4 of bin_size
+void binToHex(int bin[], int bin_size, char hex[], int hex_size);
 
-// keyword array used to parse text file
-const char *keyword[][16]={
-	{"BR", "br", "BRnzp", "brnzp", "BRnz", "brnz", "BRn", "brn",
-	"BRnp", "brnp", "BRzp", "brzp", "BRz", "brz", "BRp", "brp"},
-	{"ADD", "add"},
-	{"LD", "ld"},
-	{"ST", "st"},
-	{"JSR", "jsr", "JSRR", "jsrr"},
-	{"AND", "and"},
-	{"LDR", "ldr"},
-	{"STR", "str"},
-	{"RTI", "rti"},
-	{"NOT", "not"},
-	{"LDI", "ldi"},
-	{"STI", "sti"},
-	{"JMP", "jmp", "RET", "ret"},
-	{"INVALID_OPCODE_EXCEPTION"},
-	{"LEA", "lea"},
-	{"TRAP", "trap", "GETC", "getc", "OUT", "out", "PUTS", "puts",
-	"IN", "in", "PUTSP", "putsp", "HALT", "halt"}
-};
+int hexToDec(char hex[]);
 
-const char *regs[][2]={
-	{"R0", "r0"},
-	{"R1", "r1"},
-	{"R2", "r2"},
-	{"R3", "r3"},
-	{"R4", "r4"},
-	{"R5", "r5"},
-	{"R6", "r6"},
-	{"R7", "r7"}
-};
+unsigned char byteValue (char hex[2]);
 
-const char *pseudoop[][2]={
-	".ORIG", ".orig",
-	".END", ".end",
-	".STRINGZ", ".stringz",
-	".BLKW", ".blkw",
-	".FILL", ".fill"
-};
+// note: only handles positive numbers, intended for use with addresses
+// DO NOT use to calculate offsets
+int addrToDec(char hex[]);
 
-// 16 bit one in binary (used by adder)
-int one_16b[16]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1};
+// note: only handles positive numbers, intended for use with addresses
+// DO NOT use to calculate offsets
+char* decToAddr(char *hex, int dec_num);
+
+#endif

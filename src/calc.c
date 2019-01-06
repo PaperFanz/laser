@@ -1,4 +1,5 @@
 #include "calc.h"
+#include "convert.h"
 
 int checkExt (const char *filename, const char *ext)
 {
@@ -85,6 +86,7 @@ int offset (int type, char c[], int bits)
 			i++;
 		}
 		if (c[0] == '-' || c[1] == '-') {
+			int addone[16]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1};
 			notArr (bin, 16);
 			addArr (bin, 16, addone, 16, bin, 16);
 		}

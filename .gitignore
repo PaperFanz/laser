@@ -10,3 +10,6 @@ laser
 *.bin
 *.hex
 *.obj
+
+# ignore personal configs
+.vscode

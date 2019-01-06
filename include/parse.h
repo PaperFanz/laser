@@ -1,4 +1,3 @@
-// include statements
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -7,13 +6,13 @@
 #include <ctype.h>
 #include "config.h"
 
-// macros
-#define size(arr) ((&arr)[1]-arr)
+#ifndef PARSE_H
+#define PARSE_H
 
-// types
 struct Symbol {
 	char label[MAX_WORD_SIZE+2];
 	int addr;
+	int count;
 };
 
 struct Alert {
@@ -30,71 +29,36 @@ struct File {
 	FILE *obj;
 };
 
-// function declarations
+struct Alias {
+	char word[MAX_WORD_SIZE+2];
+	char replace[MAX_WORD_SIZE+2];
+	int count;
+};
+
+void parseFile (FILE *fp, char *fname);
+
+int labelAddress (struct Symbol *symbols, int s_cnt, char *label);
+
+void aliasWord (struct Alias *aliases, int a_cnt, char c[MAX_WORD_SIZE + 2]);
+
+void op_reg_imm (char *keyword, char *op, int *bin, int loc,
+				int offset_bits, int ln, struct Alert *alert, char *fname);
+
+void op_register (char *keyword, char *op, int loc, int *bin, int ln, struct Alert *alert, char *fname);
+
+void op_offset (char *keyword, char *op, int offset_bits, int ln,
+				int *bin, int s_cnt, struct Symbol *symbols, int addr, struct Alert *alert, char *fname);
+
 void lineToWords (char *line_buf, char word_buf[][MAX_WORD_SIZE + 2]);
 
 int countWords (int offset, char word_buf[][MAX_WORD_SIZE + 2]);
 
-void printAlertSummary (struct Alert alert);
-
-int isOrig (char word_buf[][MAX_WORD_SIZE + 2]);
-
-int isEnd (char word_buf[][MAX_WORD_SIZE + 2]);
-
-char *replaceExt (char *filename, const char *ext);
-
 void fprintAsm (struct File file, int *bin, int addr, int ln, char *line_buf, bool op, bool src);
 
-unsigned char byteValue (char hex[2]);
-
-int isKeyword(char c[]);
-
-int isPseuodoOp(char c[]);
-
-int isRegister(char c[]);
-
-int isLabel(char *c);
-
-int isValidOffset(char c[]);
-
-int isTrap(char c[]);
-
-int isBranch(char c[]);
+void printAlertSummary (struct Alert alert);
 
 void branchCondition (char *c, int *bin);
 
 void trapShortcut (char *op, char *trapvect);
 
-int isQuote(char c);
-
-int escapeValue (char c);
-
-int fillRegister(int r, int bin[], int n);
-
-int offset (int type, char c[], int bits);
-
-int fillDecOffset(int off, int bits, int ln, int put_bin[]);
-
-int addrToDec(char hex[]);
-
-char* decToAddr(char hex[], int dec_num);
-
-int labelAddress (struct Symbol *symbols, int s_cnt, char *label);
-
-void putSymbol(FILE *fp, char symbol[], char addr[]);
-
-void addSymbol (struct Symbol *symbols, int s_cnt, char *c, int addr, struct File file);
-
-void fprintIntArr(FILE *fp, int num[], int size);
-
-void fprintCharArr(FILE *fp, char hex[], int size);
-
-void decToTwoComp(int n, int bin[], int size);
-
-void binToHex(int bin[], int bin_size, char hex[], int hex_size);
-
-void op_reg_imm(char *keyword, char *op, int *bin, int loc, int offset_bits, int ln, struct Alert *alert, char *fname);
-
-void op_register(char *keyword, char *op, int loc, int *bin, int ln, struct Alert *alert, char *fname);
-
-void op_offset(char *keyword, char *op, int offset_bits, int ln, int *bin, int s_cnt, struct Symbol *symbols, int addr, struct Alert *alert, char *fname);
+#endif
