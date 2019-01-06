@@ -66,7 +66,7 @@ int parseArgs(int argc, char **argv)
 int main (int argc, char **argv) {
 
 	if (argc <= 1) {
-		printf("Type 'laser -h' for help\n");
+		printf("%s", usage);
 	} else {
 		parseArgs(argc, argv);
 	}
