@@ -157,8 +157,13 @@ void putSymbol (FILE *fp, char symbol[], char addr[])
 {
 	int i = 0;
 	fprintf (fp, "%s", symbol);
-	for (i = 6 - (symbol[MAX_WORD_SIZE + 1] / TABSIZE); i >= 0; i--)
-		fprintf (fp, "\t");
+	if (USE_SPACES_IN_SYM) {
+		for (i = 35 - symbol[MAX_WORD_SIZE + 1]; i >= 0; i--)
+			fprintf (fp, " ");
+	} else {
+		for (i = 8 - (symbol[MAX_WORD_SIZE + 1] / TABSIZE); i >= 0; i--)
+			fprintf (fp, "\t");
+	}
 	fprintf (fp, "x");
 	fprintCharArr(fp, addr, 4);
 	fprintf (fp, "\n");

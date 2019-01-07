@@ -246,10 +246,11 @@ int isValidOffset(char c[])
 
 int isLabel(char *c)
 {
-	int keyword = isKeyword (c);
-	int pseudoop = isPseuodoOp (c);
-	int off_type = isValidOffset (c);
-	if(keyword < 0 && pseudoop < 0 && off_type == 0 && c[0] != '\0')
+	int reg = isRegister (c);
+	int key = isKeyword (c);
+	int psop = isPseuodoOp (c);
+	int offt = isValidOffset (c);
+	if(reg < 0 && key < 0 && psop < 0 && offt == 0 && c[0] != '\0')
 		return 1;
 	else
 		return 0;
