@@ -29,6 +29,13 @@ void parseFile (FILE *fp, char *fname) {
 	alert.err = 0;
 	alert.exception = 0;
 
+	const char *symHeader = "Symbol Name                       Address\n"
+							"=========================================\n";
+	const char *lstHeader = " Addr |  Hex  | Line |     Source\n";
+	const char *binlstHeader = " Addr |  Hex  |      Binary      | Line |     Source\n";
+	const char *underline = "=================================================="
+	"==============================\n";
+
 	//==========================================================================
 	//	Create files and write headers (where applicable)
 	//==========================================================================
@@ -50,8 +57,13 @@ void parseFile (FILE *fp, char *fname) {
 		printf ("Error: Unable to open %s!\n", fname);
 	replaceExt(fname, ".asm");
 
-	fprintf (file.sym, "Symbol Name\t\t\t Page Address\n---------------------------------\n");
-	fprintf (file.lst, " Addr |  Hex  | Line |\tSource\n");
+	fprintf (file.sym, "%s", symHeader);
+
+	if (PRINT_BIN_IN_LST)
+		fprintf(file.lst, "%s", binlstHeader);
+	else
+		fprintf (file.lst, "%s", lstHeader);
+	fprintf(file.lst, "%s", underline);
 	
 	//==========================================================================
 	//	Pass 1 - Generate Symbol file
@@ -84,16 +96,27 @@ void parseFile (FILE *fp, char *fname) {
 				fgetpos (fp, &pos);
 				orig = true;
 			} else if (a >= 0) {
-				aliases = realloc (aliases, (a_cnt + 1) * sizeof (struct Alias));
-				memcpy (aliases[a_cnt].word, word_buf[a + 1], sizeof(char) * (MAX_WORD_SIZE + 2));
-				memcpy (aliases[a_cnt].replace, word_buf[a + 2], sizeof(char) * (MAX_WORD_SIZE + 2));
-				aliases[a_cnt].count = 0;
-				a_cnt++;
+				if (word_buf[a +1][0] == '\0' || word_buf[a + 2][0] == '\0'){
+					alert.warn++;
+					printf ("Warning: (%s line %d) ", fname, ln);
+					printf ("'%s' requires two operands!\n%s", word_buf[a], line_buf);
+				} else {
+					aliases = realloc (aliases, (a_cnt + 1) * sizeof (struct Alias));
+					memcpy (aliases[a_cnt].word, word_buf[a + 1], sizeof(char) * (MAX_WORD_SIZE + 2));
+					memcpy (aliases[a_cnt].replace, word_buf[a + 2], sizeof(char) * (MAX_WORD_SIZE + 2));
+					aliases[a_cnt].count = 0;
+					a_cnt++;
+				}
 			}
 			fprintAsm (file, bin, addr, ln, line_buf, op, src);
 		} else if (isEnd (word_buf) >= 0) {
 			break;
 		} else {
+			
+			for (int i = 0; i < MAX_WORD_NUM; i++) {
+				aliasWord (aliases, a_cnt, word_buf[i]);
+			}
+
 			int i;
 			int keyword, pseudoop, label;
 			for (i = 0; i < MAX_WORD_NUM; i++) {
@@ -882,8 +905,14 @@ void fprintAsm (struct File file, int *bin, int addr, int ln,
 		binToHex (bin, 16, hex, 4);
 		fprintCharArr (file.lst, hex, 4);
 		fprintf (file.lst, " | ");
-	} else if (src) {
+		if (PRINT_BIN_IN_LST) {
+			fprintIntArr (file.lst, bin, 16);
+			fprintf (file.lst, " | ");
+		}
+	} else if (src && !PRINT_BIN_IN_LST) {
 		fprintf (file.lst, "      |       | ");
+	} else if (src && PRINT_BIN_IN_LST) {
+		fprintf (file.lst, "      |       |                  | ");
 	}
 
 	if (src) {
