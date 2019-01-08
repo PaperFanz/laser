@@ -12,7 +12,7 @@ const char escapeChars[] = {'\'', '\"', '\?', '\\', 'a', 'b', 'f', 'n', 'r', 't'
 const int escapeVals[] = {0x27, 0x22, 0x3F, 0x5C, 0x07, 0x08, 0x0C, 0x0A, 0x0D, 0x09, 0x0B};
 
 // keyword array used to parse text file
-const char *keyword[][16]={
+const char *keyword[][16] = {
 	{"BR", "br", "BRnzp", "brnzp", "BRnz", "brnz", "BRn", "brn",
 	"BRnp", "brnp", "BRzp", "brzp", "BRz", "brz", "BRp", "brp"},
 	{"ADD", "add"},
@@ -33,7 +33,19 @@ const char *keyword[][16]={
 	"IN", "in", "PUTSP", "putsp", "HALT", "halt"}
 };
 
-const char *regs[][2]={
+const char *branch[][2] = {
+	{"\0", "\0"},
+	{"BRp", "brp"},
+	{"BRz", "brz"},
+	{"BRzp", "brzp"},
+	{"BRn", "brn"},
+	{"BRnp", "brnp"},
+	{"BRnz", "brnz"},
+	{"BR", "br"},
+	{"BRnzp", "brnzp"}
+};
+
+const char *regs[][2] = {
 	{"R0", "r0"},
 	{"R1", "r1"},
 	{"R2", "r2"},
@@ -44,7 +56,7 @@ const char *regs[][2]={
 	{"R7", "r7"}
 };
 
-const char *pseudoop[][2]={
+const char *pseudoop[][2] = {
 	".ORIG", ".orig",
 	".END", ".end",
 	".STRINGZ", ".stringz",
@@ -265,10 +277,22 @@ int isTrap(char c[])
 	return -1;
 }
 
-int isBranch(char c[])
+int isBranchOLD(char c[])
 {
 	for (int i = 0; i <= 15; i++) {
 		if (strcmp (c, keyword[0][i]) == 0)
+			return i;
+	}
+	return -1;
+}
+
+int isBranch(char *c)
+{
+	if (!strcmp (c, branch[8][0]) || !strcmp (c, branch[8][1])) {
+		return 7;
+	}
+	for (int i = 0; i < 8; i++) {
+		if (!strcmp (c, branch[i][0]) || !strcmp (c, branch[i][1]))
 			return i;
 	}
 	return -1;

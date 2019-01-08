@@ -1,6 +1,22 @@
 #include "calc.h"
 #include "convert.h"
 
+int intPow (int a, int b)
+{
+	int ret = 1;
+	for (int i = 0; i < b; i++)
+		ret *= a;
+	return ret;
+}
+
+int offsetMask (int offset_bits)
+{
+	int mask = 0;
+	for (int i = 0; i < offset_bits; i++)
+		mask += intPow (2, i);
+	return mask;
+}
+
 int checkExt (const char *filename, const char *ext)
 {
 	char *dot=strrchr(filename, '.');

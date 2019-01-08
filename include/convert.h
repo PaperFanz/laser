@@ -26,7 +26,9 @@ int isLabel(char *c);
 
 int isTrap(char c[]);
 
-int isBranch(char c[]);
+int isBranchOLD(char c[]);
+
+int isBranch(char *c);
 
 int isQuote(char c);
 

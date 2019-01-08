@@ -7,6 +7,10 @@
 #ifndef CALC_H
 #define CALC_H
 // function declarations
+int intPow (int a, int b);
+
+int offsetMask (int offset_bits);
+
 int checkExt (const char *filename, const char *ext);
 
 char *replaceExt (char *filename, const char *ext);
