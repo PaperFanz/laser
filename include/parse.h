@@ -16,6 +16,14 @@ struct Instruction {
 	char *opcode;
 	__uint16_t instr;
 	int addr;
+	int type;
+	bool src;
+};
+
+enum instype {
+	N_OP = 0,
+	P_OP = 1,
+	OP = 2
 };
 
 struct Symbol {
@@ -82,11 +90,13 @@ int operandRegister (char *op, int loc, struct Instruction *ins, struct Alert *a
 
 int operandOffset (char *op, struct Instruction *ins, struct Symbol *sym, int off_b, struct Alert *a);
 
+int operandString (char *str, struct Instruction *ins, struct File file, struct Alert *a);
+
 void lineToWords (char *line_buf, char word_buf[][MAX_WORD_SIZE + 2]);
 
 int countWords (int offset, char word_buf[][MAX_WORD_SIZE + 2]);
 
-void fprintAsm (struct File file, struct Instruction ins, bool op, bool src);
+void fprintAsm (struct File file, struct Instruction ins);
 
 void printAlertSummary (struct Alert alert);
 

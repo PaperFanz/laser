@@ -9,7 +9,7 @@ void parseFile (FILE *fp, char *fname) {
 	//==========================================================================
 
 	int addr_st = 0, ln = 0, ln_st = 0;
-	bool orig = false, op = false, src = true;
+	bool orig = false;
 	int bin[16];
 
 	char line_buf[MAX_LEN + 1];
@@ -97,18 +97,19 @@ void parseFile (FILE *fp, char *fname) {
 		instruction.instr = 0;
 
 		if (!orig) {
-			op = false;
-			src = true;
+			instruction.type = N_OP;
+			instruction.src = true;
 			int o = isOrig (word_buf);
 			int a = isAlias (word_buf);
 			if (o >= 0) {
-				op = true;
+				instruction.type = P_OP;
 				addr_st = instruction.addr = addrToDec (word_buf[o + 1]);
 				instruction.instr = instruction.addr;
 				ln_st = ln;
 				fgetpos (fp, &pos);
 				orig = true;
 			} else if (a >= 0) {
+				instruction.type = P_OP;
 				if (word_buf[a + 1][0] == '\0' || word_buf[a + 2][0] == '\0'){
 					alert.warn++;
 					printf ("Warning: (%s line %d) ", fname, ln);
@@ -122,7 +123,7 @@ void parseFile (FILE *fp, char *fname) {
 					aliases[0].count++;
 				}
 			}
-			fprintAsm (file, instruction, op, src);
+			fprintAsm (file, instruction);
 		} else if (isEnd (word_buf) >= 0) {
 			break;
 		} else {
@@ -354,12 +355,12 @@ void parseFile (FILE *fp, char *fname) {
 				alert.warn++;
 				printf ("Warning: (%s line %d) ", fname, ln);
 				printf ("'%s' takes %d operand%c!\n", word_buf[i-1], op_num, c);
-				printf ("%s", line_buf);
+				printf ("\t%s", line_buf);
 			} else if ((countWords (i, word_buf) - op_num) < 0) {
 				alert.err++;
 				printf ("Error: (%s line %d) ", fname, ln);
 				printf ("'%s' takes %d operand%c!\n", word_buf[i-1], op_num, c);
-				printf ("%s", line_buf);
+				printf ("\t%s", line_buf);
 			}
 		}
 	}
@@ -393,8 +394,8 @@ void parseFile (FILE *fp, char *fname) {
 		bool empty = (line_buf[0] == '\0');
 
 		if (comment || empty){
-			op = false;
-			fprintAsm (file, instruction, op, src);
+			instruction.type = N_OP;
+			fprintAsm (file, instruction);
 			continue;
 		}
 
@@ -406,15 +407,15 @@ void parseFile (FILE *fp, char *fname) {
 		//======================================================================
 
 		memset (bin, 0, sizeof(int) * 16);		// clear bin array
-		
-		op = false;
-		src = true;
+
 		int offset_bits = 0;
 		int off, off_type, label_addr;
 
 		instruction.line_buf = line_buf;
 		instruction.ln = ln;
 		instruction.instr = 0;
+		instruction.type = N_OP;
+		instruction.src = true;
 
 		int instr_bin[16];
 
@@ -440,7 +441,7 @@ void parseFile (FILE *fp, char *fname) {
 		{
 			alert.err++;
 			printf ("Error: (%s line %d) ", fname, ln);
-			printf ("Multiple .ORIG declaration\n%s", line_buf);
+			printf ("Multiple .ORIG declaration\n\t%s", line_buf);
 			break;			
 		}
 		case END:		// clean up and return
@@ -485,48 +486,16 @@ void parseFile (FILE *fp, char *fname) {
 		}
 		case STRINGZ:
 		{
-			op = true;
-			op1 = word_buf[i + 1];
-			if (op1[0] == '\"') {
-				int i = 1;
-				while (op1[i] != '\0') {
-					int escChar = escapeValue (op1[i+1]);
-					if (op1[i] == '\"'){
-						instruction.instr = 0;
-						fprintAsm (file, instruction, op, src);
-						instruction.addr++;
-						break;
-					} else if (op1[i] == '\\' && escChar) {
-						instruction.instr = escChar;
-						fprintAsm (file, instruction, op, src);
-						if (src) src = false;
-						instruction.addr++;
-						i += 2;
-					} else if (op1[i] == '\\' && !escChar) {
-						alert.err++;
-						printf ("Error: (%s line %d) ", instruction.fname, instruction.ln);
-						printf ("invalid escape sequence in string %s\n", op1);
-					} else {
-						instruction.instr = op1[i];
-						fprintAsm (file, instruction, op, src);
-						if (src) src = false;
-						instruction.addr++;
-						i++;
-					}
-				}
-			} else {
-				alert.err++;
-				printf ("Error: (%s line %d) ", fname, ln);
-				printf ("invalid operand for '%s': %s\n", word_buf[i], op1);
-			}
-			op = false;
+			instruction.type = P_OP;
+			operandString (op1, &instruction, file, &alert);
+			instruction.type = N_OP;
+			instruction.src = false;
 			break;
 		}
 		case BLKW:
 		{
-			op = true;
-			src = true;
-			op1 = word_buf[i + 1];
+			instruction.type = P_OP;
+			instruction.src = true;
 			off_type = isValidOffset (op1);
 			if (off_type == 0){
 				alert.err++;
@@ -534,19 +503,19 @@ void parseFile (FILE *fp, char *fname) {
 				printf ("invalid operand for '%s': %s\n", word_buf[i], op1);
 			} else {
 				for (off = offset (off_type, op1, 15); off > 0; off--){
-					fprintAsm (file, instruction, op, src);
-					if (src) src = false;
+					fprintAsm (file, instruction);
+					if (instruction.src) instruction.src = false;
 					instruction.addr++;
 				}
 			}
-			op = false;
-			src = false;
+			instruction.type = N_OP;
+			instruction.src = false;
 			break;
 		}
 		case FILL:
 		{
-			op = true;
-			src = true;
+			instruction.type = P_OP;
+			instruction.src = true;
 			off_type = isValidOffset (op1);
 			int label_addr = labelAddress (symbols, s_cnt, op1);
 			if (off_type > 0) {
@@ -576,8 +545,8 @@ void parseFile (FILE *fp, char *fname) {
 		if (keyword >= 0 && keyword <= 15 && keyword != 13){
 			instruction.instr = keyword << 12;
 			instruction.opcode = word_buf[i];
-			op = true;
-			src = true;
+			instruction.type = OP;
+			instruction.src = true;
 		}
 
 		switch (keyword) {
@@ -699,10 +668,7 @@ void parseFile (FILE *fp, char *fname) {
 		}
 		case TRAP:
 		{
-			op = true;
 			offset_bits = 8;
-
-			op1 = word_buf[i + 1];
 			trapShortcut (word_buf[i], op1);
 			operandOffset (op1, &instruction, symbols, offset_bits, &alert);
 			break;
@@ -712,8 +678,8 @@ void parseFile (FILE *fp, char *fname) {
 			break;
 		}
 
-		fprintAsm (file, instruction, op, src);
-		if(op)
+		fprintAsm (file, instruction);
+		if(instruction.type)
 			instruction.addr++;
 	}
 }
@@ -815,6 +781,42 @@ int operandOffset (char *op, struct Instruction *ins, struct Symbol *sym, int of
 	}
 }
 
+int operandString (char *str, struct Instruction *ins, struct File file, struct Alert *a)
+{
+	if (str[0] == '\"') {
+		int i = 1;
+		while (str[i] != '\0') {
+			int escChar = escapeValue (str[i+1]);
+			if (str[i] == '\"'){
+				ins->instr = 0;
+				fprintAsm (file, *ins);
+				ins->addr++;
+				break;
+			} else if (str[i] == '\\' && escChar) {
+				ins->instr = escChar;
+				fprintAsm (file, *ins);
+				if (ins->src) ins->src = false;
+				ins->addr++;
+				i += 2;
+			} else if (str[i] == '\\' && !escChar) {
+				a->err++;
+				printf ("Error: (%s line %d) ", ins->fname, ins->ln);
+				printf ("invalid escape sequence in string %s\n", str);
+			} else {
+				ins->instr = str[i];
+				fprintAsm (file, *ins);
+				if (ins->src) ins->src = false;
+				ins->addr++;
+				i++;
+			}
+		}
+	} else {
+		a->err++;
+		printf ("Error: (%s line %d) ", ins->fname, ins->ln);
+		printf ("invalid operand for '%s': %s\n", ins->opcode, str);
+	}
+}
+
 void lineToWords (char *line_buf, char word_buf[][MAX_WORD_SIZE + 2])
 {
 	int i = 0, j = 0, k = 0;		// counter inits
@@ -851,12 +853,12 @@ int countWords (int offset, char word_buf[][MAX_WORD_SIZE + 2])
 	return i - offset;
 }
 
-void fprintAsm (struct File file, struct Instruction ins, bool op, bool src)
+void fprintAsm (struct File file, struct Instruction ins)
 {
 	char hex[4];
 	int bin[16];
 	decToTwoComp (ins.instr, bin, 16);
-	if (op) {
+	if (ins.type) {
 		char byte[2];
 		unsigned char value;
 		fprintIntArr (file.bin, bin, 16);
@@ -876,7 +878,7 @@ void fprintAsm (struct File file, struct Instruction ins, bool op, bool src)
 		fwrite (&value, sizeof(value), 1, file.obj);
 	}
 
-	if (op) {
+	if (ins.type) {
 		fprintf(file.lst, " ");
 		decToAddr (hex, ins.addr);
 		fprintCharArr (file.lst, hex, 4);
@@ -888,21 +890,21 @@ void fprintAsm (struct File file, struct Instruction ins, bool op, bool src)
 			fprintIntArr (file.lst, bin, 16);
 			fprintf (file.lst, " | ");
 		}
-	} else if (src && !PRINT_BIN_IN_LST) {
+	} else if (ins.src && !PRINT_BIN_IN_LST) {
 		fprintf (file.lst, "      |       | ");
-	} else if (src && PRINT_BIN_IN_LST) {
+	} else if (ins.src && PRINT_BIN_IN_LST) {
 		fprintf (file.lst, "      |       |                  | ");
 	}
 
-	if (src) {
+	if (ins.src) {
 		fprintf (file.lst, "%d", ins.ln);
 		int n = ins.ln;
 		while (n < 10000){
 			fprintf (file.lst, " ");
 			n *= 10;
 		}
-		fprintf (file.lst, "|\t%s", ins.line_buf);
-	} else if (op) {
+		fprintf (file.lst, "| %s", ins.line_buf);
+	} else if (ins.type) {
 		fprintf (file.lst, "     |\n");
 	}
 }
