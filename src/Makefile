@@ -1,5 +1,6 @@
 CC = gcc
 CFLAGS = -I $(IDIR) -lm
+MAC_CFLAGS = -I $(IDIR)
 
 IDIR = ../include
 LDIR = ../lib
@@ -16,6 +17,9 @@ $(ODIR)/%.o: %.c $(DEPS)
 
 laser: $(OBJ)
 	$(CC) -o $@ $^ $(CFLAGS)
+
+mac: $(OBJ)
+	$(CC) -o $@ $^ $(MAC_CFLAGS)
 
 .PHONY: clean install uninstall
 

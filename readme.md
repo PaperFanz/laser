@@ -2,7 +2,7 @@
 
 ## Description
 
-An assembler for the LC3 assembly language written entirely in C. I've been trying to move away from LC3Edit provided by my university, which is old and hurts my eyes, and an assembling programs was the last thing I used LC3Edit for.
+An assembler for the LC3 assembly language written entirely in C. I've been trying to move away from LC3Edit provided by my university, which is old and hurts my eyes, and an assembling programs was the last thing I used LC3Edit for. The LC3 ISA can be found [here][2].
 
 ### Motivation
 
@@ -38,14 +38,54 @@ You can use the command `laser -a *.asm` or `laser -c *.asm` to assemble or clea
 
 ## Building from Source
 
-If you would like to give `laser` a try, here are the instructions for building on Mac, Linux, or Windows Subsystem Linux. Mac users must have `xcode` installed, and Linux users must have `build-essential` installed. Open a terminal, and execute the following commands:
+### Configuration
+
+Due to the variety of different ways the `laser` output files can be formatted, I have included a way for you to customize a few options at compile-time. These options are detailed in [`include/config.h`](./include.config.h).
+
+### Linux
+
+#### Prep
+
+Let's be honest; you already know how to do this. There are no special requirements for this project other than `build-essential` - `laser` uses only the standard C headers and the math library.
+
+#### Building
 
 1. Clone this repository: `git clone https://github.com/PaperFanz/laser.git`
 2. Go to the `src` directory: `cd laser/src`
 3. Build the project using the included Makefile: `make`
 4. `sudo make install` (if you want to use `laser` without selecting the directory and using ./laser)
 
-This last step might not work for Mac users, but Linux users (including Windows Subsystem Linux) should have no issues. Alternatively, you may choose to manually copy the compiled binary to your `bin` directory of choice.
+Check if `laser` has been properly installed by using `whereis laser`.
+
+### Windows
+
+#### Prep
+
+Windows users must have either Windows Subsystem Linux (available from the [Microsoft Store app][0]) or MINGW installed on their system. Instructions on installing WSL on your system are available [here][1]. Ensure that the `build-essential` package is installed (`sudo apt install build-essential` if it is not).
+
+#### Building
+
+1. Clone this repository: `git clone https://github.com/PaperFanz/laser.git`
+2. Go to the `src` directory: `cd laser/src`
+3. Build the project using the included Makefile: `make`
+4. `sudo make install` (if you want to use `laser` without selecting the directory and using ./laser)
+
+Check if `laser` has been properly installed by using `whereis laser`.
+
+### Mac
+
+#### Prep
+
+Mac users must have the command-line XCode tools installed. They can be installed from the [Apple Developers page](developer.apple.com) or by typing `xcode-select --install` into the terminal and following the prompts. After this is complete, check that it is installed properly by running `whereis gcc` and `whereis make` in the terminal. If either of these commands returns an error, Google is your best friend.
+
+#### Building
+
+1. Clone this repository: `git clone https://github.com/PaperFanz/laser.git`
+2. Go to the `src` directory: `cd laser/src`
+3. Build the project using the included Makefile: `make mac`
+4. `sudo make install` (if you want to use `laser` without selecting the directory and using ./laser)
+
+Check if `laser` has been properly installed by using `whereis laser`.
 
 ## Notice
 
@@ -61,3 +101,9 @@ The base features of this project are now complete, and the functions listed abo
 6. ~~Generating the object file~~	Completed 1/4/2019
 
 ~~I've got a lot of work to do.~~ Good thing winter break is forever.
+
+[0]: https://www.microsoft.com/en-us/p/ubuntu-1804-lts/9n9tngvndl3q?activetab=pivot:overviewtab
+
+[1]: https://docs.microsoft.com/en-us/windows/wsl/install-win10
+
+[2]: https://justinmeiners.github.io/lc3-vm/supplies/lc3-isa.pdf
