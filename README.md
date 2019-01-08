@@ -12,7 +12,7 @@ The completion of this tool allows me to do everything LC3-related from VSCode, 
 
 Laser implements the basic funcitonality of the assembler included in LC3Edit, with some changes, including a new feature. These differences are as follows:
 
-1. Aside from the existing pseudoops `ORIG`, `END`, `STRINGZ`, `BLKW`, `FILL`, there is an additional `ALIAS` pseudoop. `ALIAS` allows you to declare an alias for a word before the `.ORIG x____` declaration, and is similar to a `#define` statement in C. For example, if you were to `.ALIAS foo bar`, then every occurence of `foo` in your code following the `.ORIG` would be replaced with `bar` at compile time. The intention is to allow you to 'name' your registers, making it easier to keep track of your operations.
+1. Aside from the existing pseudoops `ORIG`, `END`, `STRINGZ`, `BLKW`, `FILL`, there is an additional `ALIAS` pseudoop. `ALIAS` allows you to declare an alias for a word before the `.ORIG x____` declaration, and is similar to a `#define` statement in C. For example, if you were to `.ALIAS foo bar`, then every occurence of `foo` in your code following the `.ORIG` would be replaced with `bar` when the program is assembled. The intention is to allow you to 'name' your registers, making it easier to keep track of your operations.
 2. By using the command `laser -a *.asm` you can assemble all assembly files in a directory. This is especially useful when dealing with programs utilizing data files or user-defined subroutines. For this reason, `laser`'s error reporting system will include the file name along with the line number that the error originates from.
 3. Hex and binary numbers used in `.FILL`s will be sign extended to 4 hex characters and 16 binary bits and calculated accordingly, as opposed to zero-extending like LC3Edit. For the most part, functionality is unchanged, except for hex numbers leading with '8' or greater, and binary numbers leading with '1'. For example, LC3Edit assembles `.FILL xA` as `x000A`, while `laser` will assemble it as `xFFFA`. To get `laser` to fill `x000A`, add a leading 0 - `.FILL x0A`.
 4. `laser` has error-checking features similar to LC3Edit, but separates the severity of these errors into three separate tiers:
@@ -61,9 +61,11 @@ Check if `laser` has been properly installed by using `whereis laser`.
 
 #### Prep
 
-Windows users must have either Windows Subsystem Linux (available from the [Microsoft Store app][0]) or MINGW installed on their system. Instructions on installing WSL on your system are available [here][1]. Ensure that the `build-essential` package is installed (`sudo apt install build-essential` if it is not).
+Windows users may choose between using Windows Subsystem Linux (available from the [Microsoft Store app][0]) or downloading the compiled executable from the [releases][3] page. If you choose to use the executable, be sure to [add it to your PATH environment][4]. You may then use `laser` through `cmd` or `powershell`.
 
-#### Building
+#### Building on WSL
+
+Instructions on installing WSL on your system are available [here][1]. Ensure that the `build-essential` package is installed (`sudo apt install build-essential` if it is not).
 
 1. Clone this repository: `git clone https://github.com/PaperFanz/laser.git`
 2. Go to the `src` directory: `cd laser/src`
@@ -107,3 +109,7 @@ The base features of this project are now complete, and the functions listed abo
 [1]: https://docs.microsoft.com/en-us/windows/wsl/install-win10
 
 [2]: https://justinmeiners.github.io/lc3-vm/supplies/lc3-isa.pdf
+
+[3]: https://github.com/PaperFanz/laser/releases/tag/v1.0.0
+
+[4]: https://helpdeskgeek.com/windows-10/add-windows-path-environment-variable/
