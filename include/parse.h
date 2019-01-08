@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <math.h>
 #include <ctype.h>
 #include "config.h"
@@ -14,7 +15,7 @@ struct Instruction {
 	int ln;
 	char *line_buf;
 	char *opcode;
-	__uint16_t instr;
+	uint16_t instr;
 	int addr;
 	int type;
 	bool src;

@@ -20,8 +20,12 @@ int offsetMask (int offset_bits)
 int checkExt (const char *filename, const char *ext)
 {
 	char *dot=strrchr(filename, '.');
-	if(strcmp(dot, ext)==0) return 1;
-	else return 0;
+	if (dot == NULL)
+		return 0;
+	else if (strcmp (dot, ext) == 0)
+		return 1;
+	else
+		return 0;
 }
 
 char *replaceExt (char *filename, const char *ext)
