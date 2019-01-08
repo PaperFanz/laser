@@ -40,7 +40,7 @@ You can use the command `laser -a *.asm` or `laser -c *.asm` to assemble or clea
 
 ### Configuration
 
-Due to the variety of different ways the `laser` output files can be formatted, I have included a way for you to customize a few options at compile-time. These options are detailed in [`include/config.h`](./include.config.h).
+Due to the variety of different ways the `laser` output files can be formatted, I have included a way for you to customize a few options at compile-time. These options are detailed in [`include/config.h`](./include/config.h).
 
 ### Linux
 
