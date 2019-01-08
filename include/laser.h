@@ -8,7 +8,7 @@
 #ifndef LASER_H
 #define LASER_H
 
-const char *version_num = "0.0.4";
+const char *version_num = "1.0.0";
 
 const char *usage = "laser usage:\n"
 					"\t'laser -v' to display version number\n"
