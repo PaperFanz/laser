@@ -450,7 +450,8 @@ void parseFile (FILE *fp, char *fname) {
 			alert.err += alert_st.err;
 			alert.exception += alert_st.exception;
 
-			free(symbols);
+			free (symbols);
+			free (aliases);
 			if (file.bin != NULL)
 				fclose(file.bin);
 			if (file.hex != NULL)
@@ -557,7 +558,6 @@ void parseFile (FILE *fp, char *fname) {
 		case BR:
 		{
 			offset_bits = 9;
-			branchCondition (word_buf[i], bin);
 			int branch = isBranch (word_buf[i]);
 			if (branch >= 0) {
 				instruction.instr += branch << 9;
@@ -724,7 +724,7 @@ int operandImmediate (char *op, struct Instruction *ins, int loc, int off_b, str
 		return 0;
 	}
 
-	if (off > intPow (2, off_b - 1) - 1 || off < -intPow (2, off_b - 1)) {
+	if (off > (1 << off_b - 1) - 1 || off < -(1 << off_b - 1)) {
 		a->err++;
 		printf ("Error: (%s line %d) ", ins->fname, ins->ln);
 		printf ("%d will not fit in %d offset bits!\n", off, off_b);
@@ -770,7 +770,7 @@ int operandOffset (char *op, struct Instruction *ins, struct Symbol *sym, int of
 		return 0;
 	}
 
-	if (off > intPow (2, off_b - 1) - 1 || off < -intPow (2, off_b - 1)) {
+	if (off > (1 << off_b - 1) - 1 || off < -(1 << off_b - 1)) {
 		a->err++;
 		printf ("Error: (%s line %d) ", ins->fname, ins->ln);
 		printf ("%d will not fit in %d offset bits!\n", off, off_b);
@@ -927,37 +927,6 @@ void printAlertSummary (struct Alert alert)
 	printf ("%d error%c,", alert.err, err);
 	printf (" %d warning%c,", alert.warn, warn);
 	printf (" and %d exception%c!\n", alert.exception, exception);
-}
-
-int branchCondition (char *c, int *bin)
-{
-	switch (isBranchOLD (c)) {
-	case -1:
-		break;
-	case 0 ... 3:
-		bin[4] = bin[5] = bin[6] = 1;
-		break;
-	case 4 ... 5:
-		bin[4] = bin[5] = 1;
-		break;
-	case 6 ... 7:
-		bin[4] = 1;
-		break;
-	case 8 ... 9:
-		bin[4] = bin[6] = 1;
-		break;
-	case 10 ... 11:
-		bin[5] = bin[6] = 1;
-	case 12 ... 13:
-		bin[5] = 1;
-		break;
-	case 14 ... 15:
-		bin[6] = 1;
-		break;
-	default:
-		break;
-	}
-	return 0;
 }
 
 void trapShortcut (char *op, char *trapvect)

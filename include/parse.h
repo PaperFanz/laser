@@ -3,7 +3,6 @@
 #include <string.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include <math.h>
 #include <ctype.h>
 #include "config.h"
 
@@ -100,8 +99,6 @@ int countWords (int offset, char word_buf[][MAX_WORD_SIZE + 2]);
 void fprintAsm (struct File file, struct Instruction ins);
 
 void printAlertSummary (struct Alert alert);
-
-int branchCondition (char *c, int *bin);
 
 void trapShortcut (char *op, char *trapvect);
 

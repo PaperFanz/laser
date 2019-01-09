@@ -1,6 +1,5 @@
 #include <string.h>
 #include <stdlib.h>
-#include <math.h>
 #include <ctype.h>
 #include <stdio.h>
 #include "config.h"
@@ -26,11 +25,7 @@ int isLabel(char *c);
 
 int isTrap(char c[]);
 
-int isBranchOLD(char c[]);
-
 int isBranch(char *c);
-
-int isQuote(char c);
 
 int isOrig (char word_buf[][MAX_WORD_SIZE+2]);
 

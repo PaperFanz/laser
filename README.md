@@ -50,29 +50,25 @@ Let's be honest; you already know how to do this. There are no special requireme
 
 #### Building
 
-1. Clone this repository: `git clone https://github.com/PaperFanz/laser.git`
-2. Go to the `src` directory: `cd laser/src`
-3. Build the project using the included Makefile: `make`
-4. `sudo make install` (if you want to use `laser` without selecting the directory and using ./laser)
-
-Check if `laser` has been properly installed by using `whereis laser`.
+1. `git clone https://github.com/PaperFanz/laser.git`
+2. `cd laser/src`
+3. `make`
+4. `sudo make install` or copy to `bin` directory of choice
 
 ### Windows
 
 #### Prep
 
-Windows users may choose between using Windows Subsystem Linux (available from the [Microsoft Store app][0]) or downloading the compiled executable from the [releases][3] page. If you choose to use the executable, be sure to [add it to your PATH environment][4]. You may then use `laser` through `cmd` or `powershell`.
+Windows users may choose between using Windows Subsystem Linux (available from the [Microsoft Store app][0]) or downloading the compiled executable from the [releases][3] page. If you choose to use the executable, be sure to [add it to your PATH environment][4]. You may then use `laser` through `cmd` or `powershell`. If you would like to use a Windows executable and edit the options in `config.h`, then you must compile your own exectuable using MINGW64.
 
 #### Building on WSL
 
 Instructions on installing WSL on your system are available [here][1]. Ensure that the `build-essential` package is installed (`sudo apt install build-essential` if it is not).
 
-1. Clone this repository: `git clone https://github.com/PaperFanz/laser.git`
-2. Go to the `src` directory: `cd laser/src`
-3. Build the project using the included Makefile: `make`
-4. `sudo make install` (if you want to use `laser` without selecting the directory and using ./laser)
-
-Check if `laser` has been properly installed by using `whereis laser`.
+1. `git clone https://github.com/PaperFanz/laser.git`
+2. `cd laser/src`
+3. `make`
+4. `sudo make install` or copy to `bin` directory of choice
 
 ### Mac
 
@@ -84,7 +80,7 @@ Mac users must have the command-line XCode tools installed. They can be installe
 
 1. Clone this repository: `git clone https://github.com/PaperFanz/laser.git`
 2. Go to the `src` directory: `cd laser/src`
-3. Build the project using the included Makefile: `make mac`
+3. Build the project using the included Makefile: `make`
 4. `sudo make install` (if you want to use `laser` without selecting the directory and using ./laser)
 
 Check if `laser` has been properly installed by using `whereis laser`.

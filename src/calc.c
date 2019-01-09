@@ -1,19 +1,11 @@
 #include "calc.h"
 #include "convert.h"
 
-int intPow (int a, int b)
-{
-	int ret = 1;
-	for (int i = 0; i < b; i++)
-		ret *= a;
-	return ret;
-}
-
 int offsetMask (int offset_bits)
 {
 	int mask = 0;
 	for (int i = 0; i < offset_bits; i++)
-		mask += intPow (2, i);
+		mask += 1 << i;
 	return mask;
 }
 
@@ -39,60 +31,25 @@ char *replaceExt (char *filename, const char *ext)
 	return filename;
 }
 
-// .bin generator functions
-int fillRegister (int r, int bin[], int n)
-{
-	if(n==2) n++;
-	int m=4+(3*n);
-	switch(r){
-	case 0: return 1;
-	case 1: bin[m+2]=1; return 1;
-	case 2: bin[m+1]=1; return 1;
-	case 3: bin[m+2]=bin[m+1]=1; return 1;
-	case 4: bin[m]=1; return 1;
-	case 5: bin[m+2]=bin[m]=1; return 1;
-	case 6: bin[m+1]=bin[m]=1; return 1;
-	case 7: bin[m+2]=bin[m+1]=bin[m]=1; return 1;
-	default: return 0;
-	}
-}
-
-int fillDecOffset (int off, int bits, int ln, int put_bin[])
-{
-	if((off>(pow(2, bits-1)-1))||(off<-pow(2, bits))){
-		return 0;
-	}
-	else{
-		int bin[16];
-		memset(bin, 0, sizeof(int)*16);
-		decToTwoComp(off, bin, 16);
-
-		for(int i=1; i<=bits; i++){
-			put_bin[16-i]=bin[16-i];
-		}
-		return 1;
-	}
-}
-
 // read a fixed offset or immediate value and express it in n bits
 int offset (int type, char c[], int bits)
 {
-	int off=0, bin[16];
-	memset(bin, 0, sizeof(int)*16);
+	int off = 0, bin[16];
+	memset (bin, 0, sizeof(int)*16);
 
-	if(type==0){
+	if(type == 0){
 		return 0;
 	}
-	else if(type==1){
+	else if(type == 1){
 		if (c[0] == '-' || c[1] == '-'){
-			decToTwoComp(-1 * hexToDec(&c[1]), bin, 16);
+			decToTwoComp (-1 * hexToDec(&c[1]), bin, 16);
 		} else {
-			decToTwoComp(hexToDec(c), bin, 16);
+			decToTwoComp (hexToDec(c), bin, 16);
 		}
 
 	}
-	else if(type==2){
-		int i, j=15-c[MAX_WORD_SIZE+1]+2;
+	else if(type == 2){
+		int i, j = 15 - c[MAX_WORD_SIZE + 1] + 2;
 		if (c[0] == '-' || c[1] == '-') {
 			i = 2;
 		} else {
@@ -106,12 +63,12 @@ int offset (int type, char c[], int bits)
 			i++;
 		}
 		if (c[0] == '-' || c[1] == '-') {
-			int addone[16]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1};
+			int addone[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1};
 			notArr (bin, 16);
 			addArr (bin, 16, addone, 16, bin, 16);
 		}
 	} else if(type == 3) {
-		int i, dec_num=0;
+		int i, dec_num = 0;
 		if(c[0] == '-' || c[1] == '-')
 			i = 2;
 		else
@@ -124,7 +81,7 @@ int offset (int type, char c[], int bits)
 			dec_num = -1 * dec_num;
 		decToTwoComp(dec_num, bin, 16);
 	} else if (type == 4) {
-		int i, dec_num=0;
+		int i, dec_num = 0;
 		if(c[0] == '-' || c[1] == '-')
 			i = 1;
 		else
@@ -135,13 +92,13 @@ int offset (int type, char c[], int bits)
 		}
 		if(c[0] == '-' || c[1] == '-')
 			dec_num = -1 * dec_num;
-		decToTwoComp(dec_num, bin, 16);
+		decToTwoComp (dec_num, bin, 16);
 	}
 	
 	for(int i=0; i<bits; i++){
-		off+=bin[15-i]*pow(2, i);
+		off += bin[15-i] * (1 << i);
 	}
-	off-=bin[15-bits]*pow(2, bits);
+	off -= bin[15-bits] * (1 << bits);
 
 	return off;
 }

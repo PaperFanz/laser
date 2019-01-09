@@ -277,15 +277,6 @@ int isTrap(char c[])
 	return -1;
 }
 
-int isBranchOLD(char c[])
-{
-	for (int i = 0; i <= 15; i++) {
-		if (strcmp (c, keyword[0][i]) == 0)
-			return i;
-	}
-	return -1;
-}
-
 int isBranch(char *c)
 {
 	if (!strcmp (c, branch[8][0]) || !strcmp (c, branch[8][1])) {
@@ -296,14 +287,6 @@ int isBranch(char *c)
 			return i;
 	}
 	return -1;
-}
-
-int isQuote(char c)
-{
-	if (c == '\'' || c == '\"')
-		return 1;
-	else
-		return 0;
 }
 
 int isOrig (char word_buf[][MAX_WORD_SIZE+2])
@@ -423,20 +406,21 @@ void decToTwoComp(int n, int bin[], int size)
 
 int twoCompToDec(int bin[], int size)
 {
-	int dec_num=0, i=0, r, n=0;
-	while(i<=size-1){
-		n*=10;
-		n+=bin[i];
+	int dec_num = 0, i = 0, r, n = 0;
+	while (i <= size - 1) {
+		n *= 10;
+		n += bin[i];
 		i++;
 	}
-	i=0;
-	while(n>0){
-		r=n%10;
-		n/=10;
-		dec_num+=r*pow(2, i);
+	i = 0;
+	while (n > 0) {
+		r = n % 10;
+		n /= 10;
+		dec_num += r * (1 << i);
 		i++;
 	}
-	if(bin[0]==1) dec_num-=r*pow(2, i);
+	if (bin[0] == 1)
+		dec_num -= r * (1 << i);
 	return dec_num;
 }
 
@@ -451,15 +435,16 @@ void binToHex(int bin[], int bin_size, char hex[], int hex_size)
 	}
 }
 
-int hexToDec(char hex[])
+int hexToDec (char hex[])
 {
-	int i=1, dec_num=0;
-	while(hex[i]!='\0'){
-		dec_num=dec_num*16+isHexChar(hex[i]);
+	int i = 1, dec_num = 0;
+	while (hex[i] != '\0') {
+		dec_num = dec_num * 16 + isHexChar (hex[i]);
 		i++;
 	}
 	i--;
-	if(isHexChar(hex[1])>=8) dec_num=dec_num-pow(2, (4*i));
+	if (isHexChar (hex[1]) >= 8)
+		dec_num -= 1 << (4 * 1);
 	return dec_num;
 }
 
