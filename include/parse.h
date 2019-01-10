@@ -27,12 +27,14 @@ enum instype {
 };
 
 struct Symbol {
+	int ln;
 	char label[MAX_WORD_SIZE+2];
 	int addr;
 	int count;
 };
 
 struct Alias {
+	int ln;
 	char word[MAX_WORD_SIZE+2];
 	char replace[MAX_WORD_SIZE+2];
 	int count;
@@ -80,9 +82,13 @@ enum ops {
 
 void parseFile (FILE *fp, char *fname);
 
-int labelAddress (struct Symbol *symbols, int s_cnt, char *label);
+int labelAddress (struct Symbol *sym, char *label);
 
-void aliasWord (struct Alias *aliases, int a_cnt, char c[MAX_WORD_SIZE + 2]);
+int unusedSymbol (struct Symbol *sym, struct Alert *a);
+
+void aliasWord (struct Alias *al, char c[MAX_WORD_SIZE + 2]);
+
+int unusedAlias (struct Alias *al, struct Alert *a);
 
 int operandImmediate (char *op, struct Instruction *ins, int loc, int off_b, struct Alert *a);
 

@@ -17,14 +17,13 @@ void parseFile (FILE *fp, char *fname) {
 
 	int s_cnt = 0;
 	struct Symbol *symbols = malloc (sizeof (struct Symbol));
-	memcpy (symbols[0].label, "\0INVALID", sizeof (char) * 9);
+	memcpy (symbols[0].label, fname, sizeof (char) * (MAX_WORD_SIZE + 1));
 	symbols[0].addr = 0;
 	symbols[0].count = 1;
 
 	int a_cnt = 0;
 	struct Alias *aliases = malloc (sizeof (struct Alias));
-	memcpy (aliases[0].word, "\0INVALID", sizeof (char) * 9);
-	memcpy (aliases[0].replace, "\0INVALID", sizeof (char) * 9);
+	memcpy (aliases[0].word, fname, sizeof (char) * (MAX_WORD_SIZE + 1));
 	aliases[0].count = 1;
 
 	struct File file;
@@ -119,6 +118,7 @@ void parseFile (FILE *fp, char *fname) {
 					aliases = realloc (aliases, (a_cnt + 1) * sizeof (struct Alias));
 					memcpy (aliases[a_cnt].word, word_buf[a + 1], sizeof(char) * (MAX_WORD_SIZE + 2));
 					memcpy (aliases[a_cnt].replace, word_buf[a + 2], sizeof(char) * (MAX_WORD_SIZE + 2));
+					aliases[a_cnt].ln = ln;
 					aliases[a_cnt].count = 0;
 					aliases[0].count++;
 				}
@@ -129,7 +129,7 @@ void parseFile (FILE *fp, char *fname) {
 		} else {
 
 			for (int i = 0; i < MAX_WORD_NUM; i++) {
-				aliasWord (aliases, a_cnt, word_buf[i]);
+				aliasWord (aliases, word_buf[i]);
 			}
 
 			int i;
@@ -145,6 +145,7 @@ void parseFile (FILE *fp, char *fname) {
 					memcpy (symbols[s_cnt].label, c, sizeof(char) * (MAX_WORD_SIZE + 2));
 					symbols[s_cnt].addr = instruction.addr;
 					symbols[s_cnt].count = 0;
+					symbols[s_cnt].ln = ln;
 					symbols[0].count++;
 
 					char addr_str[4];
@@ -155,6 +156,7 @@ void parseFile (FILE *fp, char *fname) {
 					memcpy (symbols[s_cnt].label, c, sizeof(char) * (MAX_WORD_SIZE + 2));
 					symbols[s_cnt].addr = instruction.addr;
 					symbols[s_cnt].count = 0;
+					symbols[s_cnt].ln = ln;
 					symbols[0].count++;
 
 					char addr_str[4];
@@ -420,11 +422,11 @@ void parseFile (FILE *fp, char *fname) {
 		int instr_bin[16];
 
 		for (int i = 0; i < MAX_WORD_NUM; i++) {
-			aliasWord (aliases, a_cnt, word_buf[i]);
+			aliasWord (aliases, word_buf[i]);
 		}
 
 		int i = 0;
-		while (labelAddress (symbols, s_cnt, word_buf[i]) >= 0) {
+		while (labelAddress (symbols, word_buf[i]) >= 0) {
 			i++;
 		}
 
@@ -446,6 +448,9 @@ void parseFile (FILE *fp, char *fname) {
 		}
 		case END:		// clean up and return
 		{
+			unusedSymbol (symbols, &alert);
+			unusedAlias (aliases, &alert);
+			
 			printAlertSummary (alert);
 			alert.err += alert_st.err;
 			alert.exception += alert_st.exception;
@@ -518,7 +523,7 @@ void parseFile (FILE *fp, char *fname) {
 			instruction.type = P_OP;
 			instruction.src = true;
 			off_type = isValidOffset (op1);
-			int label_addr = labelAddress (symbols, s_cnt, op1);
+			int label_addr = labelAddress (symbols, op1);
 			if (off_type > 0) {
 				off = offset (off_type, op1, 15);
 				instruction.instr += off;
@@ -684,25 +689,51 @@ void parseFile (FILE *fp, char *fname) {
 	}
 }
 
-int labelAddress (struct Symbol *symbols, int s_cnt, char *label)
+int labelAddress (struct Symbol *sym, char *label)
 {
-	for (int i = 0; i < s_cnt; i++) {
-		if (strcmp (symbols[i].label, label) == 0)
-			return symbols[i].addr;
+	for (int i = 1; i < sym[0].count; i++) {
+		if (strcmp (sym[i].label, label) == 0) {
+			sym[i].count++;
+			return sym[i].addr;
+		}
 	}
 	return -1;
 }
 
-void aliasWord (struct Alias *aliases, int a_cnt, char c[MAX_WORD_SIZE + 2])
+void aliasWord (struct Alias *al, char c[MAX_WORD_SIZE + 2])
 {
-	for (int i = 0; i < a_cnt; i++) {
-		if (strcmp (aliases[i].word, c) == 0) {
-			memcpy (c, aliases[i].replace, sizeof (char) * (MAX_WORD_SIZE + 2));
-			aliases[i].count++;
+	for (int i = 1; i < al[0].count; i++) {
+		if (strcmp (al[i].word, c) == 0) {
+			memcpy (c, al[i].replace, sizeof (char) * (MAX_WORD_SIZE + 2));
+			al[i].count++;
 			return;
 		}
 	}
 	return;
+}
+
+int unusedSymbol (struct Symbol *sym, struct Alert *a)
+{
+	for (int i = 1; i < sym[0].count; i++) {
+		if (sym[i].count == 0) {
+			a->warn++;
+			printf ("Warning: (%s line %d) ", sym[0].label, sym[i].ln);
+			printf ("unused label: %s\n", sym[i].label);
+		}
+	}
+	return 1;
+}
+
+int unusedAlias (struct Alias *al, struct Alert *a)
+{
+	for (int i = 1; i < al[0].count; i++) {
+		if (al[i].count == 0) {
+			a->warn++;
+			printf ("Warning: (%s line %d) ", al[0].word, al[i].ln);
+			printf ("unused alias: %s\n", al[i].word);
+		}
+	}
+	return 1;
 }
 
 int operandImmediate (char *op, struct Instruction *ins, int loc, int off_b, struct Alert *a)
@@ -758,7 +789,7 @@ int operandOffset (char *op, struct Instruction *ins, struct Symbol *sym, int of
 	int s_cnt = sym[0].count;
 	int off;
 	int off_type = isValidOffset (op);
-	int label_addr = labelAddress (sym, s_cnt, op);
+	int label_addr = labelAddress (sym, op);
 	if (off_type > 0){
 		off = offset (off_type, op, off_b);
 	} else if (label_addr >= 0) {
