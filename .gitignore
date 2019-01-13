@@ -1,6 +1,7 @@
 # ignore build artifacts
 *.o
 laser
+laser.exe
 
 # ignore test files
 *.txt
@@ -10,6 +11,7 @@ laser
 *.bin
 *.hex
 *.obj
+*.log
 
 # ignore personal configs
 .vscode

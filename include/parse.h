@@ -52,6 +52,7 @@ struct File {
 	FILE *hex;
 	FILE *lst;
 	FILE *obj;
+	FILE *log;
 };
 
 enum ops {
@@ -84,17 +85,17 @@ void parseFile (FILE *fp, char *fname);
 
 int labelAddress (struct Symbol *sym, char *label);
 
-int unusedSymbol (struct Symbol *sym, struct Alert *a);
+int unusedSymbol (struct Symbol *sym, struct Alert *a, FILE *fp_log);
 
 void aliasWord (struct Alias *al, char c[MAX_WORD_SIZE + 2]);
 
-int unusedAlias (struct Alias *al, struct Alert *a);
+int unusedAlias (struct Alias *al, struct Alert *a, FILE *fp_log);
 
-int operandImmediate (char *op, struct Instruction *ins, int loc, int off_b, struct Alert *a);
+int operandImmediate (char *op, struct Instruction *ins, int loc, int off_b, struct Alert *a, FILE *fp_log);
 
-int operandRegister (char *op, int loc, struct Instruction *ins, struct Alert *a);
+int operandRegister (char *op, int loc, struct Instruction *ins, struct Alert *a, FILE *fp_log);
 
-int operandOffset (char *op, struct Instruction *ins, struct Symbol *sym, int off_b, struct Alert *a);
+int operandOffset (char *op, struct Instruction *ins, struct Symbol *sym, int off_b, struct Alert *a, FILE *fp_log);
 
 int operandString (char *str, struct Instruction *ins, struct File file, struct Alert *a);
 
@@ -106,6 +107,14 @@ void fprintAsm (struct File file, struct Instruction ins);
 
 void printAlertSummary (struct Alert alert);
 
+void fprintAlertSummary (struct Alert alert, FILE *fp_log);
+
 void trapShortcut (char *op, char *trapvect);
+
+int warnOpOvf (struct Instruction ins, struct Alert *a, FILE *fp_log);
+
+int errOpDef (struct Instruction ins, struct Alert *a, FILE *fp_log);
+
+int errInvalidOp (struct Instruction ins, struct Alert *a, char *op, FILE *fp_log);
 
 #endif

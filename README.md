@@ -16,10 +16,11 @@ Laser implements the basic funcitonality of the assembler included in LC3Edit, w
 2. By using the command `laser -a *.asm` you can assemble all assembly files in a directory. This is especially useful when dealing with programs utilizing data files or user-defined subroutines. For this reason, `laser`'s error reporting system will include the file name along with the line number that the error originates from.
 3. Hex and binary numbers used in `.FILL`s will be sign extended to 4 hex characters and 16 binary bits and calculated accordingly, as opposed to zero-extending like LC3Edit. For the most part, functionality is unchanged, except for hex numbers leading with '8' or greater, and binary numbers leading with '1'. For example, LC3Edit assembles `.FILL xA` as `x000A`, while `laser` will assemble it as `xFFFA`. To get `laser` to fill `x000A`, add a leading 0 - `.FILL x0A`.
 4. `laser` has error-checking features similar to LC3Edit, but separates the severity of these errors into three separate tiers:
-   1. Warning: The program will assemble and a loadable object file will be produced, but unexpected errors may occur when running.
-   2. Error: The program will not assemble and no loadable object file will be produced.
-   3. Exception: The program has caused an exception to be thrown in the assembler and should be reported here as an issue.
+    1. Warning: The program will assemble and a loadable object file will be produced, but unexpected errors may occur when running.
+    2. Error: The program will not assemble and no loadable object file will be produced.
+    3. Exception: The program has caused an exception to be thrown in the assembler and should be reported here as an issue.
 5. `laser` will continue to attempt to assemble the entirety of a program even if errors are met during Pass 1, whereas LC3Edit will stop before Pass 2 if there are errors during Pass 1. This is because `laser` checks operand type (register, offset, immediate) during Pass 2 to allow for the `.ALIAS` pseudoop functionality, whereas LC3Edit checks for this type of error during Pass 1.
+6. Error logs can be enabled by editing `config.h` before compiling, and will store errors and warnings outputed by the assembler in `<file>.log`. Note that each time the assembler is run, the log is overwritten.
 
 ### Usage
 
@@ -40,7 +41,28 @@ You can use the command `laser -a *.asm` or `laser -c *.asm` to assemble or clea
 
 ### Configuration
 
-Due to the variety of different ways the `laser` output files can be formatted, I have included a way for you to customize a few options at compile-time. These options are detailed in [`include/config.h`](./include/config.h).
+Due to the variety of different ways the `laser` output files can be formatted, I have included a way for you to customize a few options at compile-time. These options are detailed in [`include/config.h`](./include/config.h). You may currently change the following settings:
+
+```C
+// set to 1 to enable logging in <file>.log file
+#define ENABLE_LOGGING 0
+
+// set to 1 to use spaces , 0 to use tabs
+#define USE_SPACES_IN_SYM 1
+
+// set to 1 to print binary in list file alongside hex
+#define PRINT_BIN_IN_LST 0
+
+// fill in your tabsize to properly format symbol file if using tabs
+// 0 is not a valid tabsize
+#define TABSIZE 4
+
+// if you are getting read errors, increase these numbers
+// (you really shouldn't have to)
+#define MAX_WORD_NUM 6		// max # of words per line
+#define MAX_WORD_SIZE 60	// max # of chars for a label, filename, or .STRINGZ
+#define MAX_LEN 360			// MAX_WORD_NUM * MAX_WORD_SIZE
+```
 
 ### Linux
 

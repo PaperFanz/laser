@@ -1,4 +1,7 @@
-#ifndef MAX_WORD_NUM
+#ifndef MAX_LEN
+
+// set to 1 to enable logging in <file>.log file
+#define ENABLE_LOGGING 0
 
 // set to 1 to use spaces , 0 to use tabs
 #define USE_SPACES_IN_SYM 1
