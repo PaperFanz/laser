@@ -34,31 +34,48 @@ int parseArgs(int argc, char **argv)
 			break;
 		default:
 			if (checkExt (file, ".asm") && prev_flag == 2){
-				FILE *fp;
-				fp = fopen (file, "r+");
-				if (fp != NULL) {
-					printf ("\nAssembling %s...\n", file);
-					parseFile (fp, file);
-					fclose (fp);
-				} else {
-					printf ("Unable to open %s!\n", file);
-				}
+				
 			} else if (checkExt (file, ".asm") && prev_flag == 3) {
-				if (remove (replaceExt (file, ".sym")))
-					printf ("Unable to delete %s!\n", file);
-				if (remove (replaceExt (file, ".bin")))
-					printf ("Unable to delete %s!\n", file);
-				if (remove (replaceExt (file, ".hex")))
-					printf ("Unable to delete %s!\n", file);
-				if (remove (replaceExt (file, ".lst")))
-					printf ("Unable to delete %s!\n", file);
-				if (remove (replaceExt (file, ".obj")))
-					printf ("Unable to delete %s!\n", file);
+				clean (file);
 			} else {
 				printf ("Invalid flags!\n");
 				return 0;
 			}
 		}
+	}
+	return 1;
+}
+
+int parse (char *file)
+{
+	FILE *fp;
+	fp = fopen (file, "r+");
+	if (fp != NULL) {
+		printf ("\nAssembling %s...\n", file);
+		parseFile (fp, file);
+		fclose (fp);
+		return 1;
+	} else {
+		printf ("Unable to open %s!\n", file);
+		return 0;
+	}
+}
+
+int clean (char *file)
+{
+	if (remove (replaceExt (file, ".sym")))
+		printf ("Unable to delete %s!\n", file);
+	if (remove (replaceExt (file, ".bin")))
+		printf ("Unable to delete %s!\n", file);
+	if (remove (replaceExt (file, ".hex")))
+		printf ("Unable to delete %s!\n", file);
+	if (remove (replaceExt (file, ".lst")))
+		printf ("Unable to delete %s!\n", file);
+	if (remove (replaceExt (file, ".obj")))
+		printf ("Unable to delete %s!\n", file);
+	if (ENABLE_LOGGING) {
+		if (remove (replaceExt (file, ".log")))
+			printf ("Unable to delete %s!\n", file);
 	}
 	return 1;
 }

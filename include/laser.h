@@ -34,6 +34,10 @@ void parseFile (FILE *fp, char *fname);
 
 int parseArgs(int argc, char **argv);
 
+int parse (char *file);
+
+int clean (char *file);
+
 int main (int argc, char **argv);
 
 #endif
