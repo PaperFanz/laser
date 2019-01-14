@@ -81,7 +81,7 @@ enum ops {
 	TRAP = 15
 };
 
-void parseFile (FILE *fp, char *fname);
+void parseFile (FILE *fp, char *fname, int q);
 
 int labelAddress (struct Symbol *sym, char *label);
 

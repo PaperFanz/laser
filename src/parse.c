@@ -2,7 +2,9 @@
 #include "convert.h"
 #include "calc.h"
 
-void parseFile (FILE *fp, char *fname) {
+int quiet;
+
+void parseFile (FILE *fp, char *fname, int q) {
 
 	//==========================================================================
 	//	Declarations
@@ -33,6 +35,8 @@ void parseFile (FILE *fp, char *fname) {
 	alert.warn = 0;
 	alert.err = 0;
 	alert.exception = 0;
+
+	quiet = q;
 
 	struct Instruction instruction;
 	instruction.fname = fname;
@@ -83,8 +87,8 @@ void parseFile (FILE *fp, char *fname) {
 	//==========================================================================
 	//	Pass 1 - Generate Symbol file
 	//==========================================================================
-
-	printf ("Pass 1: \n");
+	if (quiet < 1)
+		printf ("Pass 1: \n");
 	if (ENABLE_LOGGING)
 		fprintf (file.log, "Pass 1: \n");
 
@@ -120,8 +124,10 @@ void parseFile (FILE *fp, char *fname) {
 				instruction.type = P_OP;
 				if (word_buf[a + 1][0] == '\0' || word_buf[a + 2][0] == '\0'){
 					alert.warn++;
-					printf ("Warning: (%s line %d) ", fname, ln);
-					printf ("'%s' requires two operands!\n%s", word_buf[a], line_buf);
+					if (quiet < 1){
+						printf ("Warning: (%s line %d) ", fname, ln);
+						printf ("'%s' requires two operands!\n%s", word_buf[a], line_buf);
+					}
 				} else {
 					a_cnt = aliases[0].count;
 					aliases = realloc (aliases, (a_cnt + 1) * sizeof (struct Alias));
@@ -173,9 +179,11 @@ void parseFile (FILE *fp, char *fname) {
 					putSymbol (file.sym, c, addr_str);
 
 					alert.warn++;
-					printf ("Warning: (%s line %d) ", fname, ln);
-					printf ("multiple label declaration!\n%s", line_buf);
-					printf ("\tConsider consolidating labels.\n");
+					if (quiet < 1){
+						printf ("Warning: (%s line %d) ", fname, ln);
+						printf ("multiple label declaration!\n%s", line_buf);
+						printf ("\tConsider consolidating labels.\n");
+					}
 				} else if (word_buf[i][0] == '\0') {
 					break;
 				} else if (!isValidOffset (word_buf[i])) {
@@ -184,8 +192,10 @@ void parseFile (FILE *fp, char *fname) {
 					break;
 				} else {
 					alert.err++;
-					printf ("Error: (%s line %d) ", fname, ln);
-					printf ("Unrecognized syntax!\n%s", line_buf);
+					if (quiet < 2){
+						printf ("Error: (%s line %d) ", fname, ln);
+						printf ("Unrecognized syntax!\n%s", line_buf);
+					}
 					break;
 				}
 			}
@@ -202,8 +212,10 @@ void parseFile (FILE *fp, char *fname) {
 			{
 				instruction.type = 1;
 				alert.err++;
-				printf ("Error: (%s line %d) ", fname, ln);
-				printf ("Multiple .ORIG declaration!\n%s", line_buf);
+				if (quiet < 2){
+					printf ("Error: (%s line %d) ", fname, ln);
+					printf ("Multiple .ORIG declaration!\n%s", line_buf);
+				}
 				break;
 			}
 			case END:
@@ -248,8 +260,10 @@ void parseFile (FILE *fp, char *fname) {
 			{
 				instruction.type = 2;
 				alert.err++;
-				printf ("Error: (%s line %d) ", fname, ln);
-				printf ("aliases must be declared before .ORIG!\n\t%s", line_buf);
+				if (quiet < 2){
+					printf ("Error: (%s line %d) ", fname, ln);
+					printf ("aliases must be declared before .ORIG!\n\t%s", line_buf);
+				}
 				break;
 			}
 			default:
@@ -371,7 +385,8 @@ void parseFile (FILE *fp, char *fname) {
 		}
 	}
 
-	printAlertSummary (alert);
+	if (quiet < 1)
+		printAlertSummary (alert);
 	if (ENABLE_LOGGING)
 		fprintAlertSummary (alert, file.log);
 
@@ -382,11 +397,13 @@ void parseFile (FILE *fp, char *fname) {
 	//	Pass 2 - Generate List, Binary, Hex, and Object files
 	//==========================================================================
 
-	printf ("Pass 2:\n");
+	if (quiet < 1)
+		printf ("Pass 2:\n");
 	if (ENABLE_LOGGING)
 		fprintf (file.log, "Pass 2: \n");
 
 	struct Alert alert_st;
+	alert_st.warn = alert.warn;
 	alert_st.err = alert.err;
 	alert_st.exception = alert.exception;
 
@@ -450,8 +467,10 @@ void parseFile (FILE *fp, char *fname) {
 		case ORIG:
 		{
 			alert.err++;
-			printf ("Error: (%s line %d) ", fname, ln);
-			printf ("Multiple .ORIG declaration\n\t%s", line_buf);
+			if (quiet < 2) {
+				printf ("Error: (%s line %d) ", fname, ln);
+				printf ("Multiple .ORIG declaration\n\t%s", line_buf);
+			}
 			if (ENABLE_LOGGING) {
 				fprintf (file.log, "Error: (%s line %d) ", fname, ln);
 				fprintf (file.log, "Multiple .ORIG declaration\n\t%s", line_buf);
@@ -463,11 +482,18 @@ void parseFile (FILE *fp, char *fname) {
 			unusedSymbol (symbols, &alert, file.log);
 			unusedAlias (aliases, &alert, file.log);
 			
-			printAlertSummary (alert);
+			if (quiet < 1)
+				printAlertSummary (alert);
 			if (ENABLE_LOGGING)
 				fprintAlertSummary (alert, file.log);
+			alert.warn += alert_st.warn;
 			alert.err += alert_st.err;
 			alert.exception += alert_st.exception;
+
+			if (quiet > 0 && alert.err > 0){
+				printf ("%s: ", fname);
+				printAlertSummary (alert);
+			}
 
 			free (symbols);
 			free (aliases);
@@ -582,8 +608,10 @@ void parseFile (FILE *fp, char *fname) {
 				instruction.instr += branch << 9;
 			} else {
 				alert.err++;
-				printf ("Error: (%s line %d) ", instruction.fname, instruction.ln);
-				printf ("invalid branch conditions: %s\n", instruction.opcode);
+				if (quiet < 2){
+					printf ("Error: (%s line %d) ", instruction.fname, instruction.ln);
+					printf ("invalid branch conditions: %s\n", instruction.opcode);
+				}
 				if (ENABLE_LOGGING) {
 					fprintf (file.log, "Error: (%s line %d) ", instruction.fname, instruction.ln);
 					fprintf (file.log, "invalid branch conditions: %s\n", instruction.opcode);
@@ -735,8 +763,10 @@ int unusedSymbol (struct Symbol *sym, struct Alert *a, FILE *fp_log)
 	for (int i = 1; i < sym[0].count; i++) {
 		if (sym[i].count == 0) {
 			a->warn++;
-			printf ("Warning: (%s line %d) ", sym[0].label, sym[i].ln);
-			printf ("unused label: %s\n", sym[i].label);
+			if (quiet < 1) {
+				printf ("Warning: (%s line %d) ", sym[0].label, sym[i].ln);
+				printf ("unused label: %s\n", sym[i].label);
+			}
 			if (ENABLE_LOGGING) {
 				fprintf (fp_log, "Warning: (%s line %d) ", sym[0].label, sym[i].ln);
 				fprintf (fp_log, "unused label: %s\n", sym[i].label);
@@ -751,8 +781,10 @@ int unusedAlias (struct Alias *al, struct Alert *a, FILE *fp_log)
 	for (int i = 1; i < al[0].count; i++) {
 		if (al[i].count == 0) {
 			a->warn++;
-			printf ("Warning: (%s line %d) ", al[0].word, al[i].ln);
-			printf ("unused alias: %s\n", al[i].word);
+			if (quiet < 1) {
+				printf ("Warning: (%s line %d) ", al[0].word, al[i].ln);
+				printf ("unused alias: %s\n", al[i].word);
+			}
 			if (ENABLE_LOGGING) {
 				fprintf (fp_log, "Warning: (%s line %d) ", al[0].word, al[i].ln);
 				fprintf (fp_log, "unused alias: %s\n", al[i].word);
@@ -776,8 +808,10 @@ int operandImmediate (char *op, struct Instruction *ins, int loc, int off_b, str
 		off = offset (off_type, op, off_b);
 	} else {
 		a->err++;
-		printf ("Error: (%s line %d) ", ins->fname, ins->ln);
-		printf ("invalid operand for '%s': %s!\n", ins->opcode, op);
+		if (quiet < 2) {
+			printf ("Error: (%s line %d) ", ins->fname, ins->ln);
+			printf ("invalid operand for '%s': %s!\n", ins->opcode, op);
+		}
 		if (ENABLE_LOGGING) {
 			fprintf (fp_log, "Error: (%s line %d) ", ins->fname, ins->ln);
 			fprintf (fp_log, "invalid operand for '%s': %s!\n", ins->opcode, op);
@@ -787,8 +821,10 @@ int operandImmediate (char *op, struct Instruction *ins, int loc, int off_b, str
 
 	if (off > (1 << off_b - 1) - 1 || off < -(1 << off_b - 1)) {
 		a->err++;
-		printf ("Error: (%s line %d) ", ins->fname, ins->ln);
-		printf ("%d will not fit in %d offset bits!\n", off, off_b);
+		if (quiet < 2){
+			printf ("Error: (%s line %d) ", ins->fname, ins->ln);
+			printf ("%d will not fit in %d offset bits!\n", off, off_b);
+		}
 		if (ENABLE_LOGGING) {
 			fprintf (fp_log, "Error: (%s line %d) ", ins->fname, ins->ln);
 			fprintf (fp_log, "%d will not fit in %d offset bits!\n", off, off_b);
@@ -811,9 +847,11 @@ int operandRegister (char *op, int loc, struct Instruction *ins, struct Alert *a
 		return 1;
 	} else {
 		a->err++;
-		printf ("Error: (%s line %d) ", ins->fname, ins->ln);
-		printf ("'%s' expects operand type register; ", ins->opcode);
-		printf ("'%s' is not a register!\n", op);
+		if (quiet < 2) {
+			printf ("Error: (%s line %d) ", ins->fname, ins->ln);
+			printf ("'%s' expects operand type register; ", ins->opcode);
+			printf ("'%s' is not a register!\n", op);
+		}
 		if (ENABLE_LOGGING) {
 			fprintf (fp_log, "Error: (%s line %d) ", ins->fname, ins->ln);
 			fprintf (fp_log, "'%s' expects operand type register; ", ins->opcode);
@@ -835,8 +873,10 @@ int operandOffset (char *op, struct Instruction *ins, struct Symbol *sym, int of
 		off = label_addr - ins->addr -1;
 	} else {
 		a->err++;
-		printf ("Error: (%s line %d) ", ins->fname, ins->ln);
-		printf ("invalid operand for '%s': %s!\n", ins->opcode, op);
+		if (quiet < 2) {
+			printf ("Error: (%s line %d) ", ins->fname, ins->ln);
+			printf ("invalid operand for '%s': %s!\n", ins->opcode, op);
+		}
 		if (ENABLE_LOGGING) {
 			fprintf (fp_log, "Error: (%s line %d) ", ins->fname, ins->ln);
 			fprintf (fp_log, "invalid operand for '%s': %s!\n", ins->opcode, op);
@@ -846,8 +886,10 @@ int operandOffset (char *op, struct Instruction *ins, struct Symbol *sym, int of
 
 	if (off > (1 << off_b - 1) - 1 || off < -(1 << off_b - 1)) {
 		a->err++;
-		printf ("Error: (%s line %d) ", ins->fname, ins->ln);
-		printf ("%d will not fit in %d offset bits!\n", off, off_b);
+		if (quiet < 2) {
+			printf ("Error: (%s line %d) ", ins->fname, ins->ln);
+			printf ("%d will not fit in %d offset bits!\n", off, off_b);
+		}
 		if (ENABLE_LOGGING) {
 			fprintf (fp_log, "Error: (%s line %d) ", ins->fname, ins->ln);
 			fprintf (fp_log, "%d will not fit in %d offset bits!\n", off, off_b);
@@ -878,8 +920,10 @@ int operandString (char *str, struct Instruction *ins, struct File file, struct 
 				i += 2;
 			} else if (str[i] == '\\' && !escChar) {
 				a->err++;
-				printf ("Error: (%s line %d) ", ins->fname, ins->ln);
-				printf ("invalid escape sequence in string %s\n", str);
+				if (quiet < 2) {
+					printf ("Error: (%s line %d) ", ins->fname, ins->ln);
+					printf ("invalid escape sequence in string %s\n", str);
+				}
 				if (ENABLE_LOGGING) {
 					fprintf (file.log, "Error: (%s line %d) ", ins->fname, ins->ln);
 					fprintf (file.log, "invalid escape sequence in string %s\n", str);
@@ -1084,9 +1128,11 @@ int warnOpOvf (struct Instruction ins, struct Alert *a, FILE *fp_log)
 		c = 's';
 
 	a->warn++;
-	printf ("Warning: (%s line %d) ", ins.fname, ins.ln);
-	printf ("'%s' takes %d operand%c!\n", ins.opcode, ins.type, c);
-	printf ("\t%s", ins.line_buf);
+	if (quiet < 1) {
+		printf ("Warning: (%s line %d) ", ins.fname, ins.ln);
+		printf ("'%s' takes %d operand%c!\n", ins.opcode, ins.type, c);
+		printf ("\t%s", ins.line_buf);
+	}
 	if (ENABLE_LOGGING) {
 		fprintf (fp_log, "Warning: (%s line %d) ", ins.fname, ins.ln);
 		fprintf (fp_log, "'%s' takes %d operand%c!\n", ins.opcode, ins.type, c);
@@ -1107,9 +1153,11 @@ int errOpDef (struct Instruction ins, struct Alert *a, FILE *fp_log)
 		c = 's';
 
 	a->err++;
-	printf ("Error: (%s line %d) ", ins.fname, ins.ln);
-	printf ("'%s' requires %d operand%c!\n", ins.opcode, ins.type, c);
-	printf ("\t%s", ins.line_buf);
+	if (quiet < 2) {
+		printf ("Error: (%s line %d) ", ins.fname, ins.ln);
+		printf ("'%s' requires %d operand%c!\n", ins.opcode, ins.type, c);
+		printf ("\t%s", ins.line_buf);
+	}
 	if (ENABLE_LOGGING) {
 		fprintf (fp_log, "Error: (%s line %d) ", ins.fname, ins.ln);
 		fprintf (fp_log, "'%s' requires %d operand%c!\n", ins.opcode, ins.type, c);
@@ -1123,8 +1171,10 @@ int errInvalidOp (struct Instruction ins, struct Alert *a, char *op, FILE *fp_lo
 	if (fp_log == NULL && ENABLE_LOGGING)
 		return 0;
 	a->err++;
-	printf ("Error: (%s line %d) ", ins.fname, ins.ln);
-	printf ("invalid operand for '%s': %s\n", ins.opcode, op);
+	if (quiet < 2) {
+		printf ("Error: (%s line %d) ", ins.fname, ins.ln);
+		printf ("invalid operand for '%s': %s\n", ins.opcode, op);
+	}
 	if (ENABLE_LOGGING) {
 		fprintf (fp_log, "Error: (%s line %d) ", ins.fname, ins.ln);
 		fprintf (fp_log, "invalid operand for '%s': %s\n", ins.opcode, op);

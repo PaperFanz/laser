@@ -3,7 +3,7 @@
 
 int checkFlags(char *c)
 {
-	for (int i = 0; i < 4; i++) {
+	for (int i = 0; i < 6; i++) {
 		if (strcmp (c, flags[i]) == 0)
 			return i;
 	}
@@ -12,7 +12,8 @@ int checkFlags(char *c)
 
 int parseArgs(int argc, char **argv)
 {
-	int prev_flag;
+	int prev_flag = 0;
+	int quiet = 0;
 
 	for (int i = 1; i < argc; i++) {
 		int flag;
@@ -20,22 +21,28 @@ int parseArgs(int argc, char **argv)
 		flag = checkFlags (file);
 
 		switch (flag) {
-		case 0:		// version
+		case VERSION:
 			printf ("laser version: %s\n", version_num);
 			break;
-		case 1:		// help
+		case HELP:
 			printf ("%s", help);
 			break;
-		case 2:		// assemble
+		case QUIET:
+			quiet = 1;
+			break;
+		case SILENT:
+			quiet = 2;
+			break;
+		case ASSEMBLE:
 			prev_flag = flag;
 			break;
-		case 3:		// clean
+		case CLEAN:
 			prev_flag = flag;
 			break;
 		default:
-			if (checkExt (file, ".asm") && prev_flag == 2){
-				
-			} else if (checkExt (file, ".asm") && prev_flag == 3) {
+			if (checkExt (file, ".asm") && prev_flag == ASSEMBLE){
+				parse (file, quiet);
+			} else if (checkExt (file, ".asm") && prev_flag == CLEAN) {
 				clean (file);
 			} else {
 				printf ("Invalid flags!\n");
@@ -46,13 +53,14 @@ int parseArgs(int argc, char **argv)
 	return 1;
 }
 
-int parse (char *file)
+int parse (char *file, int q)
 {
 	FILE *fp;
 	fp = fopen (file, "r+");
 	if (fp != NULL) {
-		printf ("\nAssembling %s...\n", file);
-		parseFile (fp, file);
+		if (q < 2)
+			printf ("\nAssembling %s...\n", file);
+		parseFile (fp, file, q);
 		fclose (fp);
 		return 1;
 	} else {
