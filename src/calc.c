@@ -32,7 +32,7 @@ char *replaceExt (char *filename, const char *ext)
 }
 
 // read a fixed offset or immediate value and express it in n bits
-int offset (int type, char c[], int bits)
+int offset (int type, char *c, int bits)
 {
 	int off = 0, bin[16];
 	memset (bin, 0, sizeof(int)*16);

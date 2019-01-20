@@ -115,10 +115,12 @@ int isRegister(char c[])
 int isHexChar(char c)
 {
 	for(int i=0; i<=15; i++){
-		if((i<=9)&&(c==hex_chars[i]))
+		if( (i<=9) && (c == hex_chars[i])) {
 			return i;
-		else if((i>9)&&((c==hex_chars[i])||(c==hex_chars[i]+0x20)))
+		}
+		else if( (i>9) && ((c == hex_chars[i])||(c == hex_chars[i] + 0x20))) {
 			return i;
+		}
 	}
 	return -1;
 }
@@ -444,7 +446,7 @@ int hexToDec (char hex[])
 	}
 	i--;
 	if (isHexChar (hex[1]) >= 8)
-		dec_num -= 1 << (4 * 1);
+		dec_num -= 1 << (4 * i);
 	return dec_num;
 }
 
