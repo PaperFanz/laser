@@ -15,8 +15,8 @@
 
 // if you are getting read errors, increase these numbers
 // (you really shouldn't have to)
-#define MAX_WORD_NUM 6		// max # of words per line
-#define MAX_WORD_SIZE 60	// max # of chars for a label, filename, or .STRINGZ
-#define MAX_LEN 360			// MAX_WORD_NUM * MAX_WORD_SIZE
+#define MAX_WORD_NUM 8		// max # of words per line
+#define MAX_WORD_SIZE 512	// max # of chars for a label, filename, or .STRINGZ
+#define MAX_LEN 4096			// MAX_WORD_NUM * MAX_WORD_SIZE
 
 #endif
