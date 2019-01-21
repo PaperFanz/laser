@@ -277,6 +277,10 @@ void parseFile (FILE *fp, char *fname, int q) {
 			switch (keyword) {
 			case NO_OP:
 			{
+				if (pseudoop < 0) {
+					errNoOp(instruction, &alert, file.log, word_buf[i]);
+					instruction.type = -1;
+				}
 				break;
 			}
 			case BR:
@@ -377,10 +381,12 @@ void parseFile (FILE *fp, char *fname, int q) {
 			else
 				c = 's';
 
-			if ((countWords (i, word_buf) - instruction.type) > 0) {
-				warnOpOvf (instruction, &alert, file.log);
-			} else if ((countWords (i, word_buf) - instruction.type) < 0) {
-				errOpDef (instruction, &alert, file.log);
+			if (instruction.type >= 0) {
+				if ((countWords (i, word_buf) - instruction.type) > 0) {
+					warnOpOvf (instruction, &alert, file.log);
+				} else if ((countWords (i, word_buf) - instruction.type) < 0) {
+					errOpDef (instruction, &alert, file.log);
+				}
 			}
 		}
 	}
@@ -459,7 +465,8 @@ void parseFile (FILE *fp, char *fname, int q) {
 		char *op2 = word_buf[i + 2];
 		char *op3 = word_buf[i + 3];
 		
-		switch (isPseuodoOp (word_buf[i])) {
+		int pseudoop = isPseuodoOp (word_buf[i]);
+		switch (pseudoop) {
 		case NO_OP:
 		{
 			break;
@@ -1136,6 +1143,25 @@ int warnOpOvf (struct Instruction ins, struct Alert *a, FILE *fp_log)
 	if (ENABLE_LOGGING) {
 		fprintf (fp_log, "Warning: (%s line %d) ", ins.fname, ins.ln);
 		fprintf (fp_log, "'%s' takes %d operand%c!\n", ins.opcode, ins.type, c);
+		fprintf (fp_log, "\t%s", ins.line_buf);
+	}
+	return 1;
+}
+
+int errNoOp (struct Instruction ins, struct Alert *a, FILE *fp_log, char *c)
+{
+	if (fp_log == NULL && ENABLE_LOGGING)
+		return 0;
+
+	a->err++;
+	if (quiet < 1) {
+		printf ("Error: (%s line %d) ", ins.fname, ins.ln);
+		printf ("newline cannot start with '%s'!\n", c);
+		printf ("\t%s", ins.line_buf);
+	}
+	if (ENABLE_LOGGING) {
+		fprintf (fp_log, "Error: (%s line %d) ", ins.fname, ins.ln);
+		fprintf (fp_log, "newline cannot start with '%s'!\n", c);
 		fprintf (fp_log, "\t%s", ins.line_buf);
 	}
 	return 1;

@@ -113,6 +113,8 @@ void trapShortcut (char *op, char *trapvect);
 
 int warnOpOvf (struct Instruction ins, struct Alert *a, FILE *fp_log);
 
+int errNoOp (struct Instruction ins, struct Alert *a, FILE *fp_log, char *c);
+
 int errOpDef (struct Instruction ins, struct Alert *a, FILE *fp_log);
 
 int errInvalidOp (struct Instruction ins, struct Alert *a, char *op, FILE *fp_log);
