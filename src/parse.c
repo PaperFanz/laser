@@ -126,9 +126,15 @@ void parseFile (FILE *fp, char *fname, int q) {
 					alert.warn++;
 					if (quiet < 1){
 						printf ("Warning: (%s line %d) ", fname, ln);
-						printf ("'%s' requires two operands!\n%s", word_buf[a], line_buf);
+						printf ("'%s' requires two operands!\n", word_buf[a]);
+						printf ("\t%s", line_buf);
 					}
-				} else {
+					if (ENABLE_LOGGING) {
+						fprintf (file.log, "Warning: (%s line %d) ", fname, ln);
+						fprintf (file.log, "'%s' requires two operands!\n", word_buf[a]);
+						fprintf (file.log, "\t%s", line_buf);
+					}
+				} else if (isRegister (word_buf[a + 2]) >= 0) {
 					a_cnt = aliases[0].count;
 					aliases = realloc (aliases, (a_cnt + 1) * sizeof (struct Alias));
 					memcpy (aliases[a_cnt].word, word_buf[a + 1], sizeof(char) * (MAX_WORD_SIZE + 2));
@@ -136,6 +142,18 @@ void parseFile (FILE *fp, char *fname, int q) {
 					aliases[a_cnt].ln = ln;
 					aliases[a_cnt].count = 0;
 					aliases[0].count++;
+				} else {
+					alert.err++;
+					if (quiet < 2) {
+						printf ("Error: (%s line %d) ", fname, ln);
+						printf ("'%s' is for renaming registers only!\n", word_buf[a]);
+						printf ("\t%s", line_buf);
+					}
+					if (ENABLE_LOGGING) {
+						fprintf (file.log, "Error: (%s line %d) ", fname, ln);
+						fprintf (file.log, "'%s' is for renaming registers only!\n", word_buf[a]);
+						fprintf (file.log, "\t%s", line_buf);
+					}
 				}
 			}
 			fprintAsm (file, instruction);
@@ -184,6 +202,11 @@ void parseFile (FILE *fp, char *fname, int q) {
 						printf ("multiple label declaration!\n%s", line_buf);
 						printf ("\tConsider consolidating labels.\n");
 					}
+					if (ENABLE_LOGGING) {
+						fprintf (file.log, "Warning: (%s line %d) ", fname, ln);
+						fprintf (file.log, "multiple label declaration!\n%s", line_buf);
+						fprintf (file.log, "\tConsider consolidating labels.\n");
+					}
 				} else if (word_buf[i][0] == '\0') {
 					break;
 				} else if (!isValidOffset (word_buf[i])) {
@@ -195,6 +218,10 @@ void parseFile (FILE *fp, char *fname, int q) {
 					if (quiet < 2){
 						printf ("Error: (%s line %d) ", fname, ln);
 						printf ("Unrecognized syntax!\n%s", line_buf);
+					}
+					if (ENABLE_LOGGING) {
+						fprintf (file.log, "Error: (%s line %d) ", fname, ln);
+						fprintf (file.log, "Unrecognized syntax!\n%s", line_buf);
 					}
 					break;
 				}
