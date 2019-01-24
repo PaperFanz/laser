@@ -151,9 +151,9 @@ void parseFile (FILE *fp, char *fname, int q) {
 			int keyword, pseudoop, label;
 			for (i = 0; i < MAX_WORD_NUM; i++) {
 				char *c = word_buf[i];
-				keyword = isKeyword (word_buf[i]);
-				pseudoop = isPseuodoOp (word_buf[i]);
-				label = isLabel (word_buf[i]);
+				keyword = isKeyword (c);
+				pseudoop = isPseuodoOp (c);
+				label = isLabel (c);
 				s_cnt = symbols[0].count;
 				if (label && i == 0) {
 					symbols = realloc (symbols, (s_cnt + 1) * sizeof (struct Symbol));
@@ -245,7 +245,10 @@ void parseFile (FILE *fp, char *fname, int q) {
 			case BLKW:
 			{
 				instruction.type = 1;
-				off = offset (isValidOffset (word_buf[i + 1]), word_buf[i + 1], 15);
+				int off_type = isValidOffset (word_buf[i + 1]);
+				
+				off = offset (off_type, word_buf[i + 1]);
+
 				for (int j = off; j > 1; j--) {
 					instruction.addr++;
 				}
@@ -277,7 +280,9 @@ void parseFile (FILE *fp, char *fname, int q) {
 			switch (keyword) {
 			case NO_OP:
 			{
-				if (pseudoop < 0) {
+				if (word_buf[i][0] == '\0') {
+					continue;
+				} else if (pseudoop < 0) {
 					errNoOp(instruction, &alert, file.log, word_buf[i]);
 					instruction.type = -1;
 				}
@@ -464,7 +469,7 @@ void parseFile (FILE *fp, char *fname, int q) {
 		char *op1 = word_buf[i + 1];
 		char *op2 = word_buf[i + 2];
 		char *op3 = word_buf[i + 3];
-		
+
 		int pseudoop = isPseuodoOp (word_buf[i]);
 		switch (pseudoop) {
 		case NO_OP:
@@ -554,15 +559,18 @@ void parseFile (FILE *fp, char *fname, int q) {
 			instruction.type = P_OP;
 			instruction.src = true;
 			off_type = isValidOffset (op1);
-			if (off_type == 0){
+
+			off = offset (off_type, op1);
+
+			if (off == 0)
 				errInvalidOp (instruction, &alert, op1, file.log);
-			} else {
-				for (off = offset (off_type, op1, 15); off > 0; off--){
-					fprintAsm (file, instruction);
-					if (instruction.src) instruction.src = false;
-					instruction.addr++;
-				}
+
+			for (int k = off; k > 0; k--){
+				fprintAsm (file, instruction);
+				if (instruction.src) instruction.src = false;
+				instruction.addr++;
 			}
+
 			instruction.type = N_OP;
 			instruction.src = false;
 			break;
@@ -571,15 +579,12 @@ void parseFile (FILE *fp, char *fname, int q) {
 		{
 			instruction.type = P_OP;
 			instruction.src = true;
-			off_type = isValidOffset (op1);
 			int label_addr = labelAddress (symbols, op1);
-			if (off_type > 0) {
-				off = offset (off_type, op1, 15);
-				instruction.instr += off;
-			} else if (label_addr >= 0) {
+			if (label_addr >= 0) {
 				instruction.instr += label_addr;
 			} else {
-				errInvalidOp (instruction, &alert, op1, file.log);
+				off_type = isValidOffset (op1);
+				instruction.instr += offset (off_type, op1);
 			}
 			break;
 		}
@@ -605,7 +610,11 @@ void parseFile (FILE *fp, char *fname, int q) {
 		switch (keyword) {
 		case NO_OP:
 		{
-			break;
+			if (pseudoop < 0) {
+				continue;
+			} else {
+				break;
+			}
 		}
 		case BR:
 		{
@@ -632,7 +641,7 @@ void parseFile (FILE *fp, char *fname, int q) {
 			offset_bits = 5;
 			operandRegister (op1, 0, &instruction, &alert, file.log);
 			operandRegister (op2, 1, &instruction, &alert, file.log);
-			operandImmediate (op3, &instruction, 2, offset_bits, &alert, file.log);
+			operandImmediate (op3, &instruction, offset_bits, &alert, file.log);
 			break;
 		}
 		case LD:
@@ -665,7 +674,7 @@ void parseFile (FILE *fp, char *fname, int q) {
 			offset_bits = 5;
 			operandRegister (op1, 0, &instruction, &alert, file.log);
 			operandRegister (op2, 1, &instruction, &alert, file.log);
-			operandImmediate (op3, &instruction, 2, offset_bits, &alert, file.log);
+			operandImmediate (op3, &instruction, offset_bits, &alert, file.log);
 			break;
 		}
 		case LDR:
@@ -801,18 +810,16 @@ int unusedAlias (struct Alias *al, struct Alert *a, FILE *fp_log)
 	return 1;
 }
 
-int operandImmediate (char *op, struct Instruction *ins, int loc, int off_b, struct Alert *a, FILE *fp_log)
+int operandImmediate (char *op, struct Instruction *ins, int off_b, struct Alert *a, FILE *fp_log)
 {
 	int off;
 	int off_type = isValidOffset (op);
 	int r = isRegister (op);
-	if (loc == 2) loc = 3;
-	int shift = 9 - (3 * loc);
 	if (r >= 0) {
-		ins->instr += r << shift;
+		ins->instr += r;
 		return 1;
-	} else if (off_type > 0){
-		off = offset (off_type, op, off_b);
+	} else if (off_type <= 3 && off_type >= 1) {
+		off = offset (off_type, op);
 	} else {
 		a->err++;
 		if (quiet < 2) {
@@ -874,10 +881,10 @@ int operandOffset (char *op, struct Instruction *ins, struct Symbol *sym, int of
 	int off;
 	int off_type = isValidOffset (op);
 	int label_addr = labelAddress (sym, op);
-	if (off_type > 0){
-		off = offset (off_type, op, off_b);
-	} else if (label_addr >= 0) {
+	if (label_addr >= 0){
 		off = label_addr - ins->addr -1;
+	} else if (off_type >= 1 && off_type <= 3) {
+		off = offset (off_type, op);
 	} else {
 		a->err++;
 		if (quiet < 2) {

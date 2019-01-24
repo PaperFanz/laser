@@ -14,13 +14,12 @@ Laser implements the basic funcitonality of the assembler included in LC3Edit, w
 
 1. Aside from the existing pseudoops `ORIG`, `END`, `STRINGZ`, `BLKW`, `FILL`, there is an additional `ALIAS` pseudoop. `ALIAS` allows you to declare an alias for a word before the `.ORIG x____` declaration, and is similar to a `#define` statement in C. For example, if you were to `.ALIAS foo bar`, then every occurence of `foo` in your code following the `.ORIG` would be replaced with `bar` when the program is assembled. The intention is to allow you to 'name' your registers, making it easier to keep track of your operations.
 2. By using the command `laser -a *.asm` you can assemble all assembly files in a directory. This is especially useful when dealing with programs utilizing data files or user-defined subroutines. For this reason, `laser`'s error reporting system will include the file name along with the line number that the error originates from.
-3. Hex and binary numbers used in `.FILL`s will be sign extended to 4 hex characters and 16 binary bits and calculated accordingly, as opposed to zero-extending like LC3Edit. For the most part, functionality is unchanged, except for hex numbers leading with '8' or greater, and binary numbers leading with '1'. For example, LC3Edit assembles `.FILL xA` as `x000A`, while `laser` will assemble it as `xFFFA`. To get `laser` to fill `x000A`, add a leading 0 - `.FILL x0A`.
-4. `laser` has error-checking features similar to LC3Edit, but separates the severity of these errors into three separate tiers:
+3. `laser` has error-checking features similar to LC3Edit, but separates the severity of these errors into three separate tiers:
     1. Warning: The program will assemble and a loadable object file will be produced, but unexpected errors may occur when running.
     2. Error: The program will not assemble and no loadable object file will be produced.
     3. Exception: The program has caused an exception to be thrown in the assembler and should be reported here as an issue.
-5. `laser` will continue to attempt to assemble the entirety of a program even if errors are met during Pass 1, whereas LC3Edit will stop before Pass 2 if there are errors during Pass 1. This is because `laser` checks operand type (register, offset, immediate) during Pass 2 to allow for the `.ALIAS` pseudoop functionality, whereas LC3Edit checks for this type of error during Pass 1.
-6. Error logs can be enabled by editing `config.h` before compiling, and will store errors and warnings outputed by the assembler in `<file>.log`. Note that each time the assembler is run, the log is overwritten.
+4. `laser` will continue to attempt to assemble the entirety of a program even if errors are met during Pass 1, whereas LC3Edit will stop before Pass 2 if there are errors during Pass 1. This is because `laser` checks operand type (register, offset, immediate) during Pass 2 to allow for the `.ALIAS` pseudoop functionality, whereas LC3Edit checks for this type of error during Pass 1.
+5. Error logs can be enabled by editing `config.h` before compiling, and will store errors and warnings outputed by the assembler in `<file>.log`. Note that each time the assembler is run, the log is overwritten.
 
 ### Usage
 

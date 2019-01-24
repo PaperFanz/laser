@@ -31,74 +31,92 @@ char *replaceExt (char *filename, const char *ext)
 	return filename;
 }
 
-// read a fixed offset or immediate value and express it in n bits
-int offset (int type, char *c, int bits)
+int hexOffset (char *offset)
 {
-	int off = 0, bin[16];
-	memset (bin, 0, sizeof(int)*16);
+	char *hex = strchr (offset, 'x');
+	hex++;
+	if (hex[0] == '-') {
+		hex++;
+	}
 
-	if(type == 0){
-		return 0;
+	if (strchr(offset, '-') != NULL) {
+		return -hexToDec (hex);
+	} else {
+		return hexToDec (hex);
 	}
-	else if(type == 1){
-		if (c[0] == '-' || c[1] == '-'){
-			decToTwoComp (-1 * hexToDec(&c[1]), bin, 16);
-		} else {
-			decToTwoComp (hexToDec(c), bin, 16);
-		}
+}
 
+int binOffset (char *offset)
+{
+	// move pointer past leading characters
+	char *bin = strchr (offset, 'b');
+	bin++;
+	if (bin[0] == '-')
+		bin++;
+
+	// get array length
+	int i = 0, l = 0, j = 16;
+	while (bin[i] != '\0') {
+		l++;
+		i++;
 	}
-	else if(type == 2){
-		int i, j = 15 - c[MAX_WORD_SIZE + 1] + 2;
-		if (c[0] == '-' || c[1] == '-') {
-			i = 2;
-		} else {
-			i = 1;
-		}
-		for (int k = 0; k < j; k++) 
-			bin[k] = c[1] - 0x30;		// sext input binary
-		while(c[i] != 0x00){
-			bin[j] = c[i] - 0x30;
-			j++;
-			i++;
-		}
-		if (c[0] == '-' || c[1] == '-') {
-			int addone[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1};
-			notArr (bin, 16);
-			addArr (bin, 16, addone, 16, bin, 16);
-		}
-	} else if(type == 3) {
-		int i, dec_num = 0;
-		if(c[0] == '-' || c[1] == '-')
-			i = 2;
-		else
-			i = 1;
-		while(c[i] != '\0'){
-			dec_num = dec_num * 10 + c[i]-0x30;
-			i++;
-		}
-		if(c[0] == '-' || c[1] == '-')
-			dec_num = -1 * dec_num;
-		decToTwoComp(dec_num, bin, 16);
-	} else if (type == 4) {
-		int i, dec_num = 0;
-		if(c[0] == '-' || c[1] == '-')
-			i = 1;
-		else
-			i = 0;
-		while(c[i] != '\0'){
-			dec_num = dec_num * 10 + c[i]-0x30;
-			i++;
-		}
-		if(c[0] == '-' || c[1] == '-')
-			dec_num = -1 * dec_num;
-		decToTwoComp (dec_num, bin, 16);
+
+	int bin16[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+	for (i = l; i >= 0; i--) {
+		bin16[j] = bin[i] - 0x30;
+		j--;
 	}
-	
-	for(int i=0; i<bits; i++){
-		off += bin[15-i] * (1 << i);
+
+	// sign extend
+	for (i = j; i >= 0; i--) {
+		bin16[i] = bin16[j + 1];
 	}
-	off -= bin[15-bits] * (1 << bits);
+
+	if (strchr (offset, '-')) {
+		return -twoCompToDec (bin16, 16);
+	} else {
+		return twoCompToDec (bin16, 16);
+	}
+}
+
+int decOffset (char *offset)
+{
+	char *dec = strchr (offset, '#');
+	if (dec == NULL) {
+		dec = offset;
+	} else {
+		dec++;
+	}
+
+	if (dec[0] == '-') {
+		dec++;
+	}
+
+	int off = 0, i = 0;
+	while (dec[i] != '\0') {
+		off = off * 10 + (dec[i] - 0x30);
+		i++;
+	}
+
+	if (strchr (offset, '-')) {
+		return -off;
+	} else {
+		return off;
+	}
+}
+
+int offset (int off_type, char *op)
+{
+	int off;
+	if (off_type == 1) {
+		off = hexOffset (op);
+	} else if (off_type == 2) {
+		off = binOffset (op);
+	} else if (off_type == 3) {
+		off = decOffset (op);
+	} else {
+		off = 0;
+	}
 
 	return off;
 }

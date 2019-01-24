@@ -125,137 +125,62 @@ int isHexChar(char c)
 	return -1;
 }
 
-int isValidOffset(char c[])
+int isValidOffset(char *c)
 {
-	int i = 0, j = 0;
-	if (c[0] == '-') {
-		if (c[1] == 'x') {
-			i = 2;
-			if (c[MAX_WORD_SIZE+1] < i + 1)
+	int i = 0;
+	char *hex, *bin, *dec;
+	hex = strchr (c, 'x');
+	bin = strchr (c, 'b');
+	dec = strchr (c, '#');
+
+	if (hex != NULL) {
+		hex++;
+		if (hex[0] == '-')
+			hex++;
+
+		while (hex[i] != '\0') {
+			if (isHexChar (hex[i]) < 0)
 				return 0;
-			while (c[i] != '\0') {
-				if (isHexChar (c[i]) < 0)
-					return 0;
-				i++;
-			}
-			return 1;
-		} else if (c[1] == 'b') {
-			i = 2;
-			if (c[MAX_WORD_SIZE+1] < i + 1)
-				return 0;
-			while (c[i] != '\0') {
-				if (c[i] != '0' && c[i] != '1')
-					return 0;
-				i++;
-			}
-			return 2;
-		} else if (c[1] == '#') {
-			i = 2;
-			if (c[MAX_WORD_SIZE+1] < i + 1)
-				return 0;
-			while (c[i] != '\0') {
-				if (!isdigit (c[i]))
-					return 0;
-				i++;
-			}
-			return 3;
-		} else if (isdigit (c[1])) {
-			i = 1;
-			if (c[MAX_WORD_SIZE+1] < i + 1)
-				return 0;
-			while (c[i] != '\0') {
-				if (!isdigit (c[i]))
-					return 0;
-				i++;
-			}
-			return 4;
+			i++;
 		}
-	} else if (c[1] == '-') {
-		if (c[0] == 'x') {
-			i = 2;
-			if (c[MAX_WORD_SIZE+1] < i + 1)
+
+		return 1;
+	} else if (bin != NULL) {
+		bin++;
+		if (bin[0] == '-')
+			bin++;
+		
+		while (bin[i] != '\0') {
+			if (bin[i] != '0' && bin[i] != '1')
 				return 0;
-			while (c[i] != '\0') {
-				if (isHexChar (c[i]) < 0)
-					return 0;
-				i++;
-			}
-			return 1;
-		} else if (c[0] == 'b') {
-			i = 2;
-			if (c[MAX_WORD_SIZE+1] < i + 1)
-				return 0;
-			while (c[i] != '\0') {
-				if (c[i] != '0' && c[i] != '1')
-					return 0;
-				i++;
-			}
-			return 2;
-		} else if (c[0] == '#') {
-			i = 2;
-			if (c[MAX_WORD_SIZE+1] < i + 1)
-				return 0;
-			while (c[i] != '\0') {
-				if (!isdigit (c[i]))
-					return 0;
-				i++;
-			}
-			return 3;
-		} else if (isdigit (c[0])) {
-			i = 1;
-			if (c[MAX_WORD_SIZE+1] < i + 1)
-				return 0;
-			while (c[i] != '\0') {
-				if (!isdigit (c[i]))
-					return 0;
-				i++;
-			}
-			return 4;
+			i++;
 		}
+
+		return 2;
+	} else if (dec != NULL) {
+		dec++;
+		if (dec[0] == '-')
+			dec++;
+
+		while (dec[i] != '\0') {
+			if (!isdigit (dec[i]))
+				return 0;
+			i++;
+		}
+		return 3;
 	} else {
-		if (c[0] == 'x') {
-			i = 1;
-			if (c[MAX_WORD_SIZE+1] < i + 1)
+		dec = c;
+		if (dec[0] == '-')
+			dec++;
+
+		while (dec[i] != '\0') {
+			if (!isdigit (dec[i]))
 				return 0;
-			while (c[i] != '\0') {
-				if (isHexChar (c[i]) < 0)
-					return 0;
-				i++;
-			}
-			return 1;
-		} else if (c[0] == 'b') {
-			i = 1;
-			if (c[MAX_WORD_SIZE+1] < i + 1)
-				return 0;
-			while (c[i] != '\0') {
-				if (c[i] != '0' && c[i] != '1')
-					return 0;
-				i++;
-			}
-			return 2;
-		} else if (c[0] == '#') {
-			i = 1;
-			if (c[MAX_WORD_SIZE+1] < i + 1)
-				return 0;
-			while (c[i] != '\0') {
-				if (!isdigit (c[i]))
-					return 0;
-				i++;
-			}
-			return 3;
-		} else if (isdigit (c[0])) {
-			i = 0;
-			if (c[MAX_WORD_SIZE+1] < i + 1)
-				return 0;
-			while (c[i] != '\0') {
-				if (!isdigit (c[i]))
-					return 0;
-				i++;
-			}
-			return 4;
+			i++;
 		}
+
+		return 3;
 	}
-	return 0;
 }
 
 int isLabel(char *c)
@@ -439,14 +364,12 @@ void binToHex(int bin[], int bin_size, char hex[], int hex_size)
 
 int hexToDec (char hex[])
 {
-	int i = 1, dec_num = 0;
+	int i = 0, dec_num = 0;
 	while (hex[i] != '\0') {
 		dec_num = dec_num * 16 + isHexChar (hex[i]);
 		i++;
 	}
-	i--;
-	if (isHexChar (hex[1]) >= 8)
-		dec_num -= 1 << (4 * i);
+
 	return dec_num;
 }
 

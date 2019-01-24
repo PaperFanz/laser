@@ -19,7 +19,7 @@ int isRegister(char c[]);
 // extends isxdigit functionality by returning decimal value (0-16)
 int isHexChar(char c);
 
-int isValidOffset(char c[]);
+int isValidOffset(char *c);
 
 int isLabel(char *c);
 
