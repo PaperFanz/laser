@@ -91,6 +91,8 @@ void aliasWord (struct Alias *al, char c[MAX_WORD_SIZE + 2]);
 
 int unusedAlias (struct Alias *al, struct Alert *a, FILE *fp_log);
 
+int existAlias (char *op, struct Alias *al);
+
 int operandImmediate (char *op, struct Instruction *ins, int off_b, struct Alert *a, FILE *fp_log);
 
 int operandRegister (char *op, int loc, struct Instruction *ins, struct Alert *a, FILE *fp_log);

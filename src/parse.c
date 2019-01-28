@@ -87,6 +87,7 @@ void parseFile (FILE *fp, char *fname, int q) {
 	//==========================================================================
 	//	Pass 1 - Generate Symbol file
 	//==========================================================================
+
 	if (quiet < 1)
 		printf ("Pass 1: \n");
 	if (ENABLE_LOGGING)
@@ -114,14 +115,12 @@ void parseFile (FILE *fp, char *fname, int q) {
 			int o = isOrig (word_buf);
 			int a = isAlias (word_buf);
 			if (o >= 0) {
-				instruction.type = P_OP;
 				addr_st = instruction.addr = addrToDec (word_buf[o + 1]);
 				instruction.instr = instruction.addr;
 				ln_st = ln;
 				fgetpos (fp, &pos);
 				orig = true;
 			} else if (a >= 0) {
-				instruction.type = P_OP;
 				if (word_buf[a + 1][0] == '\0' || word_buf[a + 2][0] == '\0'){
 					alert.warn++;
 					if (quiet < 1){
@@ -160,11 +159,6 @@ void parseFile (FILE *fp, char *fname, int q) {
 		} else if (isEnd (word_buf) >= 0) {
 			break;
 		} else {
-
-			for (int i = 0; i < MAX_WORD_NUM; i++) {
-				aliasWord (aliases, word_buf[i]);
-			}
-
 			int i;
 			int keyword, pseudoop, label;
 			for (i = 0; i < MAX_WORD_NUM; i++) {
@@ -174,6 +168,17 @@ void parseFile (FILE *fp, char *fname, int q) {
 				label = isLabel (c);
 				s_cnt = symbols[0].count;
 				if (label && i == 0) {
+					if (existAlias (c, aliases)) {
+						alert.err++;
+						if (quiet < 2) {
+							printf ("Error: (%s line %d) ", fname, ln);
+							printf ("'%s' has already been declared as an alias!\n", c);
+						}
+						if (ENABLE_LOGGING) {
+							fprintf (file.log, "Error: (%s line %d) ", fname, ln);
+							fprintf (file.log, "'%s' has already been declared as an alias!\n", c);
+						}
+					}
 					symbols = realloc (symbols, (s_cnt + 1) * sizeof (struct Symbol));
 					memcpy (symbols[s_cnt].label, c, sizeof(char) * (MAX_WORD_SIZE + 2));
 					symbols[s_cnt].addr = instruction.addr;
@@ -184,29 +189,6 @@ void parseFile (FILE *fp, char *fname, int q) {
 					char addr_str[4];
 					decToAddr (addr_str, instruction.addr);
 					putSymbol (file.sym, c, addr_str);
-				} else if (label && i >= 0) {
-					symbols = realloc (symbols, (s_cnt + 1) * sizeof (struct Symbol));
-					memcpy (symbols[s_cnt].label, c, sizeof(char) * (MAX_WORD_SIZE + 2));
-					symbols[s_cnt].addr = instruction.addr;
-					symbols[s_cnt].count = 0;
-					symbols[s_cnt].ln = ln;
-					symbols[0].count++;
-
-					char addr_str[4];
-					decToAddr (addr_str, instruction.addr);
-					putSymbol (file.sym, c, addr_str);
-
-					alert.warn++;
-					if (quiet < 1){
-						printf ("Warning: (%s line %d) ", fname, ln);
-						printf ("multiple label declaration!\n%s", line_buf);
-						printf ("\tConsider consolidating labels.\n");
-					}
-					if (ENABLE_LOGGING) {
-						fprintf (file.log, "Warning: (%s line %d) ", fname, ln);
-						fprintf (file.log, "multiple label declaration!\n%s", line_buf);
-						fprintf (file.log, "\tConsider consolidating labels.\n");
-					}
 				} else if (word_buf[i][0] == '\0') {
 					break;
 				} else if (!isValidOffset (word_buf[i])) {
@@ -217,11 +199,11 @@ void parseFile (FILE *fp, char *fname, int q) {
 					alert.err++;
 					if (quiet < 2){
 						printf ("Error: (%s line %d) ", fname, ln);
-						printf ("Unrecognized syntax!\n%s", line_buf);
+						printf ("Unrecognized token '%s'!\n", c);
 					}
 					if (ENABLE_LOGGING) {
 						fprintf (file.log, "Error: (%s line %d) ", fname, ln);
-						fprintf (file.log, "Unrecognized syntax!\n%s", line_buf);
+						fprintf (file.log, "Unrecognized token '%s'!\n", c);
 					}
 					break;
 				}
@@ -837,6 +819,17 @@ int unusedAlias (struct Alias *al, struct Alert *a, FILE *fp_log)
 	return 1;
 }
 
+int existAlias (char *op, struct Alias *al)
+{
+	for (int i = al[0].count; i >= 1; i--) {
+		if (strcmp (op, al[i].word) == 0) {
+			printf ("%s %s\n", op, al[i].word);
+			return 1;
+		}
+	}
+	return 0;
+}
+
 int operandImmediate (char *op, struct Instruction *ins, int off_b, struct Alert *a, FILE *fp_log)
 {
 	int off;
@@ -1241,4 +1234,3 @@ int errInvalidOp (struct Instruction ins, struct Alert *a, char *op, FILE *fp_lo
 	}
 	return 1;
 }
-
