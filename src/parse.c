@@ -112,6 +112,7 @@ void parseFile (FILE *fp, char *fname, int q) {
 		int o = isOrig (word_buf);
 		int a = isAlias (word_buf);
 		if (o >= 0) {
+			instruction.type = P_OP;
 			addr_st = instruction.addr = addrToDec (word_buf[o + 1]);
 			instruction.instr = instruction.addr;
 			ln_st = ln;
@@ -140,10 +141,12 @@ void parseFile (FILE *fp, char *fname, int q) {
 				}
 			}
 		}
-		fprintAsm (file, instruction);
+		fprintAsm (file, instruction);	// fill in origin address
 	}
 
 pass_1:
+	fprintAsm (file, instruction);	// fill in origin address
+
 	while(fgets (line_buf, MAX_LEN + 1, fp) != NULL) {
 		ln++;
 
