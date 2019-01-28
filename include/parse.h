@@ -85,6 +85,8 @@ void parseFile (FILE *fp, char *fname, int q);
 
 int labelAddress (struct Symbol *sym, char *label);
 
+int existLabel (struct Symbol *sym, char *label);
+
 int unusedSymbol (struct Symbol *sym, struct Alert *a, FILE *fp_log);
 
 void aliasWord (struct Alias *al, char c[MAX_WORD_SIZE + 2]);

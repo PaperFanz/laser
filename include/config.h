@@ -9,6 +9,9 @@
 // set to 1 to print binary in list file alongside hex
 #define PRINT_BIN_IN_LST 0
 
+// set to 1 to print header comments in lsit file
+#define PRESERVE_HEADER 0
+
 // fill in your tabsize to properly format symbol file if using tabs
 // 0 is not a valid tabsize
 #define TABSIZE 4

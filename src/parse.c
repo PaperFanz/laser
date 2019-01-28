@@ -93,13 +93,61 @@ void parseFile (FILE *fp, char *fname, int q) {
 	if (ENABLE_LOGGING)
 		fprintf (file.log, "Pass 1: \n");
 
+	// look for origin and set aliases
+	while (fgets (line_buf, MAX_LEN + 1, fp) != NULL) {
+		ln++;
+
+		if (!PRESERVE_HEADER && (line_buf[0] == ';' || line_buf[0] == '\0'))
+			continue;
+
+		memset (word_buf, 0, sizeof(word_buf));
+		lineToWords (line_buf, word_buf);
+
+		instruction.type = N_OP;
+		instruction.src = true;
+		instruction.line_buf = line_buf;
+		instruction.ln = ln;
+		instruction.instr = 0;
+
+		int o = isOrig (word_buf);
+		int a = isAlias (word_buf);
+		if (o >= 0) {
+			addr_st = instruction.addr = addrToDec (word_buf[o + 1]);
+			instruction.instr = instruction.addr;
+			ln_st = ln;
+			fgetpos (fp, &pos);
+			goto pass_1;
+		} else if (a >= 0) {
+			if (isRegister (word_buf[a + 2]) >= 0) {
+				a_cnt = aliases[0].count;
+				aliases = realloc (aliases, (a_cnt + 1) * sizeof (struct Alias));
+				memcpy (aliases[a_cnt].word, word_buf[a + 1], sizeof(char) * (MAX_WORD_SIZE + 2));
+				memcpy (aliases[a_cnt].replace, word_buf[a + 2], sizeof(char) * (MAX_WORD_SIZE + 2));
+				aliases[a_cnt].ln = ln;
+				aliases[a_cnt].count = 0;
+				aliases[0].count++;
+			} else {
+				alert.err++;
+				if (quiet < 2) {
+					printf ("Error: (%s line %d) ", fname, ln);
+					printf ("'%s' is for renaming registers only!\n", word_buf[a]);
+					printf ("\t%s", line_buf);
+				}
+				if (ENABLE_LOGGING) {
+					fprintf (file.log, "Error: (%s line %d) ", fname, ln);
+					fprintf (file.log, "'%s' is for renaming registers only!\n", word_buf[a]);
+					fprintf (file.log, "\t%s", line_buf);
+				}
+			}
+		}
+		fprintAsm (file, instruction);
+	}
+
+pass_1:
 	while(fgets (line_buf, MAX_LEN + 1, fp) != NULL) {
 		ln++;
 
-		bool comment = (line_buf[0] == ';');
-		bool empty = (line_buf[0] == '\0');
-
-		if (comment || empty)
+		if (line_buf[0] == ';' || line_buf[0] == '\0')
 			continue;
 
 		memset (word_buf, 0, sizeof(word_buf));
@@ -109,302 +157,250 @@ void parseFile (FILE *fp, char *fname, int q) {
 		instruction.ln = ln;
 		instruction.instr = 0;
 
-		if (!orig) {
-			instruction.type = N_OP;
-			instruction.src = true;
-			int o = isOrig (word_buf);
-			int a = isAlias (word_buf);
-			if (o >= 0) {
-				addr_st = instruction.addr = addrToDec (word_buf[o + 1]);
-				instruction.instr = instruction.addr;
-				ln_st = ln;
-				fgetpos (fp, &pos);
-				orig = true;
-			} else if (a >= 0) {
-				if (word_buf[a + 1][0] == '\0' || word_buf[a + 2][0] == '\0'){
-					alert.warn++;
-					if (quiet < 1){
-						printf ("Warning: (%s line %d) ", fname, ln);
-						printf ("'%s' requires two operands!\n", word_buf[a]);
-						printf ("\t%s", line_buf);
-					}
-					if (ENABLE_LOGGING) {
-						fprintf (file.log, "Warning: (%s line %d) ", fname, ln);
-						fprintf (file.log, "'%s' requires two operands!\n", word_buf[a]);
-						fprintf (file.log, "\t%s", line_buf);
-					}
-				} else if (isRegister (word_buf[a + 2]) >= 0) {
-					a_cnt = aliases[0].count;
-					aliases = realloc (aliases, (a_cnt + 1) * sizeof (struct Alias));
-					memcpy (aliases[a_cnt].word, word_buf[a + 1], sizeof(char) * (MAX_WORD_SIZE + 2));
-					memcpy (aliases[a_cnt].replace, word_buf[a + 2], sizeof(char) * (MAX_WORD_SIZE + 2));
-					aliases[a_cnt].ln = ln;
-					aliases[a_cnt].count = 0;
-					aliases[0].count++;
-				} else {
+		int i;
+		int keyword, pseudoop, label;
+		for (i = 0; i < MAX_WORD_NUM; i++) {
+			char *c = word_buf[i];
+			keyword = isKeyword (c);
+			pseudoop = isPseuodoOp (c);
+			label = isLabel (c);
+			s_cnt = symbols[0].count;
+			if (label && i == 0) {
+				if (existAlias (c, aliases)) {
 					alert.err++;
 					if (quiet < 2) {
 						printf ("Error: (%s line %d) ", fname, ln);
-						printf ("'%s' is for renaming registers only!\n", word_buf[a]);
-						printf ("\t%s", line_buf);
+						printf ("'%s' has already been declared as an alias!\n", c);
 					}
 					if (ENABLE_LOGGING) {
 						fprintf (file.log, "Error: (%s line %d) ", fname, ln);
-						fprintf (file.log, "'%s' is for renaming registers only!\n", word_buf[a]);
-						fprintf (file.log, "\t%s", line_buf);
+						fprintf (file.log, "'%s' has already been declared as an alias!\n", c);
 					}
 				}
+				symbols = realloc (symbols, (s_cnt + 1) * sizeof (struct Symbol));
+				memcpy (symbols[s_cnt].label, c, sizeof(char) * (MAX_WORD_SIZE + 2));
+				symbols[s_cnt].addr = instruction.addr;
+				symbols[s_cnt].count = 0;
+				symbols[s_cnt].ln = ln;
+				symbols[0].count++;
+
+				char addr_str[4];
+				decToAddr (addr_str, instruction.addr);
+				putSymbol (file.sym, c, addr_str);
+			} else if (word_buf[i][0] == '\0') {
+				break;
+			} else if (!isValidOffset (word_buf[i])) {
+				instruction.opcode = word_buf[i];
+				instruction.addr++;
+				break;
+			} else {
+				alert.err++;
+				if (quiet < 2){
+					printf ("Error: (%s line %d) ", fname, ln);
+					printf ("Unrecognized token '%s'!\n", c);
+				}
+				if (ENABLE_LOGGING) {
+					fprintf (file.log, "Error: (%s line %d) ", fname, ln);
+					fprintf (file.log, "Unrecognized token '%s'!\n", c);
+				}
+				break;
 			}
-			fprintAsm (file, instruction);
-		} else if (isEnd (word_buf) >= 0) {
+		}
+
+		instruction.type = 0;
+		int off = 0;
+
+		switch (pseudoop) {
+		case NO_OP:
+		{
 			break;
-		} else {
-			int i;
-			int keyword, pseudoop, label;
-			for (i = 0; i < MAX_WORD_NUM; i++) {
-				char *c = word_buf[i];
-				keyword = isKeyword (c);
-				pseudoop = isPseuodoOp (c);
-				label = isLabel (c);
-				s_cnt = symbols[0].count;
-				if (label && i == 0) {
-					if (existAlias (c, aliases)) {
-						alert.err++;
-						if (quiet < 2) {
-							printf ("Error: (%s line %d) ", fname, ln);
-							printf ("'%s' has already been declared as an alias!\n", c);
-						}
-						if (ENABLE_LOGGING) {
-							fprintf (file.log, "Error: (%s line %d) ", fname, ln);
-							fprintf (file.log, "'%s' has already been declared as an alias!\n", c);
-						}
-					}
-					symbols = realloc (symbols, (s_cnt + 1) * sizeof (struct Symbol));
-					memcpy (symbols[s_cnt].label, c, sizeof(char) * (MAX_WORD_SIZE + 2));
-					symbols[s_cnt].addr = instruction.addr;
-					symbols[s_cnt].count = 0;
-					symbols[s_cnt].ln = ln;
-					symbols[0].count++;
-
-					char addr_str[4];
-					decToAddr (addr_str, instruction.addr);
-					putSymbol (file.sym, c, addr_str);
-				} else if (word_buf[i][0] == '\0') {
+		}
+		case ORIG:
+		{
+			instruction.type = 1;
+			alert.err++;
+			if (quiet < 2){
+				printf ("Error: (%s line %d) ", fname, ln);
+				printf ("Multiple .ORIG declaration!\n%s", line_buf);
+			}
+			break;
+		}
+		case END:
+		{
+			goto pass_2;
+		}
+		case STRINGZ:
+		{
+			instruction.type = 1;
+			char *string = word_buf[i + 1];
+			int j = 1;
+			while (string[j] != '\0') {
+				if (string[j] == '\"'){
 					break;
-				} else if (!isValidOffset (word_buf[i])) {
-					instruction.opcode = word_buf[i];
+				} else if (string[j] == '\\') {
 					instruction.addr++;
-					break;
+					j += 2;
 				} else {
-					alert.err++;
-					if (quiet < 2){
-						printf ("Error: (%s line %d) ", fname, ln);
-						printf ("Unrecognized token '%s'!\n", c);
-					}
-					if (ENABLE_LOGGING) {
-						fprintf (file.log, "Error: (%s line %d) ", fname, ln);
-						fprintf (file.log, "Unrecognized token '%s'!\n", c);
-					}
-					break;
-				}
-			}
-
-			instruction.type = 0;
-			int off = 0;
-
-			switch (pseudoop) {
-			case NO_OP:
-			{
-				break;
-			}
-			case ORIG:
-			{
-				instruction.type = 1;
-				alert.err++;
-				if (quiet < 2){
-					printf ("Error: (%s line %d) ", fname, ln);
-					printf ("Multiple .ORIG declaration!\n%s", line_buf);
-				}
-				break;
-			}
-			case END:
-			{
-				alert.exception++;
-				printf ("%d: Unhandled exception!\n", pseudoop);
-				break;
-			}
-			case STRINGZ:
-			{
-				instruction.type = 1;
-				char *string = word_buf[i + 1];
-				int j = 1;
-				while (string[j] != '\0') {
-					if (string[j] == '\"'){
-						break;
-					} else if (string[j] == '\\') {
-						instruction.addr++;
-						j += 2;
-					} else {
-						instruction.addr++;
-						j++;
-					}
-				}
-				break;
-			}
-			case BLKW:
-			{
-				instruction.type = 1;
-				int off_type = isValidOffset (word_buf[i + 1]);
-				
-				off = offset (off_type, word_buf[i + 1]);
-
-				for (int j = off; j > 1; j--) {
 					instruction.addr++;
+					j++;
 				}
-				break;
 			}
-			case FILL:
-			{
-				instruction.type = 1;
-				break;
-			}
-			case ALIAS:
-			{
-				instruction.type = 2;
-				alert.err++;
-				if (quiet < 2){
-					printf ("Error: (%s line %d) ", fname, ln);
-					printf ("aliases must be declared before .ORIG!\n\t%s", line_buf);
-				}
-				break;
-			}
-			default:
-			{
-				alert.exception++;
-				printf ("%d: Unhandled exception!\n", pseudoop);
-				break;
-			}
-			}
+			break;
+		}
+		case BLKW:
+		{
+			instruction.type = 1;
+			int off_type = isValidOffset (word_buf[i + 1]);
+			
+			off = offset (off_type, word_buf[i + 1]);
 
-			switch (keyword) {
-			case NO_OP:
-			{
-				if (word_buf[i][0] == '\0') {
-					continue;
-				} else if (pseudoop < 0) {
-					errNoOp(instruction, &alert, file.log, word_buf[i]);
-					instruction.type = -1;
-				}
-				break;
+			for (int j = off; j > 1; j--) {
+				instruction.addr++;
 			}
-			case BR:
-			{
-				instruction.type = 1;
-				break;
+			break;
+		}
+		case FILL:
+		{
+			instruction.type = 1;
+			break;
+		}
+		case ALIAS:
+		{
+			instruction.type = 2;
+			alert.err++;
+			if (quiet < 2){
+				printf ("Error: (%s line %d) ", fname, ln);
+				printf ("aliases must be declared before .ORIG!\n\t%s", line_buf);
 			}
-			case ADD:
-			{
-				instruction.type = 3;
-				break;
+			break;
+		}
+		default:
+		{
+			alert.exception++;
+			printf ("%d: Unhandled exception!\n", pseudoop);
+			break;
+		}
+		}
+
+		switch (keyword) {
+		case NO_OP:
+		{
+			if (word_buf[i][0] == '\0') {
+				continue;
+			} else if (pseudoop < 0) {
+				errNoOp(instruction, &alert, file.log, word_buf[i]);
+				instruction.type = -1;
 			}
-			case LD:
-			{
-				instruction.type = 2;
-				break;
-			}
-			case ST:
-			{
-				instruction.type = 2;
-				break;
-			}
-			case JSR:
-			{
-				instruction.type = 1;
-				break;
-			}
-			case AND:
-			{
-				instruction.type = 3;
-				break;
-			}
-			case LDR:
-			{
-				instruction.type = 3;
-				break;
-			}
-			case STR:
-			{
-				instruction.type = 3;
-				break;
-			}
-			case RTI:
-			{
+			break;
+		}
+		case BR:
+		{
+			instruction.type = 1;
+			break;
+		}
+		case ADD:
+		{
+			instruction.type = 3;
+			break;
+		}
+		case LD:
+		{
+			instruction.type = 2;
+			break;
+		}
+		case ST:
+		{
+			instruction.type = 2;
+			break;
+		}
+		case JSR:
+		{
+			instruction.type = 1;
+			break;
+		}
+		case AND:
+		{
+			instruction.type = 3;
+			break;
+		}
+		case LDR:
+		{
+			instruction.type = 3;
+			break;
+		}
+		case STR:
+		{
+			instruction.type = 3;
+			break;
+		}
+		case RTI:
+		{
+			instruction.type = 0;
+			break;
+		}
+		case NOT:
+		{
+			instruction.type = 2;
+			break;
+		}
+		case LDI:
+		{
+			instruction.type = 2;
+			break;
+		}
+		case STI:
+		{
+			instruction.type = 2;
+			break;
+		}
+		case JMP:
+		{
+			if(strcmp(word_buf[i], "RET")==0||strcmp(word_buf[i], "ret")==0)
 				instruction.type = 0;
-				break;
-			}
-			case NOT:
-			{
-				instruction.type = 2;
-				break;
-			}
-			case LDI:
-			{
-				instruction.type = 2;
-				break;
-			}
-			case STI:
-			{
-				instruction.type = 2;
-				break;
-			}
-			case JMP:
-			{
-				if(strcmp(word_buf[i], "RET")==0||strcmp(word_buf[i], "ret")==0)
-					instruction.type = 0;
-				else
-					instruction.type = 1;
-				break;
-			}
-			case LEA:
-			{
-				instruction.type = 2;
-				break;
-			}
-			case TRAP:
-			{
-				if (isTrap (word_buf[i]) > 1)
-					instruction.type = 0;
-				else
-					instruction.type = 1;
-				break;
-			}
-			default:
-			{
-				alert.exception++;
-				printf ("%d: Unhandled exception!\n", keyword);
-				break;
-			}
-			}
-
-			if (pseudoop >= 0 || keyword >= 0)
-				i++;
-
-			char c;
-			if (instruction.type == 1)
-				c = '\0';
 			else
-				c = 's';
+				instruction.type = 1;
+			break;
+		}
+		case LEA:
+		{
+			instruction.type = 2;
+			break;
+		}
+		case TRAP:
+		{
+			if (isTrap (word_buf[i]) > 1)
+				instruction.type = 0;
+			else
+				instruction.type = 1;
+			break;
+		}
+		default:
+		{
+			alert.exception++;
+			printf ("%d: Unhandled exception!\n", keyword);
+			break;
+		}
+		}
 
-			if (instruction.type >= 0) {
-				if ((countWords (i, word_buf) - instruction.type) > 0) {
-					warnOpOvf (instruction, &alert, file.log);
-				} else if ((countWords (i, word_buf) - instruction.type) < 0) {
-					errOpDef (instruction, &alert, file.log);
-				}
+		if (pseudoop >= 0 || keyword >= 0)
+			i++;
+
+		char c;
+		if (instruction.type == 1)
+			c = '\0';
+		else
+			c = 's';
+
+		if (instruction.type >= 0) {
+			if ((countWords (i, word_buf) - instruction.type) > 0) {
+				warnOpOvf (instruction, &alert, file.log);
+			} else if ((countWords (i, word_buf) - instruction.type) < 0) {
+				errOpDef (instruction, &alert, file.log);
 			}
 		}
 	}
 
+pass_2:
 	if (quiet < 1)
 		printAlertSummary (alert);
 	if (ENABLE_LOGGING)
@@ -416,7 +412,6 @@ void parseFile (FILE *fp, char *fname, int q) {
 	//==========================================================================
 	//	Pass 2 - Generate List, Binary, Hex, and Object files
 	//==========================================================================
-
 	if (quiet < 1)
 		printf ("Pass 2:\n");
 	if (ENABLE_LOGGING)
@@ -437,10 +432,8 @@ void parseFile (FILE *fp, char *fname, int q) {
 
 	while(fgets(line_buf, MAX_LEN+1, fp)!=NULL){
 		ln++;
-		bool comment = (line_buf[0] == ';');
-		bool empty = (line_buf[0] == '\0');
 
-		if (comment || empty){
+		if (line_buf[0] == ';' || line_buf[0] == '\0'){
 			instruction.type = N_OP;
 			fprintAsm (file, instruction);
 			continue;
@@ -471,7 +464,7 @@ void parseFile (FILE *fp, char *fname, int q) {
 		}
 
 		int i = 0;
-		while (labelAddress (symbols, word_buf[i]) >= 0) {
+		while (existLabel (symbols, word_buf[i])) {
 			i++;
 		}
 
@@ -769,6 +762,16 @@ int labelAddress (struct Symbol *sym, char *label)
 		}
 	}
 	return -1;
+}
+
+int existLabel (struct Symbol *sym, char *label)
+{
+	for (int i = 1; i < sym[0].count; i++) {
+		if (strcmp (sym[i].label, label) == 0) {
+			return 1;
+		}
+	}
+	return 0;
 }
 
 void aliasWord (struct Alias *al, char c[MAX_WORD_SIZE + 2])
