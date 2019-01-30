@@ -120,13 +120,25 @@ void parseFile (FILE *fp, char *fname, int q) {
 			goto pass_1;
 		} else if (a >= 0) {
 			if (isRegister (word_buf[a + 2]) >= 0) {
-				a_cnt = aliases[0].count;
-				aliases = realloc (aliases, (a_cnt + 1) * sizeof (struct Alias));
-				memcpy (aliases[a_cnt].word, word_buf[a + 1], sizeof(char) * (MAX_WORD_SIZE + 2));
-				memcpy (aliases[a_cnt].replace, word_buf[a + 2], sizeof(char) * (MAX_WORD_SIZE + 2));
-				aliases[a_cnt].ln = ln;
-				aliases[a_cnt].count = 0;
-				aliases[0].count++;
+				if (existAlias (word_buf[a + 1], aliases)) {
+					alert.err++;
+					if (quiet < 2) {
+						printf ("Error: (%s line %d) ", fname, ln);
+						printf ("'%s' has already been declared as an alias!\n", word_buf[a + 1]);
+					}
+					if (ENABLE_LOGGING) {
+						fprintf (file.log, "Error: (%s line %d) ", fname, ln);
+						fprintf (file.log, "'%s' has already been declared as an alias!\n", word_buf[a + 1]);
+					}
+				} else {
+					a_cnt = aliases[0].count;
+					aliases = realloc (aliases, (a_cnt + 1) * sizeof (struct Alias));
+					memcpy (aliases[a_cnt].word, word_buf[a + 1], sizeof(char) * (MAX_WORD_SIZE + 2));
+					memcpy (aliases[a_cnt].replace, word_buf[a + 2], sizeof(char) * (MAX_WORD_SIZE + 2));
+					aliases[a_cnt].ln = ln;
+					aliases[a_cnt].count = 0;
+					aliases[0].count++;
+				}
 			} else {
 				alert.err++;
 				if (quiet < 2) {
@@ -169,15 +181,15 @@ pass_1:
 			label = isLabel (c);
 			s_cnt = symbols[0].count;
 			if (label && i == 0) {
-				if (existAlias (c, aliases)) {
+				if (existLabel (symbols, c)) {
 					alert.err++;
 					if (quiet < 2) {
 						printf ("Error: (%s line %d) ", fname, ln);
-						printf ("'%s' has already been declared as an alias!\n", c);
+						printf ("'%s' has already been declared as an label!\n", c);
 					}
 					if (ENABLE_LOGGING) {
 						fprintf (file.log, "Error: (%s line %d) ", fname, ln);
-						fprintf (file.log, "'%s' has already been declared as an alias!\n", c);
+						fprintf (file.log, "'%s' has already been declared as an label!\n", c);
 					}
 				}
 				symbols = realloc (symbols, (s_cnt + 1) * sizeof (struct Symbol));
@@ -746,8 +758,10 @@ pass_2:
 			break;
 		}
 		default:
+		{
 			printf ("%d Unhandled keyword exception!\n", isKeyword (word_buf[i]));
 			break;
+		}
 		}
 
 		fprintAsm (file, instruction);
