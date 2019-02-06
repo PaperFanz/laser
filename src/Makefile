@@ -1,14 +1,15 @@
+SHELL = /bin/sh
+
+IDIR = ../include
+ODIR = obj
+
 CC = gcc
 CFLAGS = -I $(IDIR)
 
-IDIR = ../include
-LDIR = ../lib
-ODIR = obj
-
-_DEPS = laser.h convert.h parse.h calc.h config.h
+_DEPS = laser.h config.h
 DEPS = $(patsubst %, $(IDIR)/%,$(_DEPS))
 
-_OBJ = laser.o convert.o parse.o calc.o
+_OBJ = laser.o assemble.o alias.o flag.o file.o label.o notify.o operand.o pseudoop.o tokenize.o
 OBJ = $(patsubst %, $(ODIR)/%,$(_OBJ))
 
 $(ODIR)/%.o: %.c $(DEPS)

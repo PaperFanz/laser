@@ -131,13 +131,7 @@ void parseFile (FILE *fp, char *fname, int q) {
 						fprintf (file.log, "'%s' has already been declared as an alias!\n", word_buf[a + 1]);
 					}
 				} else {
-					a_cnt = aliases[0].count;
-					aliases = realloc (aliases, (a_cnt + 1) * sizeof (struct Alias));
-					memcpy (aliases[a_cnt].word, word_buf[a + 1], sizeof(char) * (MAX_WORD_SIZE + 2));
-					memcpy (aliases[a_cnt].replace, word_buf[a + 2], sizeof(char) * (MAX_WORD_SIZE + 2));
-					aliases[a_cnt].ln = ln;
-					aliases[a_cnt].count = 0;
-					aliases[0].count++;
+					aliases = addAlias (aliases, word_buf[a + 1], word_buf[a + 2], ln);
 				}
 			} else {
 				alert.err++;
@@ -153,7 +147,7 @@ void parseFile (FILE *fp, char *fname, int q) {
 				}
 			}
 		}
-		fprintAsm (file, instruction);	// fill in origin address
+		fprintAsm (file, instruction);
 	}
 
 pass_1:
@@ -770,25 +764,24 @@ pass_2:
 	}
 }
 
-int labelAddress (struct Symbol *sym, char *label)
-{
-	for (int i = 1; i < sym[0].count; i++) {
-		if (strcmp (sym[i].label, label) == 0) {
-			sym[i].count++;
-			return sym[i].addr;
-		}
-	}
-	return -1;
+int findOrig (struct Alias **als) {
+
 }
 
-int existLabel (struct Symbol *sym, char *label)
+struct Alias* addAlias (struct Alias *als, char *word, char *rep, int ln)
 {
-	for (int i = 1; i < sym[0].count; i++) {
-		if (strcmp (sym[i].label, label) == 0) {
-			return 1;
-		}
-	}
-	return 0;
+	int i = als[0].count;
+
+	als = realloc (als, (i + 1) * sizeof (struct Alias));
+
+	memcpy (als[i].word, word, sizeof (char) * (MAX_WORD_SIZE + 1));
+	memcpy (als[i].replace, rep, sizeof (char) * (MAX_WORD_SIZE + 1));
+
+	als[i].ln = ln;
+	als[i].count = 0;
+	als[0].count++;
+
+	return als;
 }
 
 void aliasWord (struct Alias *al, char c[MAX_WORD_SIZE + 2])
@@ -801,24 +794,6 @@ void aliasWord (struct Alias *al, char c[MAX_WORD_SIZE + 2])
 		}
 	}
 	return;
-}
-
-int unusedSymbol (struct Symbol *sym, struct Alert *a, FILE *fp_log)
-{
-	for (int i = 1; i < sym[0].count; i++) {
-		if (sym[i].count == 0) {
-			a->warn++;
-			if (quiet < 1) {
-				printf ("Warning: (%s line %d) ", sym[0].label, sym[i].ln);
-				printf ("unused label: %s\n", sym[i].label);
-			}
-			if (ENABLE_LOGGING) {
-				fprintf (fp_log, "Warning: (%s line %d) ", sym[0].label, sym[i].ln);
-				fprintf (fp_log, "unused label: %s\n", sym[i].label);
-			}
-		}
-	}
-	return 1;
 }
 
 int unusedAlias (struct Alias *al, struct Alert *a, FILE *fp_log)
@@ -844,6 +819,45 @@ int existAlias (char *op, struct Alias *al)
 	for (int i = al[0].count; i >= 1; i--) {
 		if (strcmp (op, al[i].word) == 0) {
 			printf ("%s %s\n", op, al[i].word);
+			return 1;
+		}
+	}
+	return 0;
+}
+
+int unusedSymbol (struct Symbol *sym, struct Alert *a, FILE *fp_log)
+{
+	for (int i = 1; i < sym[0].count; i++) {
+		if (sym[i].count == 0) {
+			a->warn++;
+			if (quiet < 1) {
+				printf ("Warning: (%s line %d) ", sym[0].label, sym[i].ln);
+				printf ("unused label: %s\n", sym[i].label);
+			}
+			if (ENABLE_LOGGING) {
+				fprintf (fp_log, "Warning: (%s line %d) ", sym[0].label, sym[i].ln);
+				fprintf (fp_log, "unused label: %s\n", sym[i].label);
+			}
+		}
+	}
+	return 1;
+}
+
+int labelAddress (struct Symbol *sym, char *label)
+{
+	for (int i = 1; i < sym[0].count; i++) {
+		if (strcmp (sym[i].label, label) == 0) {
+			sym[i].count++;
+			return sym[i].addr;
+		}
+	}
+	return -1;
+}
+
+int existLabel (struct Symbol *sym, char *label)
+{
+	for (int i = 1; i < sym[0].count; i++) {
+		if (strcmp (sym[i].label, label) == 0) {
 			return 1;
 		}
 	}
