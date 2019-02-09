@@ -15,7 +15,7 @@ int8_t main (int argc, char **argv)
 		if (flag >= 0) {
 			last_flag = parseFlag (flag);
 		} else {
-			last_flag = parseFile (file, last_flag);
+			last_flag = parsefile (file, last_flag);
 		}
 
 		if (last_flag == -1) {

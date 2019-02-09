@@ -40,6 +40,7 @@ int8_t checkFlags (char *f)
 
 int8_t parseFlag (int8_t flag)
 {
+	bool setverbosity = 0;
 	switch (flag) {
 		case VERSION: {
 			printf ("laser version %s\n", version_num);
@@ -50,11 +51,13 @@ int8_t parseFlag (int8_t flag)
 			break;
 		}
 		case QUIET: {
-			quiet = 1;
+			if (!setverbosity) quiet = 1;
+			setverbosity = 1;
 			break;
 		}
 		case SILENT: {
-			quiet = 2;
+			if (!setverbosity) quiet = 2;
+			setverbosity = 1;
 			break;
 		}
 		case ASSEMBLE: {

@@ -2,7 +2,7 @@
 #define USES_FLAG
 #include "laser.h"
 
-int8_t checkExtension (char *file, char *extension)
+int8_t checkextension (char *file, char *extension)
 {
 	char *dot=strrchr(file, '.');
 	if (dot == NULL)
@@ -13,7 +13,7 @@ int8_t checkExtension (char *file, char *extension)
 		return 0;
 }
 
-char* replaceExtension (char *file, const char *extension)
+char* replaceextension (char *file, const char *extension)
 {
 	char *dot=strrchr(file, '.');
 	int i=0;
@@ -24,9 +24,9 @@ char* replaceExtension (char *file, const char *extension)
 	return file;
 }
 
-int8_t parseFile (char *file, int8_t last_flag)
+int8_t parsefile (char *file, int8_t last_flag)
 {
-	if (checkExtension (file, ".asm")) {
+	if (checkextension (file, ".asm")) {
 		if (last_flag == ASSEMBLE) {
 			return assemble (file);
 		} else if (last_flag == CLEAN) {
@@ -39,19 +39,19 @@ int8_t parseFile (char *file, int8_t last_flag)
 	}
 }
 
-void fprintIntArr (FILE *fp, int num[], int size)
+void fprintintarr (FILE *fp, int num[], int size)
 {
 	for (int i = 0; i <= size - 1; i++)
 		fprintf(fp, "%d", num[i]);
 }
 
-void fprintCharArr (FILE *fp, char hex[], int size)
+void fprintchararr (FILE *fp, char hex[], int size)
 {
 	for (int i = 0; i <= size - 1; i++)
 		fprintf (fp, "%c", hex[i]);
 }
 
-void printSymbol (FILE *fp, char symbol[], char addr[])
+void printsymbol (FILE *fp, char symbol[], char addr[])
 {
 	int i = 0;
 	fprintf (fp, "%s", symbol);
@@ -63,6 +63,6 @@ void printSymbol (FILE *fp, char symbol[], char addr[])
 			fprintf (fp, "\t");
 	}
 	fprintf (fp, "x");
-	fprintCharArr(fp, addr, 4);
+	fprintchararr(fp, addr, 4);
 	fprintf (fp, "\n");
 }

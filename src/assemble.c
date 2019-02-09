@@ -1,4 +1,7 @@
 #define USES_FILE
+#define USES_ALIAS
+#define USES_MACRO
+#define USES_LABEL
 #define USES_NOTIFY
 #define USES_OPERAND
 #define USES_PSEUDOOP
@@ -17,7 +20,7 @@ int8_t clean (char *file)
 {
 	bool err = 0;
 	for (int i = 0; i < 5; i++) {
-		file = replaceExtension (file, extensions[i]);
+		file = replaceextension (file, extensions[i]);
 		notify ("Deleting %s...\n", file);
 		if (remove (file)) {
 			notify ("Unable to delete %s!\n", file);
@@ -25,7 +28,7 @@ int8_t clean (char *file)
 		}
 	}
 
-	file = replaceExtension (file, ".sym");
+	file = replaceextension (file, ".sym");
 
 	if (err) return -2;
 	else return 0;
@@ -37,7 +40,8 @@ struct Alert {
 	int32_t exceptions;
 };
 
-uint16_t origof (FILE *fp, uint32_t *ln, struct Alert *a)
+uint16_t origof (FILE *fp, uint32_t *ln, struct Alert *alert,
+				 struct Alias *a, struct Macro *m)
 {
 	uint16_t orig_addr = -1;
 	int8_t orig = 0;
@@ -52,18 +56,24 @@ uint16_t origof (FILE *fp, uint32_t *ln, struct Alert *a)
 		tokenize (line, token);
 		if (!token[0][0] || token[0][0] == ';') continue;	//skip comments
 
-		int8_t t = ispseudoop (token[0]);
-
-		if (t == ALIAS) {
-
-		} else if (t == MACRO) {
-
-		} else if (t == ORIG) {
-			
-			orig = 1;
+		switch (ispseudoop (token[0])) {
+		case ALIAS: {
+			a = addalias (a, *ln, token[1], token[2]);
 			break;
-		} else {
-
+		}
+		case MACRO: {
+			m = addmacro (m, *ln, token[1], token[2]);
+			break;
+		}
+		case ORIG: {
+			printf ("%s\n", token[1]);
+			orig = true;
+			break;
+		}
+		default: {
+			printf ("%s\n", "err");
+			break;
+		}
 		}
 
 		if (orig) break;	// exit when orig is found
@@ -76,5 +86,31 @@ uint16_t origof (FILE *fp, uint32_t *ln, struct Alert *a)
 int8_t assemble (char *file)
 {
 	notify ("Assembling %s...\n", file);
+	FILE *fp = fopen (file, "r");
+
+	struct Alias *aliases = malloc (sizeof (struct Alias));
+	aliases[0].count = 0;
+	struct Macro *macros = malloc (sizeof (struct Macro));
+	macros[0].count = 0;
+	struct Label *labels = malloc (sizeof (struct Label));
+	labels[0].count = 0;
+
+	struct Alert alerts;
+	alerts.err = 0;
+	alerts.exceptions = 0;
+	alerts.warn = 0;
+	
+
+	uint32_t ln = 1;
+	uint16_t origaddr = origof (fp, &ln, &alerts, aliases, macros);
+
+	// Pass 1 TODO
+
+	// Pass 2 TODO
+
+	free (aliases);
+	free (macros);
+	free (labels);
+
 	return 0;
 }
