@@ -3,6 +3,7 @@
 #define USES_MACRO
 #define USES_LABEL
 #define USES_NOTIFY
+#define USES_OFFSET
 #define USES_OPERAND
 #define USES_PSEUDOOP
 #define USES_TOKENIZE
@@ -66,7 +67,7 @@ uint16_t origof (FILE *fp, uint32_t *ln, struct Alert *alert,
 			break;
 		}
 		case ORIG: {
-			printf ("%s\n", token[1]);
+			uint16_t orig_addr = offset(1, token[1]);
 			orig = true;
 			break;
 		}

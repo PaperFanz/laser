@@ -111,6 +111,10 @@
 
 #endif
 
+#ifdef USES_OFFSET
+	uint16_t offset (int8_t off_type, char *op);
+#endif
+
 #ifdef USES_PSEUDOOP
 	enum pseudoops {
 		ALIAS,

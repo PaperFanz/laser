@@ -9,7 +9,7 @@ CFLAGS = -I $(IDIR)
 _DEPS = laser.h config.h
 DEPS = $(patsubst %, $(IDIR)/%,$(_DEPS))
 
-_OBJ = laser.o assemble.o alias.o flag.o file.o label.o notify.o operand.o pseudoop.o tokenize.o macro.o
+_OBJ = laser.o assemble.o alias.o flag.o file.o label.o notify.o operand.o pseudoop.o tokenize.o macro.o offset.o
 OBJ = $(patsubst %, $(ODIR)/%,$(_OBJ))
 
 $(ODIR)/%.o: %.c $(DEPS)
