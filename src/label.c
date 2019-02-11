@@ -6,7 +6,8 @@ struct Label* addlabel (struct Label *l, uint32_t ln, char *label, uint16_t addr
 	l[0].count++;
 	uint32_t labelnum = l[0].count;
 
-	l = realloc (l, (labelnum + 1) * sizeof (struct Label));
+	if (labelnum >= DEFAULT_LABEL_NUM)
+		l = realloc (l, (labelnum + 1) * sizeof (struct Label));
 
 	l[labelnum].count = 0;
 	l[labelnum].ln = ln;

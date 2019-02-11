@@ -4,7 +4,7 @@ IDIR = ../include
 ODIR = obj
 
 CC = gcc
-CFLAGS = -I $(IDIR)
+CFLAGS = -I $(IDIR) -g
 
 _DEPS = laser.h config.h
 DEPS = $(patsubst %, $(IDIR)/%,$(_DEPS))

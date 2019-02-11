@@ -1,12 +1,15 @@
 #define USES_MACRO
 #include "laser.h"
 
-struct Macro* addmacro (struct Macro *m, uint32_t ln, char *macro, char *replace)
+struct Macro* addmacro (struct Macro *m, uint32_t ln, char *macro,
+						char *replace)
 {
 	m[0].count++;
 	uint32_t macronum = m[0].count;
 
-	m = realloc (m, (macronum + 1) * sizeof (struct Macro));
+	if (macronum >= DEFAULT_MACRO_NUM)
+		m = realloc (m, (macronum + 1) * sizeof (struct Macro));
+
 	m[macronum].count = 0;
 	m[macronum].ln = ln;
 	m[macronum].macro = macro;

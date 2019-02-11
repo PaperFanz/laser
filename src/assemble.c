@@ -105,9 +105,9 @@ int8_t assemble (char *file)
 	if (err) return err;	// exit with error if files unopenable
 
 	struct Arrays arrs = {
-		malloc (sizeof (struct Alias)),
-		malloc (sizeof (struct Macro)),
-		malloc (sizeof (struct Label))
+		malloc (DEFAULT_ALIAS_NUM * sizeof (struct Alias)),
+		malloc (DEFAULT_MACRO_NUM * sizeof (struct Macro)),
+		malloc (DEFAULT_LABEL_NUM * sizeof (struct Label))
 	};
 	arrs.alias[0].count = 0;
 	arrs.macro[0].count = 0;

@@ -70,6 +70,18 @@
 #endif
 
 #ifdef USES_FILE
+	struct Files {
+		FILE *asm_;
+		FILE *sym_;
+		FILE *bin_;
+		FILE *hex_;
+		FILE *obj_;
+		FILE *lst_;
+		FILE *log_;
+	};
+
+	int8_t openasmfiles (struct Files *f, char *file);
+
 	int8_t checkextension (char *file, char *extension);
 
 	char* replaceextension (char *file, const char *extension);
@@ -96,6 +108,17 @@
 	uint16_t labeladdr (struct Label *l, char *label);
 #endif
 
+#ifdef USES_OPERAND
+	struct Instruction {
+		uint16_t bin;
+		uint32_t ln;
+		char *line;
+	};
+
+	void error (int8_t type, FILE *fp, struct Instruction ins, 
+				const char *format, ...);
+#endif
+
 #ifdef USES_NOTIFY
 	enum notify_t {
 		WARN = 1,
@@ -105,10 +128,6 @@
 	int8_t quiet;
 
 	void notify (const char *format, ...);
-#endif
-
-#ifdef USES_OPERAND
-
 #endif
 
 #ifdef USES_OFFSET

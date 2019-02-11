@@ -1,5 +1,7 @@
 #define USES_ASSEMBLE
 #define USES_FLAG
+#define USES_FILE
+#define USES_NOTIFY
 #include "laser.h"
 
 int8_t checkextension (char *file, char *extension)
@@ -55,6 +57,7 @@ void printsymbol (FILE *fp, char symbol[], char addr[])
 {
 	int i = 0;
 	fprintf (fp, "%s", symbol);
+
 	if (USE_SPACES_IN_SYM) {
 		for (i = 35 - symbol[MAX_WORD_SIZE + 1]; i >= 0; i--)
 			fprintf (fp, " ");
@@ -62,7 +65,65 @@ void printsymbol (FILE *fp, char symbol[], char addr[])
 		for (i = 8 - (symbol[MAX_WORD_SIZE + 1] / TABSIZE); i >= 0; i--)
 			fprintf (fp, "\t");
 	}
+
 	fprintf (fp, "x");
 	fprintchararr(fp, addr, 4);
 	fprintf (fp, "\n");
+}
+
+int8_t openasmfiles (struct Files *f, char *file)
+{
+	int8_t failed = 0;
+	f->asm_ = fopen (file, "r");
+	if (f->asm_ == NULL) {
+		notify ("Unable to open %s!\n", file);
+		failed++;
+	}
+	replaceextension (file, ".sym");
+	
+	f->sym_ = fopen (file, "w");
+	if (f->sym_ == NULL) {
+		notify ("Unable to open %s!\n", file);
+		failed++;
+	}
+	replaceextension (file, ".bin");
+
+	f->bin_ = fopen (file, "w");
+	if (f->bin_ == NULL) {
+		notify ("Unable to open %s!\n", file);
+		failed++;
+	}
+	replaceextension (file, ".hex");
+
+	f->hex_ = fopen (file, "w");
+	if (f->hex_ == NULL) {
+		notify ("Unable to open %s!\n", file);
+		failed++;
+	}
+	replaceextension (file, ".obj");
+
+	f->obj_ = fopen (file, "w");
+	if (f->obj_ == NULL) {
+		notify ("Unable to open %s!\n", file);
+		failed++;
+	}
+	replaceextension (file, ".lst");
+
+	f->lst_ = fopen (file, "w");
+	if (f->lst_ == NULL) {
+		notify ("Unable to open %s!\n", file);
+		failed++;
+	}
+
+	if (ENABLE_LOGGING) {
+		replaceextension (file, ".log");
+		f->log_ = fopen (file, "w");
+		if (f->log_ == NULL) {
+			notify ("Unable to open %s!\n", file);
+			failed++;
+		}
+	}
+	replaceextension (file, ".sym");
+
+	return failed;
 }

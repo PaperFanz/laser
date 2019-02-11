@@ -6,7 +6,8 @@ struct Alias* addalias (struct Alias *a, uint32_t ln, char *word, char *replace)
 	a[0].count++;
 	uint32_t aliasnum = a[0].count;
 
-	a = realloc (a, (aliasnum + 1) * sizeof (struct Alias));
+	if (aliasnum >= DEFAULT_ALIAS_NUM)
+		a = realloc (a, (aliasnum + 1) * sizeof (struct Alias));
 
 	a[aliasnum].count = 0;
 	a[aliasnum].ln = ln;

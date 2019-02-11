@@ -1,6 +1,7 @@
 #define USES_FLAG
 #define USES_FILE
 #define USES_NOTIFY
+#define USES_OPERAND
 #include "laser.h"
 
 int8_t main (int argc, char **argv)

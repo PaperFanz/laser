@@ -129,17 +129,23 @@ int16_t decoffset (char *offset)
 	return off;
 }
 
+enum off_type {
+	INVALID_OFF,
+	HEX,
+	BIN,
+	DEC
+};
+
 int16_t offset (int8_t off_type, char *op)
 {
-	int16_t off;
-	if (off_type == 1) {
+	int16_t off = 0;
+
+	if (off_type == HEX) {
 		off = hexoffset (op);
-	} else if (off_type == 2) {
+	} else if (off_type == BIN) {
 		off = binoffset (op);
-	} else if (off_type == 3) {
+	} else if (off_type == DEC) {
 		off = decoffset (op);
-	} else {
-		off = 0;
 	}
 
 	return off;

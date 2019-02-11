@@ -60,22 +60,18 @@ void tokenize (char *line, char token_buf[MAX_WORD_NUM][MAX_WORD_SIZE])
 	bool delim = 0, quote = 0;
 	bool wasdelim = 1;
 
-	for(int32_t i = 0; line[i]; i++) {
+	for(int32_t i = 0; line[i] && line[i] != ';'; i++) {
 		delim = (line[i] == ' ' || line[i] == '\t' || line[i] == ',');
 		quote = (line[i] == '\"');
 		
 		if (quote) {
 			int32_t k = 0;
 			i++;
-
 			putstr (line, token_buf[word], &i);
-
 			word++;
 		} else if (wasdelim && !delim) {
 			int32_t k = 0;
-
 			putwrd (line, token_buf[word], &i);
-
 			word++;
 			delim = 1;
 		}
