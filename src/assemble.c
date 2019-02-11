@@ -14,13 +14,14 @@ const char *extensions[] = {
 	".bin",
 	".hex",
 	".lst",
-	".obj"
+	".obj",
+	".log"
 };
 
 int8_t clean (char *file)
 {
 	bool err = 0;
-	for (int i = 0; i < 5; i++) {
+	for (int i = 0; i < (ENABLE_LOGGING ? 6 : 5); i++) {
 		file = replaceextension (file, extensions[i]);
 		notify ("Deleting %s...\n", file);
 		if (remove (file)) {
@@ -41,77 +42,90 @@ struct Alert {
 	int32_t exceptions;
 };
 
-uint16_t origof (FILE *fp, uint32_t *ln, struct Alert *alert,
-				 struct Alias *a, struct Macro *m)
+struct Arrays {
+	struct Alias *alias;
+	struct Macro *macro;
+	struct Label *label;
+};
+
+uint16_t origof (struct Files f, uint32_t *ln, struct Alert *alert, struct Arrays *a)
 {
-	uint16_t orig_addr = -1;
-	int8_t orig = 0;
+	uint16_t orig_addr = 0;
 	int32_t i = 0;
+	struct Instruction ins = {0, 0, ""};
 
 	char line[MAX_LEN + 1];
 	char **token_buf;
 
-	for (i = *ln; fgets (line, MAX_LEN + 1, fp) != NULL; i++) {
+	for (i = *ln; fgets (line, MAX_LEN + 1, f.asm_) != NULL; i++) {
 		char token[MAX_WORD_NUM][MAX_WORD_SIZE] = {0};
+		ins.ln = i;
+		ins.line = line;
 
 		tokenize (line, token);
-		if (!token[0][0] || token[0][0] == ';') continue;	//skip comments
+		if (!token[0][0]) continue;	// skip empty lines
 
-		switch (ispseudoop (token[0])) {
-		case ALIAS: {
-			a = addalias (a, *ln, token[1], token[2]);
+		int8_t pseudoop = ispseudoop (token[0]);
+		if (pseudoop == ALIAS) {
+			a->alias = addalias (a->alias, *ln, token[1], token[2]);
+		} else if (pseudoop == MACRO) {
+			a->macro = addmacro (a->macro, *ln, token[1], token[2]);
+		} else if (pseudoop == ORIG) {
+			orig_addr = offset(1, token[1]);
 			break;
 		}
-		case MACRO: {
-			m = addmacro (m, *ln, token[1], token[2]);
-			break;
-		}
-		case ORIG: {
-			uint16_t orig_addr = offset(1, token[1]);
-			orig = true;
-			break;
-		}
-		default: {
-			printf ("%s\n", "err");
-			break;
-		}
-		}
-
-		if (orig) break;	// exit when orig is found
 	}
+
+	if (!orig_addr) error (ERR, f.log_, ins, "no origin detected!");
 
 	*ln = i;
 	return orig_addr;
 }
 
+void passone (struct Files f, uint32_t *ln, struct Alert *alert,
+			  struct Alias *a, struct Macro *m, struct Label *l)
+{
+
+}
+
+void passtwo (struct Files f, uint32_t *ln, struct Alert *alert,
+			  struct Alias *a, struct Macro *m, struct Label *l)
+{
+
+}
+
 int8_t assemble (char *file)
 {
+	int8_t err = 0;
+	struct Alert a = {0, 0, 0};
 	notify ("Assembling %s...\n", file);
-	FILE *fp = fopen (file, "r");
 
-	struct Alias *aliases = malloc (sizeof (struct Alias));
-	aliases[0].count = 0;
-	struct Macro *macros = malloc (sizeof (struct Macro));
-	macros[0].count = 0;
-	struct Label *labels = malloc (sizeof (struct Label));
-	labels[0].count = 0;
+	struct Files f;
+	err += openasmfiles (&f, file);
+	if (err) return err;	// exit with error if files unopenable
 
-	struct Alert alerts;
-	alerts.err = 0;
-	alerts.exceptions = 0;
-	alerts.warn = 0;
-	
+	struct Arrays arrs = {
+		malloc (sizeof (struct Alias)),
+		malloc (sizeof (struct Macro)),
+		malloc (sizeof (struct Label))
+	};
+	arrs.alias[0].count = 0;
+	arrs.macro[0].count = 0;
+	arrs.label[0].count = 0;
 
 	uint32_t ln = 1;
-	uint16_t origaddr = origof (fp, &ln, &alerts, aliases, macros);
+	uint16_t origaddr = origof (f, &ln, &a, &arrs);
+	fpos_t origpos;
+	fgetpos (f.asm_, &origpos);
 
 	// Pass 1 TODO
 
+	fsetpos (f.asm_, &origpos);
 	// Pass 2 TODO
 
-	free (aliases);
-	free (macros);
-	free (labels);
+	free (arrs.alias);
+	free (arrs.macro);
+	free (arrs.label);
 
-	return 0;
+	return err;
 }
