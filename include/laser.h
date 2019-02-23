@@ -15,29 +15,33 @@
 #endif
 
 #ifdef USES_ALIAS
-	struct Alias {
+	typedef struct Alias {
 		uint32_t ln;
 		char *word;
-		char *replace;
+		char *reg;
 		uint32_t count;
-	};
+	} Alias;
 
-	struct Alias* addalias (struct Alias *a, uint32_t ln, char *word, char *replace);
+	Alias* addalias (Alias *a, uint32_t ln, char *word, char *replace);
 
-	uint32_t findalias (struct Alias *a, char *word);
+	char* findalias (Alias *a, char *word);
+
+	Alias* freealiasarr (Alias *a);
 #endif
 
 #ifdef USES_MACRO
-	struct Macro {
+	typedef struct Macro {
 		uint32_t ln;
 		char *macro;
 		char *replace;
 		uint32_t count;
-	};
+	} Macro;
 
-	struct Macro* addmacro (struct Macro *m, uint32_t ln, char *macro, char *replace);
+	Macro* addmacro (Macro *m, uint32_t ln, char *macro, char *replace);
 
-	uint32_t findmacro (struct Macro *m, char *macro);
+	char* findmacro (Macro *m, char *macro);
+
+	Macro* freemacroarr (Macro *m);
 #endif
 
 #ifdef USES_FLAG
@@ -80,7 +84,9 @@
 		FILE *log_;
 	};
 
-	int8_t openasmfiles (struct Files *f, char *file);
+	uint8_t openasmfiles (struct Files *f, char *file);
+
+	void closeasmfiles (struct Files *f);
 
 	int8_t checkextension (char *file, char *extension);
 
@@ -88,41 +94,55 @@
 
 	int8_t parsefile (char *file, int8_t last_flag);
 
-	void fprintintarr (FILE *fp, int num[], int size);
+	void fprintintarr (FILE *fp, int *num, int size);
 
-	void fprintchararr (FILE *fp, char hex[], int size);
+	void fprintchararr (FILE *fp, char *hex, int size);
 
-	void printsymbol (FILE *fp, char symbol[], char addr[]);
+	void printsymbol (FILE *fp, char *symbol, uint16_t addr);
 #endif
 
 #ifdef USES_LABEL
-	struct Label {
+	typedef struct Label {
 		uint32_t ln;
 		char *label;
 		uint16_t address;
 		uint32_t count;
-	};
+	} Label;
 
-	struct Label* addlabel (struct Label *l, uint32_t ln, char *label, uint16_t addr);
+	uint8_t isvalidlabel (char *token);
 
-	uint16_t labeladdr (struct Label *l, char *label);
+	Label* addlabel (Label *l, uint32_t ln, char *label, uint16_t addr);
+
+	uint16_t labeladdr (Label *l, char *label);
+
+	Label* freelabelarr (Label *l);
 #endif
 
 #ifdef USES_OPERAND
-	struct Instruction {
+	typedef struct Instruction {
 		uint16_t bin;
 		uint32_t ln;
 		char *line;
-	};
+	} Instruction;
 
-	void error (int8_t type, FILE *fp, struct Instruction ins, 
+	void error (int8_t type, FILE *fp, Instruction ins, 
 				const char *format, ...);
+
+	int8_t isregister (char *token);
+
+	int8_t isbranch (char *token);
+
+	int8_t istrap (char *token);
+
+	int8_t isoperand (char *token);
+
+	uint8_t operandnum (int8_t operand);
 #endif
 
 #ifdef USES_NOTIFY
 	enum notify_t {
-		WARN = 1,
-		ERR = 2
+		WARN,
+		ERR
 	};
 
 	int8_t quiet;
@@ -131,6 +151,8 @@
 #endif
 
 #ifdef USES_OFFSET
+	uint8_t offtype (char *token);
+
 	uint16_t offset (int8_t off_type, char *op);
 #endif
 
@@ -146,8 +168,16 @@
 	};
 
 	int8_t ispseudoop (char *token);
+
+	uint8_t poperandnum (uint8_t popcode);
+
+	uint16_t addrnum (uint8_t popcode, char *token);
 #endif
 
 #ifdef USES_TOKENIZE
-	void tokenize (char *line, char token_buf[MAX_WORD_NUM][MAX_WORD_SIZE]);
+	char* puttoken (char *token);
+
+	char** tokenize (char *line);
+
+	char** free_token (char **token);
 #endif

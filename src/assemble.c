@@ -36,60 +36,96 @@ int8_t clean (char *file)
 	else return 0;
 }
 
-struct Alert {
+typedef struct Alert {
 	int32_t warn;
 	int32_t err;
 	int32_t exceptions;
-};
+} Alert;
 
-struct Arrays {
+typedef struct Arrays {
 	struct Alias *alias;
 	struct Macro *macro;
 	struct Label *label;
-};
+} Arrays;
 
-uint16_t origof (struct Files f, uint32_t *ln, struct Alert *alert, struct Arrays *a)
+uint16_t origof (struct Files f, uint32_t *ln, Alert *alt, Arrays *a)
 {
 	uint16_t orig_addr = 0;
 	int32_t i = 0;
-	struct Instruction ins = {0, 0, ""};
-
 	char line[MAX_LEN + 1];
-	char **token_buf;
 
 	for (i = *ln; fgets (line, MAX_LEN + 1, f.asm_) != NULL; i++) {
-		char token[MAX_WORD_NUM][MAX_WORD_SIZE] = {0};
-		ins.ln = i;
-		ins.line = line;
+		struct Instruction ins = {0, i, line};
 
-		tokenize (line, token);
-		if (!token[0][0]) continue;	// skip empty lines
+		char **token = tokenize (line);
+		if (token[0] == NULL){				// skip empty lines
+			free_token (token);
+			continue;
+		}
 
-		int8_t pseudoop = ispseudoop (token[0]);
-		if (pseudoop == ALIAS) {
+		switch (ispseudoop (token[0])) {
+		case ALIAS:
 			a->alias = addalias (a->alias, *ln, token[1], token[2]);
-		} else if (pseudoop == MACRO) {
+			break;
+		case MACRO:
 			a->macro = addmacro (a->macro, *ln, token[1], token[2]);
-		} else if (pseudoop == ORIG) {
+			break;
+		case ORIG:
 			orig_addr = offset(1, token[1]);
 			break;
+		default:
+			error (WARN, f.log_, ins,
+				   "Ignoring invalid token '%s' before '.ORIG'", token[0]);
+			break;
 		}
+
+		token = free_token (token);
+		if (orig_addr) break;
 	}
 
-	if (!orig_addr) error (ERR, f.log_, ins, "no origin detected!");
+	struct Instruction ins = {0, 0, ""};
+	if (!orig_addr) error (ERR, f.log_, ins, "No origin detected!");
 
 	*ln = i;
 	return orig_addr;
 }
 
-void passone (struct Files f, uint32_t *ln, struct Alert *alert,
-			  struct Alias *a, struct Macro *m, struct Label *l)
+void passone (struct Files f, uint32_t ln, uint16_t addr,
+			  Alert *alt, Arrays *arrs)
 {
+	char line[MAX_LEN + 1];
 
+	for (uint32_t i = ln; fgets (line, MAX_LEN + 1, f.asm_) != NULL; i++) {
+		char **token = tokenize (line);
+		if (token[0] == NULL){				// skip empty lines
+			token = free_token (token);
+			continue;
+		}
+
+		uint8_t j = 0;						// token index
+		if (isvalidlabel (token[j])) {
+			arrs->label = addlabel (arrs->label, ln, token[j], addr);
+			printsymbol (f.sym_ ,token[j], addr);
+			j++;
+		}
+
+		int8_t opcode = -1, pseudoop = -1, opnum = -1, end = 0; 
+		if ((opcode = isoperand (token[j])) >= 0) {				// is an opcode
+			opnum = operandnum (opcode);
+			addr++;
+		} else if ((pseudoop = ispseudoop (token[j])) >= 0) {	// is pseudoop
+			opnum = poperandnum (pseudoop);
+			addr += addrnum (pseudoop, token[j + 1]);
+			if (pseudoop == END) end = 1;
+		}
+
+		token = free_token (token);
+		if (end) break;
+	}
 }
 
-void passtwo (struct Files f, uint32_t *ln, struct Alert *alert,
-			  struct Alias *a, struct Macro *m, struct Label *l)
+void passtwo (struct Files f, uint32_t ln, uint16_t addr,
+			  Alert *alt, Arrays *arrs)
 {
 
 }
@@ -97,35 +133,41 @@ void passtwo (struct Files f, uint32_t *ln, struct Alert *alert,
 int8_t assemble (char *file)
 {
 	int8_t err = 0;
-	struct Alert a = {0, 0, 0};
+	Alert alt = {0, 0, 0};
 	notify ("Assembling %s...\n", file);
 
-	struct Files f;
+	struct Files f = {NULL, NULL, NULL, NULL, NULL, NULL, NULL};
 	err += openasmfiles (&f, file);
 	if (err) return err;	// exit with error if files unopenable
 
-	struct Arrays arrs = {
-		malloc (DEFAULT_ALIAS_NUM * sizeof (struct Alias)),
-		malloc (DEFAULT_MACRO_NUM * sizeof (struct Macro)),
-		malloc (DEFAULT_LABEL_NUM * sizeof (struct Label))
+	Arrays arrs = {
+		(Alias*) malloc (DEFAULT_ALIAS_NUM * sizeof (struct Alias)),
+		(Macro*) malloc (DEFAULT_MACRO_NUM * sizeof (struct Macro)),
+		(Label*) malloc (DEFAULT_LABEL_NUM * sizeof (struct Label))
 	};
 	arrs.alias[0].count = 0;
 	arrs.macro[0].count = 0;
 	arrs.label[0].count = 0;
 
 	uint32_t ln = 1;
-	uint16_t origaddr = origof (f, &ln, &a, &arrs);
+	uint16_t origaddr = origof (f, &ln, &alt, &arrs);
+	uint32_t ln_st = ln;
+	
 	fpos_t origpos;
 	fgetpos (f.asm_, &origpos);
 
 	// Pass 1 TODO
+	passone (f, ln, origaddr, &alt, &arrs);
 
 	fsetpos (f.asm_, &origpos);
 	// Pass 2 TODO
+	passtwo (f, ln, origaddr, &alt, &arrs);
 
-	free (arrs.alias);
-	free (arrs.macro);
-	free (arrs.label);
+	// cleanup
+	arrs.alias = freealiasarr (arrs.alias);
+	arrs.macro = freemacroarr (arrs.macro);
+	arrs.label = freelabelarr (arrs.label);
+	closeasmfiles (&f);
 
 	return err;
 }

@@ -1,13 +1,12 @@
 #include "laser.h"
 
-const char hex_chars[16] = {'0','1','2','3',
-							'4','5','6','7',
-							'8','9','A','B',
-							'C','D','E','F'};
-
 // extends isxdigit functionality by returning decimal value (0-16)
 int8_t isxchar (char c)
 {
+	const char hex_chars[16] = {'0','1','2','3',
+								'4','5','6','7',
+								'8','9','A','B',
+								'C','D','E','F'};
 	for(int8_t i=0; i<=15; i++){
 		if( (i<=9) && (c == hex_chars[i])) {
 			return i;
@@ -80,15 +79,9 @@ int16_t binoffset (char *offset)
 		neg = 1;
 	}
 
-	// get array length
-	int8_t i = 0, l = 0, j = 16;
-	while (bin[i] != '\0') {
-		l++;
-		i++;
-	}
-
+	uint8_t i = 0, j = 16;
 	int8_t bin16[16] = {0};
-	for (i = l; i >= 0; i--) {
+	for (i = strlen (bin); i >= 0; i--) {
 		bin16[j] = bin[i] - 0x30;
 		j--;
 	}
@@ -129,23 +122,59 @@ int16_t decoffset (char *offset)
 	return off;
 }
 
-enum off_type {
+enum OFF_TYPE {
 	INVALID_OFF,
 	HEX,
 	BIN,
 	DEC
 };
 
-int16_t offset (int8_t off_type, char *op)
+uint8_t offtype (char *token)
+{
+	char *tmp;
+	char c;
+	if ((tmp = strchr (token, 'x')) != NULL) {
+		tmp++;
+		if (*tmp == '-') tmp++;
+		for (uint16_t i = 0; (c = tmp[i]); i++) {
+			if (!isxdigit (c)) return INVALID_OFF;
+		}
+		return HEX;
+	} else if ((tmp = strchr (token, 'b')) != NULL) {
+		tmp++;
+		if (*tmp == '-') tmp++;
+		for (uint16_t i = 0; (c = tmp[i]); i++) {
+			if (!(c == '0' || c == '1')) return INVALID_OFF;
+		}
+		return BIN;
+	} else if ((tmp = strchr (token, '#')) != NULL) {
+		tmp++;
+		if (*tmp == '-') tmp++;
+		for (uint16_t i = 0; (c = tmp[i]); i++) {
+			if (!isdigit (c)) return INVALID_OFF;
+		}
+		return DEC;
+	} else if ((tmp = token) != NULL) {
+		if (*tmp == '-') tmp++;
+		for (uint16_t i = 0; (c = tmp[i]); i++) {
+			if (!isdigit (c)) return INVALID_OFF;
+		}
+		return DEC;
+	} else {
+		return INVALID_OFF;
+	}
+}
+
+int16_t offset (uint8_t off_type, char *token)
 {
 	int16_t off = 0;
 
 	if (off_type == HEX) {
-		off = hexoffset (op);
+		off = hexoffset (token);
 	} else if (off_type == BIN) {
-		off = binoffset (op);
+		off = binoffset (token);
 	} else if (off_type == DEC) {
-		off = decoffset (op);
+		off = decoffset (token);
 	}
 
 	return off;

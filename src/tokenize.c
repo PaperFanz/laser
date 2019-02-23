@@ -14,68 +14,143 @@ char escval (char c)
 	return c;
 }
 
-void putstr (char *line, char *token, int32_t *lineptr)
+char* puttoken (char *token)
 {
-	int32_t i = *lineptr, j = 0;
+	uint16_t toklen = token[-1];
+	char *ret = (char*) malloc (toklen * sizeof (char));
+	for (uint16_t i = 0; i < toklen; i++) {
+		ret[i] = token[i];
+	}
+	return ret;
+}
+
+char* putstr (char *line, uint16_t *lineptr)
+{
+	uint16_t i = *lineptr, j = 0;
+	char tmp[MAX_WORD_SIZE];
 
 	while (line[i] != '\0') {
 		if (line[i] == '\"') {
 			break;
 		} else if (line[i] == '\\') {
 			i++;
-			token[j] = escval(line[i]);
+			tmp[j] = escval(line[i]);
 			j++;
 			i++;
 		} else {
-			token[j] = line[i];
+			tmp[j] = line[i];
 			j++;
 			i++;
 		}
 	}
+
+	char *token = (char*) malloc ((j + 2) * sizeof (char));
+	token++;
+	token[-1] = j + 1;
+	for (uint16_t k = 0; k < j; k++) {
+		token[k] = tmp[k];
+	}
+	token[j] = '\0';
 
 	*lineptr = i;
+	return token;
 }
 
-void putwrd (char *line, char *token, int32_t *lineptr)
+int8_t iseow (char c)
 {
-	int32_t i = *lineptr, j = 0;
+	int8_t eow = 0;
+	const char eowchars[] = {32, 44, 9, 10, 13};
 
-	while (line[i] != '\0') {						// end of file
-		if (line[i] == ' ' || line[i] == ',' ||
-			line[i] == '\t' || line[i] == '\n') {	// end of word
+	for (uint8_t i = 0; i < 5; i++) {
+		if (c == eowchars[i]) eow++;
+	}
+
+	return eow;
+}
+
+char* putwrd (char *line, uint16_t *lineptr)
+{
+	uint8_t i = *lineptr, j = 0;
+	char tmp[MAX_WORD_SIZE];
+
+	while (line[i] != '\0') {						// end of line
+		if (iseow (line[i])) {
 			break;
 		} else {
-			token[j] = line[i];						// fill in word
+			tmp[j] = line[i];						// fill in word
 			j++;
 			i++;
 		}
 	}
 
+	char *token = (char*) malloc ((j + 2) * sizeof (char));
+	token++;
+	token[-1] = j + 1;
+	for (uint16_t k = 0; k < j; k++) {
+		token[k] = tmp[k];
+	}
+	token[j] = '\0';
+
 	*lineptr = i;									// modify line pointer
+	return token;
 }
 
-void tokenize (char *line, char token_buf[MAX_WORD_NUM][MAX_WORD_SIZE])
+int8_t iseeol (char c)
 {
-	int32_t word = 0;
+	int8_t eol = 0;
+	const char eolchars[] = {0, 10, 13, 59};
+
+	for (uint8_t i = 0; i < 4; i++) {
+		if (c == eolchars[i]) eol++;
+	}
+
+	return eol;
+}
+
+char** tokenize (char *line)
+{
+	char *tmp[MAX_WORD_NUM];
+	char **token = calloc (MAX_WORD_NUM + 1, sizeof (char*));
+	token++;
+
+	uint8_t word = 0;
 	bool delim = 0, quote = 0;
 	bool wasdelim = 1;
 
-	for(int32_t i = 0; line[i] && line[i] != ';'; i++) {
+	for(uint16_t i = 0; !iseeol (line[i]); i++) {
 		delim = (line[i] == ' ' || line[i] == '\t' || line[i] == ',');
 		quote = (line[i] == '\"');
 		
 		if (quote) {
-			int32_t k = 0;
 			i++;
-			putstr (line, token_buf[word], &i);
+			token[word] = putstr (line, &i);
 			word++;
 		} else if (wasdelim && !delim) {
-			int32_t k = 0;
-			putwrd (line, token_buf[word], &i);
+			token[word] = putwrd (line, &i);
 			word++;
 			delim = 1;
 		}
 
 		wasdelim = delim;
 	}
+	token[-1] = word;
+
+	return token;
+}
+
+char** free_token (char **token)
+{
+	if (token == NULL) return token;
+
+	for (uint8_t i = 0; i < MAX_WORD_NUM; i++) {
+		if(token[i] != NULL){
+			token[i]--;
+			free (token[i]);
+			token[i] == NULL;
+		}
+	}
+	
+	token--;
+	free (token);
+	token == NULL;
 }

@@ -1,31 +1,56 @@
 #define USES_MACRO
+#define USES_OPERAND
+#define USES_TOKENIZE
 #include "laser.h"
 
-struct Macro* addmacro (struct Macro *m, uint32_t ln, char *macro,
+Macro* addmacro (Macro *m, uint32_t ln, char *macro,
 						char *replace)
 {
 	m[0].count++;
 	uint32_t macronum = m[0].count;
 
 	if (macronum >= DEFAULT_MACRO_NUM)
-		m = realloc (m, (macronum + 1) * sizeof (struct Macro));
+		m = (Macro*) realloc (m, (macronum + 1) * sizeof (Macro));
 
 	m[macronum].count = 0;
 	m[macronum].ln = ln;
-	m[macronum].macro = macro;
-	m[macronum].replace = replace;
+	m[macronum].macro = puttoken (macro);
+	m[macronum].replace = puttoken (replace);
 
 	return m;
 }
 
-uint32_t findmacro (struct Macro *m, char *macro)
+char* findmacro (Macro *m, char *macro)
 {
-	uint32_t macronum = m[0].count, macrofound = 0;
+	uint32_t macronum = m[0].count;
+	char *ret = NULL;
 	for (int i = 1; i < macronum; i++) {
 		if (strcmp (macro, m[i].macro) == 0) {
-			macrofound = i;
+			ret = m[i].replace;
 			break;
 		}
 	}
-	return macrofound;
+	return ret;
+}
+
+Macro* freemacroarr (Macro *m)
+{
+	if (m == NULL) return m;
+
+	uint32_t macronum = m[0].count;
+
+	for (uint32_t i = 1; i <= macronum; i++) {
+		if (m[i].macro != NULL) {
+			free (m[i].macro);
+			m[i].macro = NULL;
+		}
+		if (m[i].replace != NULL) {
+			free (m[i].replace);
+			m[i].replace = NULL;
+		}
+	}
+
+	free (m);
+	m = NULL;
+	return m;
 }
