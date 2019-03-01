@@ -21,14 +21,16 @@ const char *extensions[] = {
 int8_t clean (char *file)
 {
 	bool err = 0;
+	notify ("Cleaning up...\n");
 	for (int i = 0; i < (ENABLE_LOGGING ? 6 : 5); i++) {
 		file = replaceextension (file, extensions[i]);
-		notify ("Deleting %s...\n", file);
+		notify ("  Deleting %s...\n", file);
 		if (remove (file)) {
-			notify ("Unable to delete %s!\n", file);
+			notify ("    Unable to delete %s!\n", file);
 			err = 1;
 		}
 	}
+	notify ("Finished!\n");
 
 	file = replaceextension (file, ".sym");
 
@@ -84,7 +86,7 @@ uint16_t origof (struct Files f, uint32_t *ln, Alert *alt, Arrays *a)
 	}
 
 	struct Instruction ins = {0, 0, ""};
-	if (!orig_addr) error (ERR, f.log_, ins, "No origin detected!");
+	if (!orig_addr) error (ERR, f.log_, ins, "No origin detected!\n");
 
 	*ln = i;
 	return orig_addr;
@@ -94,6 +96,7 @@ void passone (struct Files f, uint32_t ln, uint16_t addr,
 			  Alert *alt, Arrays *arrs)
 {
 	char line[MAX_LEN + 1];
+	int8_t end = 0;
 
 	for (uint32_t i = ln; fgets (line, MAX_LEN + 1, f.asm_) != NULL; i++) {
 		char **token = tokenize (line);
@@ -101,6 +104,8 @@ void passone (struct Files f, uint32_t ln, uint16_t addr,
 			token = free_token (token);
 			continue;
 		}
+		
+		struct Instruction ins = {0, i, line};
 
 		uint8_t j = 0;						// token index
 		if (isvalidlabel (token[j])) {
@@ -109,19 +114,34 @@ void passone (struct Files f, uint32_t ln, uint16_t addr,
 			j++;
 		}
 
-		int8_t opcode = -1, pseudoop = -1, opnum = -1, end = 0; 
-		if ((opcode = isoperand (token[j])) >= 0) {				// is an opcode
+		int8_t opcode = -1, pseudoop = -1, opnum = -1, toknum = (uint64_t) *(token - 1);
+		char *op = token[j];
+		if ((opcode = isoperand (op)) >= 0) {				// is an opcode
 			opnum = operandnum (opcode);
 			addr++;
-		} else if ((pseudoop = ispseudoop (token[j])) >= 0) {	// is pseudoop
+		} else if ((pseudoop = ispseudoop (op)) >= 0) {		// is pseudoop
 			opnum = poperandnum (pseudoop);
 			addr += addrnum (pseudoop, token[j + 1]);
 			if (pseudoop == END) end = 1;
+		} else {											// unrecognized token
+			alt->err++;
+			error (ERR, f.log_, ins, "Unrecognized token '%s'", op);
+		}
+
+		if ((toknum - j - 1) > opnum) {
+			alt->warn++;
+			error (WARN, f.log_, ins, "'%s' expects %d operands", op, opnum);
+		} else if ((toknum - j - 1) < opnum) {
+			alt->err++;
+			error (ERR, f.log_, ins, "'%s' expects %d operands", op, opnum);
 		}
 
 		token = free_token (token);
 		if (end) break;
 	}
+
+	struct Instruction ins = {0, 0, ""};
+	if (!end) error (ERR, f.log_, ins, "No end detected!\n");
 }
 
 void passtwo (struct Files f, uint32_t ln, uint16_t addr,
@@ -164,6 +184,7 @@ int8_t assemble (char *file)
 	passtwo (f, ln, origaddr, &alt, &arrs);
 
 	// cleanup
+	if (alt.err > 0 || alt.exceptions > 0) clean (file);
 	arrs.alias = freealiasarr (arrs.alias);
 	arrs.macro = freemacroarr (arrs.macro);
 	arrs.label = freelabelarr (arrs.label);

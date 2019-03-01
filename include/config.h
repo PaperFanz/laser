@@ -4,6 +4,7 @@
 #define ENABLE_LOGGING 0
 
 // set to 1 to use spaces, 0 to use tabs
+// spaces are highly recommended
 #define USE_SPACES_IN_SYM 1
 
 // set to 1 to print binary in lst file alongside hex

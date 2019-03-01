@@ -44,9 +44,10 @@ char* putstr (char *line, uint16_t *lineptr)
 		}
 	}
 
-	char *token = (char*) malloc ((j + 2) * sizeof (char));
-	token++;
-	token[-1] = j + 1;
+	char *token = (char*) malloc ((j + 3) * sizeof (char));
+	uint16_t *len = (uint16_t*) token;
+	token += 2;
+	*len = j + 1;
 	for (uint16_t k = 0; k < j; k++) {
 		token[k] = tmp[k];
 	}
@@ -59,9 +60,9 @@ char* putstr (char *line, uint16_t *lineptr)
 int8_t iseow (char c)
 {
 	int8_t eow = 0;
-	const char eowchars[] = {32, 44, 9, 10, 13};
+	const char eowchars[] = {0, 32, 44, 9, 10, 13};
 
-	for (uint8_t i = 0; i < 5; i++) {
+	for (uint8_t i = 0; i < 6; i++) {
 		if (c == eowchars[i]) eow++;
 	}
 
@@ -73,25 +74,22 @@ char* putwrd (char *line, uint16_t *lineptr)
 	uint8_t i = *lineptr, j = 0;
 	char tmp[MAX_WORD_SIZE];
 
-	while (line[i] != '\0') {						// end of line
-		if (iseow (line[i])) {
-			break;
-		} else {
-			tmp[j] = line[i];						// fill in word
-			j++;
-			i++;
-		}
+	while (!iseow (line[i])) {					// end of word
+		tmp[j] = line[i];						// fill in word
+		j++;
+		i++;
 	}
 
-	char *token = (char*) malloc ((j + 2) * sizeof (char));
-	token++;
-	token[-1] = j + 1;
+	char *token = (char*) malloc ((j + 3) * sizeof (char));
+	uint16_t *len = (uint16_t*) token;
+	token += 2;
+	*len = j + 1;
 	for (uint16_t k = 0; k < j; k++) {
 		token[k] = tmp[k];
 	}
 	token[j] = '\0';
 
-	*lineptr = i;									// modify line pointer
+	*lineptr = i - 1;								// modify line pointer
 	return token;
 }
 
@@ -133,7 +131,8 @@ char** tokenize (char *line)
 
 		wasdelim = delim;
 	}
-	token[-1] = word;
+	uint64_t *wordnum = (uint64_t*) (token - 1);
+	*wordnum = word;
 
 	return token;
 }
@@ -144,7 +143,7 @@ char** free_token (char **token)
 
 	for (uint8_t i = 0; i < MAX_WORD_NUM; i++) {
 		if(token[i] != NULL){
-			token[i]--;
+			token[i] -= 2;
 			free (token[i]);
 			token[i] == NULL;
 		}

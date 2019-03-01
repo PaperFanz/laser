@@ -35,22 +35,17 @@ uint8_t poperandnum (uint8_t popcode)
 
 uint16_t addrnum (uint8_t popcode, char *token)
 {
-	switch (popcode) {
-	case STRINGZ: {
+	if (popcode == STRINGZ && token != NULL) {
 		return strlen (token) + 1;
-	}
-	case BLKW: {
+	} else if (popcode == BLKW && token != NULL) {
 		uint8_t offt = offtype (token);
 		int16_t off = offset (offt, token);
 		if (offt > 0 && off > 0) return off;
 		else return 0;
-	}
-	case FILL: {
+	} else if (popcode == FILL) {
 		return 1;
-	}
-	default: {
+	} else {
 		return 0;
-	}
 	}
 }
 
