@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <stdarg.h>
 #include <ctype.h>
+#include <time.h>
 
 #include "config.h"
 
@@ -60,12 +61,6 @@
 		SILENT,
 		ASSEMBLE,
 		CLEAN
-	};
-
-	enum verbosity {
-		NORMAL_V,
-		QUIET_V,
-		SILENT_V
 	};
 
 	int8_t checkFlags (char *f);
@@ -141,11 +136,17 @@
 
 #ifdef USES_NOTIFY
 	enum notify_t {
-		WARN,
+		WARN = 1,
 		ERR
 	};
 
-	int8_t quiet;
+	enum verbosity_t {
+		ALL,
+		WARNS_ONLY,
+		ERRS_ONLY
+	};
+
+	void setVerbosity (int8_t q);
 
 	void notify (const char *format, ...);
 #endif

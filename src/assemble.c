@@ -60,7 +60,7 @@ uint16_t origof (struct Files f, uint32_t *ln, Alert *alt, Arrays *a)
 		struct Instruction ins = {0, i, line};
 
 		char **token = tokenize (line);
-		if (token[0] == NULL){				// skip empty lines
+		if (token[0] == NULL){													// skip empty lines
 			free_token (token);
 			continue;
 		}
@@ -100,38 +100,45 @@ void passone (struct Files f, uint32_t ln, uint16_t addr,
 
 	for (uint32_t i = ln; fgets (line, MAX_LEN + 1, f.asm_) != NULL; i++) {
 		char **token = tokenize (line);
-		if (token[0] == NULL){				// skip empty lines
+		if (token[0] == NULL){													// skip empty lines
 			token = free_token (token);
 			continue;
 		}
 		
-		struct Instruction ins = {0, i, line};
+		struct Instruction ins = {0, i + 1, line};
+		int8_t opcode = -1, pseudoop = -1, opnum = -1, opcount = 0;
+		uint64_t toknum = (uint64_t) *(token - 1);
+		char *op = "\0";
 
-		uint8_t j = 0;						// token index
-		if (isvalidlabel (token[j])) {
-			arrs->label = addlabel (arrs->label, ln, token[j], addr);
-			printsymbol (f.sym_ ,token[j], addr);
-			j++;
+		for (uint8_t j = 0; j < toknum; j++) {
+			char *tok = token[j];
+			if (isvalidlabel (tok) && j == 0) {
+				arrs->label = addlabel (arrs->label, ln, tok, addr);
+				printsymbol (f.sym_ ,tok, addr);
+				opnum = 0;
+			} else if ((opcode = isoperand (tok)) >= 0) {						// is an opcode
+				op = tok;
+				opnum = operandnum (opcode);
+				addr++;
+			} else if ((pseudoop = ispseudoop (tok)) >= 0) {					// is pseudoop
+				op = tok;
+				opnum = poperandnum (pseudoop);
+				if (token[j + 1]) addr += addrnum (pseudoop, token[j + 1]);
+				if (pseudoop == END) end = 1;
+			} else if (isregister (tok) >= 0) {
+				opcount++;
+			} else if (offtype (tok) >= 0) {
+				opcount++;
+			} else {															// unrecognized token
+				alt->err++;
+				error (ERR, f.log_, ins, "Unrecognized token '%s'", tok);
+			}
 		}
 
-		int8_t opcode = -1, pseudoop = -1, opnum = -1, toknum = (uint64_t) *(token - 1);
-		char *op = token[j];
-		if ((opcode = isoperand (op)) >= 0) {				// is an opcode
-			opnum = operandnum (opcode);
-			addr++;
-		} else if ((pseudoop = ispseudoop (op)) >= 0) {		// is pseudoop
-			opnum = poperandnum (pseudoop);
-			addr += addrnum (pseudoop, token[j + 1]);
-			if (pseudoop == END) end = 1;
-		} else {											// unrecognized token
-			alt->err++;
-			error (ERR, f.log_, ins, "Unrecognized token '%s'", op);
-		}
-
-		if ((toknum - j - 1) > opnum) {
+		if (opcount > opnum) {
 			alt->warn++;
 			error (WARN, f.log_, ins, "'%s' expects %d operands", op, opnum);
-		} else if ((toknum - j - 1) < opnum) {
+		} else if (opcount < opnum) {
 			alt->err++;
 			error (ERR, f.log_, ins, "'%s' expects %d operands", op, opnum);
 		}

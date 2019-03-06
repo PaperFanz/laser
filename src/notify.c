@@ -3,12 +3,20 @@
 #define USES_OPERAND
 #include "laser.h"
 
+
+static int8_t quiet;
+
+void setVerbosity (int8_t q)
+{
+	quiet = q;
+}
+
 void notify (const char *format, ...)
 {
 	va_list strs;
 
 	va_start (strs, format);
-	if (quiet != SILENT_V) {
+	if (quiet != ERRS_ONLY) {
 		vprintf (format, strs);
 	}
 	va_end (strs);
@@ -19,11 +27,12 @@ void error (int8_t type, FILE *fp, struct Instruction ins,
 {
 	va_list strs, strscpy;
 	va_copy (strscpy, strs);
-	char *typestr = "\033[01;33mWarning";
-	if (type) typestr = "\033[1;31mError";
+	char *typestr;
+	if (type == WARN) typestr = "\033[01;33mWarning";
+	else typestr = "\033[1;31mError";
 
 	va_start (strs, format);
-	if (quiet != SILENT_V) {
+	if (type >= quiet) {
 		printf ("%s (line %d):\033[0m ", typestr, ins.ln);
 		vprintf (format, strs);
 		printf("\n");

@@ -55,16 +55,17 @@ void fprintchararr (FILE *fp, char *hex, int size)
 
 void printsymbol (FILE *fp, char *symbol, uint16_t addr)
 {
-	int i = 0, tmp = symbol[-1];
-	if (tmp >= 74) tmp = 74;
-	else tmp = tmp;
+	uint16_t *tmp = (uint16_t*) (symbol - 2);
+	uint16_t len = *tmp;
+	if (len >= 75) len = 75;
+	else len = len;
 	fprintf (fp, "%s", symbol);
 
 	if (USE_SPACES_IN_SYM) {
-		for (i = 75 - tmp; i >= 0; i--)
+		for (uint16_t i = (76 - len); i > 0; i--)
 			fprintf (fp, " ");
 	} else {
-		for (i = (72 - tmp) / TABSIZE; i >= 0; i--)
+		for (uint16_t i = (72 - len) / TABSIZE; i > 0; i--)
 			fprintf (fp, "\t");
 	}
 
