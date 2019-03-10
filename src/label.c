@@ -52,6 +52,7 @@ Label* freelabelarr (Label *l)
 	uint32_t labelnum = l[0].count;
 
 	for (uint32_t i = 1; i <= labelnum; i++) {
+		l[i].label -= 2;
 		if (l[i].label != NULL) {
 			free (l[i].label);
 			l[i].label = NULL;

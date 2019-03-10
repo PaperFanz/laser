@@ -40,10 +40,12 @@ Macro* freemacroarr (Macro *m)
 	uint32_t macronum = m[0].count;
 
 	for (uint32_t i = 1; i <= macronum; i++) {
+		m[i].macro -= 2;
 		if (m[i].macro != NULL) {
 			free (m[i].macro);
 			m[i].macro = NULL;
 		}
+		m[i].replace -= 2;
 		if (m[i].replace != NULL) {
 			free (m[i].replace);
 			m[i].replace = NULL;

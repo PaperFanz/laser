@@ -22,14 +22,13 @@ Alias* addalias (Alias *a, uint32_t ln, char *word, char *reg)
 char* findalias (Alias *a, char *word)
 {
 	uint32_t aliasnum = a[0].count;
-	char *ret = NULL;
 	for (int i = 1; i < aliasnum; i++) {
 		if (strcmp (word, a[i].word) == 0) {
-			ret = a[i].reg;
+			return a[i].reg;
 			break;
 		}
 	}
-	return ret;
+	return NULL;
 }
 
 Alias* freealiasarr (Alias *a)
@@ -39,10 +38,12 @@ Alias* freealiasarr (Alias *a)
 	uint32_t aliasnum = a[0].count;
 
 	for (uint32_t i = 1; i <= aliasnum; i++) {
+		a[i].word -= 2;
 		if (a[i].word != NULL) {
 			free (a[i].word);
 			a[i].word = NULL;
 		}
+		a[i].reg -= 2;
 		if (a[i].reg != NULL) {
 			free (a[i].reg);
 			a[i].reg = NULL;

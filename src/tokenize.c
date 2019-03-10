@@ -17,7 +17,10 @@ char escval (char c)
 char* puttoken (char *token)
 {
 	uint16_t toklen = token[-1];
-	char *ret = (char*) malloc (toklen * sizeof (char));
+	char *ret = (char*) malloc ((toklen + 2) * sizeof (char));
+	uint16_t *tmp = (uint16_t*) ret;
+	*tmp = toklen;
+	ret += 2;
 	for (uint16_t i = 0; i < toklen; i++) {
 		ret[i] = token[i];
 	}
@@ -137,7 +140,7 @@ char** tokenize (char *line)
 	return token;
 }
 
-char** free_token (char **token)
+char** freetoken (char **token)
 {
 	if (token == NULL) return token;
 

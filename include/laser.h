@@ -180,5 +180,5 @@
 
 	char** tokenize (char *line);
 
-	char** free_token (char **token);
+	char** freetoken (char **token);
 #endif

@@ -61,7 +61,7 @@ uint16_t origof (struct Files f, uint32_t *ln, Alert *alt, Arrays *a)
 
 		char **token = tokenize (line);
 		if (token[0] == NULL){													// skip empty lines
-			free_token (token);
+			freetoken (token);
 			continue;
 		}
 
@@ -81,7 +81,7 @@ uint16_t origof (struct Files f, uint32_t *ln, Alert *alt, Arrays *a)
 			break;
 		}
 
-		token = free_token (token);
+		token = freetoken (token);
 		if (orig_addr) break;
 	}
 
@@ -101,8 +101,13 @@ void passone (struct Files f, uint32_t ln, uint16_t addr,
 	for (uint32_t i = ln; fgets (line, MAX_LEN + 1, f.asm_) != NULL; i++) {
 		char **token = tokenize (line);
 		if (token[0] == NULL){													// skip empty lines
-			token = free_token (token);
+			token = freetoken (token);
 			continue;
+		}
+
+		for (uint8_t k = 0; k < (uint64_t) token[-1]; k++) {
+			char *tmp = findalias (arrs->alias, token[k]);
+			if (tmp) {}
 		}
 		
 		struct Instruction ins = {0, i + 1, line};
@@ -143,7 +148,7 @@ void passone (struct Files f, uint32_t ln, uint16_t addr,
 			error (ERR, f.log_, ins, "'%s' expects %d operands", op, opnum);
 		}
 
-		token = free_token (token);
+		token = freetoken (token);
 		if (end) break;
 	}
 
@@ -186,9 +191,11 @@ int8_t assemble (char *file)
 	// Pass 1 TODO
 	passone (f, ln, origaddr, &alt, &arrs);
 
-	fsetpos (f.asm_, &origpos);
 	// Pass 2 TODO
-	passtwo (f, ln, origaddr, &alt, &arrs);
+	if (!alt.err || !alt.exceptions) {
+		fsetpos (f.asm_, &origpos);
+		passtwo (f, ln, origaddr, &alt, &arrs);
+	}
 
 	// cleanup
 	if (alt.err > 0 || alt.exceptions > 0) clean (file);
