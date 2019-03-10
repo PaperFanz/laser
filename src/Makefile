@@ -6,12 +6,12 @@ ODIR = obj
 CC = gcc
 CFLAGS = -I $(IDIR) -g
 
-_DEPS = laser.h config.h
+_DEPS = laser.h config.h token.h
 DEPS = $(patsubst %, $(IDIR)/%,$(_DEPS))
 
 _MAIN_OBJ =  laser.o
 _PARSE_OBJ = file.o flag.o notify.o
-_DEP_OBJ = alias.o label.o macro.o tokenize.o offset.o 
+_DEP_OBJ = alias.o label.o macro.o token.o offset.o 
 _ASM_OBJ = assemble.o operand.o pseudoop.o
 _OBJ = $(_MAIN_OBJ) $(_PARSE_OBJ) $(_DEP_OBJ) $(_ASM_OBJ)
 OBJ = $(patsubst %, $(ODIR)/%,$(_OBJ))

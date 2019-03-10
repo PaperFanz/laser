@@ -8,6 +8,7 @@
 #include <time.h>
 
 #include "config.h"
+#include "token.h"
 
 #ifdef USES_ASSEMBLE
 	int8_t clean (char *file);
@@ -18,31 +19,31 @@
 #ifdef USES_ALIAS
 	typedef struct Alias {
 		uint32_t ln;
-		char *word;
-		char *reg;
+		Token *word;
+		Token *reg;
 		uint32_t count;
 	} Alias;
 
-	Alias* addalias (Alias *a, uint32_t ln, char *word, char *replace);
+	void addalias (Alias **a, uint32_t ln, Token *word, Token *replace);
 
-	char* findalias (Alias *a, char *word);
+	Token* findalias (Alias *a, Token *word);
 
-	Alias* freealiasarr (Alias *a);
+	void freealiasarr (Alias *a);
 #endif
 
 #ifdef USES_MACRO
 	typedef struct Macro {
 		uint32_t ln;
-		char *macro;
-		char *replace;
+		Token *macro;
+		Token *replace;
 		uint32_t count;
 	} Macro;
 
-	Macro* addmacro (Macro *m, uint32_t ln, char *macro, char *replace);
+	Macro* addmacro (Macro *m, uint32_t ln, Token *macro, Token *replace);
 
-	char* findmacro (Macro *m, char *macro);
+	Token* findmacro (Macro *m, Token *macro);
 
-	Macro* freemacroarr (Macro *m);
+	void freemacroarr (Macro *m);
 #endif
 
 #ifdef USES_FLAG
@@ -93,24 +94,24 @@
 
 	void fprintchararr (FILE *fp, char *hex, int size);
 
-	void printsymbol (FILE *fp, char *symbol, uint16_t addr);
+	void printsymbol (FILE *fp, Token *symbol, uint16_t addr);
 #endif
 
 #ifdef USES_LABEL
 	typedef struct Label {
 		uint32_t ln;
-		char *label;
+		Token *label;
 		uint16_t address;
 		uint32_t count;
 	} Label;
 
 	uint8_t isvalidlabel (char *token);
 
-	Label* addlabel (Label *l, uint32_t ln, char *label, uint16_t addr);
+	Label* addlabel (Label *l, uint32_t ln, Token *label, uint16_t addr);
 
-	uint16_t labeladdr (Label *l, char *label);
+	uint16_t labeladdr (Label *l, Token *label);
 
-	Label* freelabelarr (Label *l);
+	void freelabelarr (Label *l);
 #endif
 
 #ifdef USES_OPERAND
@@ -173,12 +174,4 @@
 	uint8_t poperandnum (uint8_t popcode);
 
 	uint16_t addrnum (uint8_t popcode, char *token);
-#endif
-
-#ifdef USES_TOKENIZE
-	char* puttoken (char *token);
-
-	char** tokenize (char *line);
-
-	char** freetoken (char **token);
 #endif
