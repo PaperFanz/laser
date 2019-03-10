@@ -1,9 +1,8 @@
 #define USES_ALIAS
 #define USES_OPERAND
-#define USES_TOKENIZE
 #include "laser.h"
 
-Alias* addalias (Alias *a, uint32_t ln, char *word, char *reg)
+void addalias (Alias *a, uint32_t ln, Token *word, Token *reg)
 {
 	a[0].count++;
 	uint32_t aliasnum = a[0].count;
@@ -13,44 +12,44 @@ Alias* addalias (Alias *a, uint32_t ln, char *word, char *reg)
 
 	a[aliasnum].count = 0;
 	a[aliasnum].ln = ln;
-	a[aliasnum].word = puttoken (word);
-	a[aliasnum].reg = puttoken (reg);
-
-	return a;
+	a[aliasnum].word = (Token*) malloc (sizeof (Token));
+	copytoken (a[aliasnum].word, word);
+	a[aliasnum].reg = (Token*) malloc (sizeof (Token));
+	copytoken (a[aliasnum].reg, reg);
 }
 
-char* findalias (Alias *a, char *word)
+Token* findalias (Alias *a, Token *word)
 {
 	uint32_t aliasnum = a[0].count;
-	for (int i = 1; i < aliasnum; i++) {
-		if (strcmp (word, a[i].word) == 0) {
-			return a[i].reg;
-			break;
+	for (int i = 1; i <= aliasnum; i++) {
+		if (strcmp (word->str, a[i].word->str) == 0) {
+			Token *reg;
+			copytoken (reg, a[i].reg);
+			return reg;
 		}
 	}
 	return NULL;
 }
 
-Alias* freealiasarr (Alias *a)
+Alias* initaliasarr (void)
 {
-	if (a == NULL) return a;
+	Alias *a = (Alias*) malloc (DEFAULT_ALIAS_NUM * sizeof (struct Alias));
+	a[0].count = 0;																// tracks aliasnum
+	a[0].ln = DEFAULT_ALIAS_NUM;												// tracks capacity
+	a[0].word = NULL;
+	a[0].reg = NULL;
+	return a;
+}
 
+void freealiasarr (Alias *a)
+{
+	if (a == NULL) return;
 	uint32_t aliasnum = a[0].count;
 
 	for (uint32_t i = 1; i <= aliasnum; i++) {
-		a[i].word -= 2;
-		if (a[i].word != NULL) {
-			free (a[i].word);
-			a[i].word = NULL;
-		}
-		a[i].reg -= 2;
-		if (a[i].reg != NULL) {
-			free (a[i].reg);
-			a[i].reg = NULL;
-		}
+		if (a[i].word != NULL) freetoken (a[i].word);
+		if (a[i].reg != NULL) freetoken (a[i].reg);
 	}
 
 	free (a);
-	a = NULL;
-	return a;
 }

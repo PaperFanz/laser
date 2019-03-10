@@ -6,7 +6,6 @@
 #define USES_OFFSET
 #define USES_OPERAND
 #define USES_PSEUDOOP
-#define USES_TOKENIZE
 #include "laser.h"
 
 const char *extensions[] = {
@@ -59,21 +58,22 @@ uint16_t origof (struct Files f, uint32_t *ln, Alert *alt, Arrays *a)
 	for (i = *ln; fgets (line, MAX_LEN + 1, f.asm_) != NULL; i++) {
 		struct Instruction ins = {0, i, line};
 
-		char **token = tokenize (line);
-		if (token[0] == NULL){													// skip empty lines
-			freetoken (token);
+		TokenBuffer *buf = tokenize (line);
+		Token **token = buf->token;
+		if (buf->token[0] == NULL){													// skip empty lines
+			freetokenarr (buf);
 			continue;
 		}
 
-		switch (ispseudoop (token[0])) {
+		switch (ispseudoop (token[0]->str)) {
 		case ALIAS:
-			a->alias = addalias (a->alias, *ln, token[1], token[2]);
+			addalias (a->alias, *ln, token[1], token[2]);
 			break;
 		case MACRO:
 			a->macro = addmacro (a->macro, *ln, token[1], token[2]);
 			break;
 		case ORIG:
-			orig_addr = offset(1, token[1]);
+			orig_addr = offset(1, token[1]->str);
 			break;
 		default:
 			error (WARN, f.log_, ins,
@@ -81,7 +81,7 @@ uint16_t origof (struct Files f, uint32_t *ln, Alert *alt, Arrays *a)
 			break;
 		}
 
-		token = freetoken (token);
+		freetokenarr (buf);
 		if (orig_addr) break;
 	}
 
@@ -99,27 +99,22 @@ void passone (struct Files f, uint32_t ln, uint16_t addr,
 	int8_t end = 0;
 
 	for (uint32_t i = ln; fgets (line, MAX_LEN + 1, f.asm_) != NULL; i++) {
-		char **token = tokenize (line);
-		if (token[0] == NULL){													// skip empty lines
-			token = freetoken (token);
+		TokenBuffer *buf = tokenize (line);
+		Token **token = buf->token;
+		if (buf->toknum == 0){													// skip empty lines
+			freetokenarr (buf);
 			continue;
-		}
-
-		for (uint8_t k = 0; k < (uint64_t) token[-1]; k++) {
-			char *tmp = findalias (arrs->alias, token[k]);
-			if (tmp) {}
 		}
 		
 		struct Instruction ins = {0, i + 1, line};
 		int8_t opcode = -1, pseudoop = -1, opnum = -1, opcount = 0;
-		uint64_t toknum = (uint64_t) *(token - 1);
 		char *op = "\0";
 
-		for (uint8_t j = 0; j < toknum; j++) {
-			char *tok = token[j];
+		for (uint8_t j = 0; j < buf->toknum; j++) {
+			char *tok = token[j]->str;
 			if (isvalidlabel (tok) && j == 0) {
-				arrs->label = addlabel (arrs->label, ln, tok, addr);
-				printsymbol (f.sym_ ,tok, addr);
+				arrs->label = addlabel (arrs->label, ln, token[j], addr);
+				printsymbol (f.sym_, token[j], addr);
 				opnum = 0;
 			} else if ((opcode = isoperand (tok)) >= 0) {						// is an opcode
 				op = tok;
@@ -128,7 +123,7 @@ void passone (struct Files f, uint32_t ln, uint16_t addr,
 			} else if ((pseudoop = ispseudoop (tok)) >= 0) {					// is pseudoop
 				op = tok;
 				opnum = poperandnum (pseudoop);
-				if (token[j + 1]) addr += addrnum (pseudoop, token[j + 1]);
+				if (j + 1 < buf->toknum) addr += addrnum (pseudoop, token[j + 1]->str);
 				if (pseudoop == END) end = 1;
 			} else if (isregister (tok) >= 0) {
 				opcount++;
@@ -148,7 +143,7 @@ void passone (struct Files f, uint32_t ln, uint16_t addr,
 			error (ERR, f.log_, ins, "'%s' expects %d operands", op, opnum);
 		}
 
-		token = freetoken (token);
+		freetokenarr (buf);
 		if (end) break;
 	}
 
@@ -173,13 +168,10 @@ int8_t assemble (char *file)
 	if (err) return err;	// exit with error if files unopenable
 
 	Arrays arrs = {
-		(Alias*) malloc (DEFAULT_ALIAS_NUM * sizeof (struct Alias)),
-		(Macro*) malloc (DEFAULT_MACRO_NUM * sizeof (struct Macro)),
-		(Label*) malloc (DEFAULT_LABEL_NUM * sizeof (struct Label))
+		initaliasarr(),
+		initmacroarr(),
+		initlabelarr()
 	};
-	arrs.alias[0].count = 0;
-	arrs.macro[0].count = 0;
-	arrs.label[0].count = 0;
 
 	uint32_t ln = 1;
 	uint16_t origaddr = origof (f, &ln, &alt, &arrs);
@@ -199,9 +191,9 @@ int8_t assemble (char *file)
 
 	// cleanup
 	if (alt.err > 0 || alt.exceptions > 0) clean (file);
-	arrs.alias = freealiasarr (arrs.alias);
-	arrs.macro = freemacroarr (arrs.macro);
-	arrs.label = freelabelarr (arrs.label);
+	freealiasarr (arrs.alias);
+	freemacroarr (arrs.macro);
+	freelabelarr (arrs.label);
 	closeasmfiles (&f);
 
 	return err;

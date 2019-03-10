@@ -139,9 +139,8 @@ TokenBuffer* tokenize (char *line)
 
 void freetoken (Token *t)
 {
-	if (t) {
-		if (t->str) free (t->str);
-		t->str = NULL;
+	if (t != NULL) {
+		if (t->str != NULL) free (t->str);
 		free (t);
 	}
 }

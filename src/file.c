@@ -53,13 +53,12 @@ void fprintchararr (FILE *fp, char *hex, int size)
 		fprintf (fp, "%c", hex[i]);
 }
 
-void printsymbol (FILE *fp, char *symbol, uint16_t addr)
+void printsymbol (FILE *fp, Token *symbol, uint16_t addr)
 {
-	uint16_t *tmp = (uint16_t*) (symbol - 2);
-	uint16_t len = *tmp;
+	uint16_t len = symbol->len;
 	if (len >= 75) len = 75;
 	else len = len;
-	fprintf (fp, "%s", symbol);
+	fprintf (fp, "%s", symbol->str);
 
 	if (USE_SPACES_IN_SYM) {
 		for (uint16_t i = (76 - len); i > 0; i--)

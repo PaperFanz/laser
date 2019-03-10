@@ -18,15 +18,17 @@
 
 #ifdef USES_ALIAS
 	typedef struct Alias {
+		uint32_t count;
 		uint32_t ln;
 		Token *word;
 		Token *reg;
-		uint32_t count;
 	} Alias;
 
-	void addalias (Alias **a, uint32_t ln, Token *word, Token *replace);
+	void addalias (Alias *a, uint32_t ln, Token *word, Token *replace);
 
 	Token* findalias (Alias *a, Token *word);
+
+	Alias* initaliasarr (void);
 
 	void freealiasarr (Alias *a);
 #endif
@@ -42,6 +44,8 @@
 	Macro* addmacro (Macro *m, uint32_t ln, Token *macro, Token *replace);
 
 	Token* findmacro (Macro *m, Token *macro);
+
+	Macro* initmacroarr (void);
 
 	void freemacroarr (Macro *m);
 #endif
@@ -110,6 +114,8 @@
 	Label* addlabel (Label *l, uint32_t ln, Token *label, uint16_t addr);
 
 	uint16_t labeladdr (Label *l, Token *label);
+
+	Label* initlabelarr (void);
 
 	void freelabelarr (Label *l);
 #endif
