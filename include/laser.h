@@ -26,7 +26,7 @@
 
 	void addalias (Alias *a, uint32_t ln, Token *word, Token *replace);
 
-	Token* findalias (Alias *a, Token *word);
+	uint32_t findalias (Alias *a, Token *word);
 
 	Alias* initaliasarr (void);
 
@@ -43,7 +43,7 @@
 
 	Macro* addmacro (Macro *m, uint32_t ln, Token *macro, Token *replace);
 
-	Token* findmacro (Macro *m, Token *macro);
+	uint32_t findmacro (Macro *m, Token *macro);
 
 	Macro* initmacroarr (void);
 
@@ -124,10 +124,10 @@
 	typedef struct Instruction {
 		uint16_t bin;
 		uint32_t ln;
-		char *line;
-	} Instruction;
+		char *op;
+	} instruction_t;
 
-	void error (int8_t type, FILE *fp, Instruction ins, 
+	void error (int8_t type, FILE *fp, uint32_t ln, 
 				const char *format, ...);
 
 	int8_t isregister (char *token);

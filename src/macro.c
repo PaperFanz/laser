@@ -20,17 +20,15 @@ Macro* addmacro (Macro *m, uint32_t ln, Token *macro, Token *replace)
 	return m;
 }
 
-Token* findmacro (Macro *m, Token *macro)
+uint32_t findmacro (Macro *m, Token *macro)
 {
 	uint32_t macronum = m[0].count;
-	for (int i = 1; i <= macronum; i++) {
+	for (uint32_t i = 1; i <= macronum; i++) {
 		if (strcmp (macro->str, m[i].macro->str) == 0) {
-			Token *replace;
-			copytoken (replace, m[i].replace);
-			return replace;
+			return i;
 		}
 	}
-	return NULL;
+	return 0;
 }
 
 Macro* initmacroarr (void)

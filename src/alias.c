@@ -18,17 +18,15 @@ void addalias (Alias *a, uint32_t ln, Token *word, Token *reg)
 	copytoken (a[aliasnum].reg, reg);
 }
 
-Token* findalias (Alias *a, Token *word)
+uint32_t findalias (Alias *a, Token *word)
 {
 	uint32_t aliasnum = a[0].count;
-	for (int i = 1; i <= aliasnum; i++) {
+	for (uint32_t i = 1; i <= aliasnum; i++) {
 		if (strcmp (word->str, a[i].word->str) == 0) {
-			Token *reg;
-			copytoken (reg, a[i].reg);
-			return reg;
+			return i;
 		}
 	}
-	return NULL;
+	return 0;
 }
 
 Alias* initaliasarr (void)

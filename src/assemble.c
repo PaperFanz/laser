@@ -20,12 +20,12 @@ const char *extensions[] = {
 int8_t clean (char *file)
 {
 	bool err = 0;
-	notify ("Cleaning up...\n");
+	notify ("Cleaning up...");
 	for (int i = 0; i < (ENABLE_LOGGING ? 6 : 5); i++) {
 		file = replaceextension (file, extensions[i]);
-		notify ("  Deleting %s...\n", file);
+		notify ("  Deleting %s...", file);
 		if (remove (file)) {
-			notify ("    Unable to delete %s!\n", file);
+			notify ("    Unable to delete %s!", file);
 			err = 1;
 		}
 	}
@@ -49,18 +49,17 @@ typedef struct Arrays {
 	struct Label *label;
 } Arrays;
 
-uint16_t origof (struct Files f, uint32_t *ln, Alert *alt, Arrays *a)
+uint16_t preorig (struct Files f, uint32_t *ln, Alert *alt, Arrays *a)
 {
 	uint16_t orig_addr = 0;
 	int32_t i = 0;
 	char line[MAX_LEN + 1];
 
 	for (i = *ln; fgets (line, MAX_LEN + 1, f.asm_) != NULL; i++) {
-		struct Instruction ins = {0, i, line};
 
 		TokenBuffer *buf = tokenize (line);
 		Token **token = buf->token;
-		if (buf->token[0] == NULL){													// skip empty lines
+		if (buf->token[0] == NULL){												// skip empty lines
 			freetokenarr (buf);
 			continue;
 		}
@@ -76,7 +75,7 @@ uint16_t origof (struct Files f, uint32_t *ln, Alert *alt, Arrays *a)
 			orig_addr = offset(1, token[1]->str);
 			break;
 		default:
-			error (WARN, f.log_, ins,
+			error (WARN, f.log_, i,
 				   "Ignoring invalid token '%s' before '.ORIG'", token[0]);
 			break;
 		}
@@ -85,8 +84,7 @@ uint16_t origof (struct Files f, uint32_t *ln, Alert *alt, Arrays *a)
 		if (orig_addr) break;
 	}
 
-	struct Instruction ins = {0, 0, ""};
-	if (!orig_addr) error (ERR, f.log_, ins, "No origin detected!\n");
+	if (!orig_addr) error (ERR, f.log_, i, "No origin detected!");
 
 	*ln = i;
 	return orig_addr;
@@ -97,18 +95,24 @@ void passone (struct Files f, uint32_t ln, uint16_t addr,
 {
 	char line[MAX_LEN + 1];
 	int8_t end = 0;
+	uint32_t i;
 
-	for (uint32_t i = ln; fgets (line, MAX_LEN + 1, f.asm_) != NULL; i++) {
+	for (i = ln; fgets (line, MAX_LEN + 1, f.asm_) != NULL; i++) {
 		TokenBuffer *buf = tokenize (line);
-		Token **token = buf->token;
 		if (buf->toknum == 0){													// skip empty lines
 			freetokenarr (buf);
 			continue;
 		}
+
+		uint32_t macro = findmacro (arrs->macro, buf->token[0]);
+		if (macro) {
+			freetokenarr (buf);
+			buf = tokenize (arrs->macro[macro].replace->str);
+		}
 		
-		struct Instruction ins = {0, i + 1, line};
+		Token **token = buf->token;
+		instruction_t ins = {0, i + 1, NULL};
 		int8_t opcode = -1, pseudoop = -1, opnum = -1, opcount = 0;
-		char *op = "\0";
 
 		for (uint8_t j = 0; j < buf->toknum; j++) {
 			char *tok = token[j]->str;
@@ -117,44 +121,92 @@ void passone (struct Files f, uint32_t ln, uint16_t addr,
 				printsymbol (f.sym_, token[j], addr);
 				opnum = 0;
 			} else if ((opcode = isoperand (tok)) >= 0) {						// is an opcode
-				op = tok;
+				ins.op = tok;
 				opnum = operandnum (opcode);
 				addr++;
 			} else if ((pseudoop = ispseudoop (tok)) >= 0) {					// is pseudoop
-				op = tok;
+				ins.op = tok;
 				opnum = poperandnum (pseudoop);
-				if (j + 1 < buf->toknum) addr += addrnum (pseudoop, token[j + 1]->str);
-				if (pseudoop == END) end = 1;
+				if (j + 1 < buf->toknum)
+					addr += addrnum (pseudoop, token[j + 1]->str);
+				if (pseudoop == END)
+					end = 1;
 			} else if (isregister (tok) >= 0) {
 				opcount++;
 			} else if (offtype (tok) >= 0) {
 				opcount++;
 			} else {															// unrecognized token
 				alt->err++;
-				error (ERR, f.log_, ins, "Unrecognized token '%s'", tok);
+				error (ERR, f.log_, i, "Unrecognized token '%s'", tok);
 			}
 		}
 
 		if (opcount > opnum) {
 			alt->warn++;
-			error (WARN, f.log_, ins, "'%s' expects %d operands", op, opnum);
+			error (WARN, f.log_, i, "'%s' expects %d operands", ins.op, opnum);
 		} else if (opcount < opnum) {
 			alt->err++;
-			error (ERR, f.log_, ins, "'%s' expects %d operands", op, opnum);
+			error (ERR, f.log_, i, "'%s' expects %d operands", ins.op, opnum);
 		}
 
 		freetokenarr (buf);
 		if (end) break;
 	}
 
-	struct Instruction ins = {0, 0, ""};
-	if (!end) error (ERR, f.log_, ins, "No end detected!\n");
+	if (!end) error (ERR, f.log_, i, "No end detected!");
 }
 
 void passtwo (struct Files f, uint32_t ln, uint16_t addr,
 			  Alert *alt, Arrays *arrs)
 {
+	char line[MAX_LEN + 1];
+	int8_t end = 0;
+	uint32_t i;
 
+	for (i = ln; fgets (line, MAX_LEN + 1, f.asm_) != NULL; i++) {
+		TokenBuffer *buf = tokenize (line);
+		if (buf->toknum == 0){													// skip empty lines
+			freetokenarr (buf);
+			continue;
+		}
+
+		uint32_t macro = findmacro (arrs->macro, buf->token[0]);
+		if (macro) {
+			freetokenarr (buf);
+			buf = tokenize (arrs->macro[macro].replace->str);
+		}
+
+		for (uint8_t j = 0; j < buf->toknum; j++) {
+			uint32_t alias = findalias (arrs->alias, buf->token[j]);
+			if (alias) {
+				freetoken (buf->token[j]);
+				buf->token[j] = (Token*) malloc (sizeof (Token));
+				copytoken (buf->token[j], arrs->alias[alias].reg);
+			}
+		}
+		
+		Token **token = buf->token;
+		instruction_t ins = {0, i + 1, NULL};
+		int8_t opcode = -1, pseudoop = -1;
+
+		uint32_t label = labeladdr (arrs->label, token[0]);
+		if (label) token++;														// increment past labels
+
+		if ((opcode = isoperand (token[0])) >= 0) {
+
+		} else if ((pseudoop = ispseudoop (token[0])) >= 0) {
+
+		} else {
+			alt->err++;
+			error (ERR, f.log_, i, "Unrecognized token '%s'", token[0]);
+		}
+
+		freetokenarr (buf);
+		if (end) break;
+	}
+
+	instruction_t ins = {0, 0, ""};
+	if (!end) error (ERR, f.log_, i, "No end detected!");
 }
 
 int8_t assemble (char *file)
@@ -174,7 +226,7 @@ int8_t assemble (char *file)
 	};
 
 	uint32_t ln = 1;
-	uint16_t origaddr = origof (f, &ln, &alt, &arrs);
+	uint16_t origaddr = preorig (f, &ln, &alt, &arrs);
 	uint32_t ln_st = ln;
 	
 	fpos_t origpos;
