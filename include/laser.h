@@ -109,7 +109,7 @@
 		uint32_t count;
 	} Label;
 
-	uint8_t isvalidlabel (char *token);
+	uint8_t isvalidlabel (Token *token);
 
 	Label* addlabel (Label *l, uint32_t ln, Token *label, uint16_t addr);
 
@@ -127,18 +127,19 @@
 		char *op;
 	} instruction_t;
 
-	void error (int8_t type, FILE *fp, uint32_t ln, 
-				const char *format, ...);
+	enum opcodes {BR, ADD, LD, ST,
+			   JSR, AND, LDR, STR,
+			   RTI, NOT, LDI, STI,
+			   JMP, INV, LEA, TRAP,
+			   TRAPS, JSRR, RET};
 
-	int8_t isregister (char *token);
+	int8_t isregister (Token *token);
 
-	int8_t isbranch (char *token);
+	int8_t isbranch (Token *token);
 
-	int8_t istrap (char *token);
+	int8_t istrap (Token *token);
 
-	int8_t isoperand (char *token);
-
-	uint8_t operandnum (int8_t operand);
+	int8_t isoperand (Token *token);
 #endif
 
 #ifdef USES_NOTIFY
@@ -156,12 +157,14 @@
 	void setVerbosity (int8_t q);
 
 	void notify (const char *format, ...);
+
+	void error (int8_t type, FILE *fp, uint32_t ln, const char *format, ...);
 #endif
 
 #ifdef USES_OFFSET
-	uint8_t offtype (char *token);
+	uint8_t offtype (Token *token);
 
-	uint16_t offset (int8_t off_type, char *op);
+	uint16_t offset (int8_t off_type, Token *op);
 #endif
 
 #ifdef USES_PSEUDOOP
@@ -175,9 +178,7 @@
 		FILL
 	};
 
-	int8_t ispseudoop (char *token);
+	int8_t ispseudoop (Token *token);
 
-	uint8_t poperandnum (uint8_t popcode);
-
-	uint16_t addrnum (uint8_t popcode, char *token);
+	uint16_t addrnum (uint8_t popcode, Token *token);
 #endif

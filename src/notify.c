@@ -23,8 +23,7 @@ void notify (const char *format, ...)
 	va_end (strs);
 }
 
-void error (int8_t type, FILE *fp, uint32_t ln, 
-			const char *format, ...)
+void error (int8_t type, FILE *fp, uint32_t ln, const char *format, ...)
 {
 	va_list strs, strscpy;
 	va_copy (strscpy, strs);

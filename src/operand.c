@@ -1,3 +1,4 @@
+#define USES_OPERAND
 #include "laser.h"
 
 int8_t arrcmp (char *str, const char *arr[][2], uint8_t size)
@@ -9,7 +10,7 @@ int8_t arrcmp (char *str, const char *arr[][2], uint8_t size)
 	return -1;
 }
 
-int8_t isregister (char *token)
+int8_t isregister (Token *token)
 {
 	const char *regs[][2] = {
 		{"R0", "r0"},
@@ -22,10 +23,10 @@ int8_t isregister (char *token)
 		{"R7", "r0"}
 	};
 
-	return arrcmp (token, regs, 8);
+	return arrcmp (token->str, regs, 8);
 }
 
-int8_t isbranch (char *token)
+int8_t isbranch (Token *token)
 {
 	const char *brs[][2] = {
 		{"BR", "br"},
@@ -38,10 +39,10 @@ int8_t isbranch (char *token)
 		{"BRnzp", "brnzp"}
 	};
 	
-	return arrcmp (token, brs, 8);
+	return arrcmp (token->str, brs, 8);
 }
 
-int8_t istrap (char *token)
+int8_t istrap (Token *token)
 {
 	const char *traps[][2] = {
 		{"GETC", "getc"},
@@ -53,16 +54,13 @@ int8_t istrap (char *token)
 		{"TRAP", "trap"}
 	};
 
-	return arrcmp (token, traps, 7);
+	int8_t tmp = arrcmp (token->str, traps, 7);
+	if (tmp == -1) return -1;
+	else if (tmp == 7) return 0;
+	else return 32 + tmp;
 }
 
-enum opcodes {BR, ADD, LD, ST,
-			   JSR, AND, LDR, STR,
-			   RTI, NOT, LDI, STI,
-			   JMP, INV, LEA, TRAP,
-			   TRAPS, JSRR, RET};
-
-int8_t isoperand (char *token)
+int8_t isoperand (Token *token)
 {
 	const char *ops[][2] = {
 		{"BR", "br"},
@@ -83,47 +81,21 @@ int8_t isoperand (char *token)
 		{"TRAP", "trap"}
 	};
 
-	int8_t op = arrcmp (token, ops, 16);
-	if (op < 0) {	// could be branch, trap, or assembler shortcut
+	int8_t op = arrcmp (token->str, ops, 16);
+	if (op < 0) {																// could be branch, trap, or assembler shortcut
 		if (isbranch (token) >= 0) {
 			op = BR;
 		} else if (istrap (token) >= 0) {
 			op = TRAPS;
-		} else if (strcmp (token, "JSRR") == 0 ||
-				   strcmp (token, "jsrr") == 0) {
+		} else if (strcmp (token->str, "JSRR") == 0 ||
+				   strcmp (token->str, "jsrr") == 0) {
 			op = JSRR;
-		} else if (strcmp (token, "RET") == 0 ||
-				   strcmp (token, "ret") == 0) {
+		} else if (strcmp (token->str, "RET") == 0 ||
+				   strcmp (token->str, "ret") == 0) {
 			op = RET;
 		}
-	} else if (op == 13) {		// invalid op
+	} else if (op == 13) {														// invalid op
 		op = -1;
 	}
 	return op;
-}
-
-uint8_t operandnum (int8_t operand)
-{
-	switch (operand) {
-		case BR: return 1;
-		case ADD: return 3;
-		case LD: return 2;
-		case ST: return 2;
-		case JSR: return 1;
-		case AND: return 3;
-		case LDR: return 3;
-		case STR: return 3;
-		case RTI: return 0;
-		case NOT: return 2;
-		case LDI: return 2;
-		case STI: return 2;
-		case JMP: return 1;
-		case INV: return 0;
-		case LEA: return 2;
-		case TRAP: return 1;
-		case TRAPS: return 0;
-		case JSRR: return 1;
-		case RET: return 0;
-		default: return 0;
-	}
 }

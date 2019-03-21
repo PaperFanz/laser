@@ -64,7 +64,7 @@ uint16_t preorig (struct Files f, uint32_t *ln, Alert *alt, Arrays *a)
 			continue;
 		}
 
-		switch (ispseudoop (token[0]->str)) {
+		switch (ispseudoop (token[0])) {
 		case ALIAS:
 			addalias (a->alias, *ln, token[1], token[2]);
 			break;
@@ -72,7 +72,7 @@ uint16_t preorig (struct Files f, uint32_t *ln, Alert *alt, Arrays *a)
 			a->macro = addmacro (a->macro, *ln, token[1], token[2]);
 			break;
 		case ORIG:
-			orig_addr = offset(1, token[1]->str);
+			orig_addr = offset(1, token[1]);
 			break;
 		default:
 			error (WARN, f.log_, i,
@@ -89,6 +89,38 @@ uint16_t preorig (struct Files f, uint32_t *ln, Alert *alt, Arrays *a)
 	*ln = i;
 	return orig_addr;
 }
+
+const uint8_t opnumarr[] = {
+	1,	// BR
+	3,	// ADD
+	2,	// LD
+	2,	// ST
+	1,	// JSR
+	3,	// AND
+	3,	// LDR
+	3,	// STR
+	0,	// RTI
+	2,	// NOT
+	2,	// LDI
+	2,	// STI
+	1,	// JMP
+	0,	// INV
+	2,	// LEA
+	1,	// TRAP
+	0,	// TRAPS
+	1,	// JSRR
+	0 	// RET
+};
+
+const uint8_t popnumarr[] = {
+	2,	// ALIAS
+	2,	// MACRO
+	1,	// ORIG
+	0,	// END
+	1,	// STRINGZ
+	1,	// BLKW
+	1	// FILL
+};
 
 void passone (struct Files f, uint32_t ln, uint16_t addr,
 			  Alert *alt, Arrays *arrs)
@@ -110,43 +142,53 @@ void passone (struct Files f, uint32_t ln, uint16_t addr,
 			buf = tokenize (arrs->macro[macro].replace->str);
 		}
 		
+		for (uint8_t j = 0; j < buf->toknum; j++) {
+			uint32_t alias = findalias (arrs->alias, buf->token[j]);
+			if (alias) {
+				freetoken (buf->token[j]);
+				buf->token[j] = (Token*) malloc (sizeof (Token));
+				copytoken (buf->token[j], arrs->alias[alias].reg);
+			}
+		}
+
 		Token **token = buf->token;
 		instruction_t ins = {0, i + 1, NULL};
 		int8_t opcode = -1, pseudoop = -1, opnum = -1, opcount = 0;
 
 		for (uint8_t j = 0; j < buf->toknum; j++) {
 			char *tok = token[j]->str;
-			if (isvalidlabel (tok) && j == 0) {
+			if (isvalidlabel (token[j]) && j == 0) {
 				arrs->label = addlabel (arrs->label, ln, token[j], addr);
 				printsymbol (f.sym_, token[j], addr);
 				opnum = 0;
-			} else if ((opcode = isoperand (tok)) >= 0) {						// is an opcode
-				ins.op = tok;
-				opnum = operandnum (opcode);
+			} else if ((opcode = isoperand (token[j])) >= 0) {					// is an opcode
+				opnum = opnumarr[opcode];
 				addr++;
-			} else if ((pseudoop = ispseudoop (tok)) >= 0) {					// is pseudoop
-				ins.op = tok;
-				opnum = poperandnum (pseudoop);
+			} else if ((pseudoop = ispseudoop (token[j])) >= 0) {				// is pseudoop
+				opnum = popnumarr [pseudoop];
 				if (j + 1 < buf->toknum)
-					addr += addrnum (pseudoop, token[j + 1]->str);
+					addr += addrnum (pseudoop, token[j + 1]);
 				if (pseudoop == END)
 					end = 1;
-			} else if (isregister (tok) >= 0) {
+			} else if (isregister (token[j]) >= 0) {
 				opcount++;
-			} else if (offtype (tok) >= 0) {
+			} else if (offtype (token[j]) >= 0) {
 				opcount++;
 			} else {															// unrecognized token
 				alt->err++;
-				error (ERR, f.log_, i, "Unrecognized token '%s'", tok);
+				error (ERR, f.log_, i,
+					"Unrecognized token '%s'", token[j]->str);
 			}
 		}
 
 		if (opcount > opnum) {
 			alt->warn++;
-			error (WARN, f.log_, i, "'%s' expects %d operands", ins.op, opnum);
+			error (WARN, f.log_, i,
+				"'%s' expects %d operands", ins.op, opnum);
 		} else if (opcount < opnum) {
 			alt->err++;
-			error (ERR, f.log_, i, "'%s' expects %d operands", ins.op, opnum);
+			error (ERR, f.log_, i,
+				"'%s' expects %d operands", ins.op, opnum);
 		}
 
 		freetokenarr (buf);
@@ -155,6 +197,59 @@ void passone (struct Files f, uint32_t ln, uint16_t addr,
 
 	if (!end) error (ERR, f.log_, i, "No end detected!");
 }
+
+const int8_t opcodearr[] = {
+	0,	// BR
+	1,	// ADD
+	2,	// LD
+	3,	// ST
+	4,	// JSR
+	5,	// AND
+	6,	// LDR
+	7,	// STR
+	8,	// RTI
+	9,	// NOT
+	10,	// LDI
+	11,	// STI
+	12,	// JMP
+	-1,	// INVALID
+	14,	// LEA
+	15,	// TRAP
+	15,	// TRAPS
+	4,	// JSRR
+	12	// RET
+};
+
+#define DRSR 0b00000001
+#define SRC1 0b00000010
+#define SRC2 0b00000100
+#define COND 0b00001000
+#define PC09 0b00010000
+#define PC11 0b00100000
+#define OFF6 0b01000000
+#define TVEC 0b10000000
+
+const uint8_t opmaskarr[] = {
+	COND | PC09,			// BR
+	DRSR | SRC1 | SRC2,		// ADD
+	DRSR | PC09,			// LD
+	DRSR | PC09,			// ST
+	PC11,					// JSR
+	DRSR | SRC1 | SRC2,		// AND
+	DRSR | SRC1 | OFF6,		// LDR
+	DRSR | SRC1 | OFF6,		// STR
+	0,						// RTI
+	DRSR | SRC1,			// NOT
+	DRSR | PC09,			// LDI
+	DRSR | PC09,			// STI
+	SRC1,					// JMP
+	0,						// INVALID
+	DRSR | PC09,			// LEA
+	TVEC,					// TRAP
+	TVEC,					// TRAPS
+	SRC1,					// JSRR
+	SRC1,					// RET
+};
 
 void passtwo (struct Files f, uint32_t ln, uint16_t addr,
 			  Alert *alt, Arrays *arrs)
@@ -186,26 +281,136 @@ void passtwo (struct Files f, uint32_t ln, uint16_t addr,
 		}
 		
 		Token **token = buf->token;
-		instruction_t ins = {0, i + 1, NULL};
+		uint32_t curln = i + 1;
 		int8_t opcode = -1, pseudoop = -1;
 
 		uint32_t label = labeladdr (arrs->label, token[0]);
-		if (label) token++;														// increment past labels
+		if (label) {
+			if (buf->toknum == 1) {												// continue if label is only token
+				freetokenarr (buf);
+				continue;
+			}
+			token++;															// increment past labels
+		}
 
 		if ((opcode = isoperand (token[0])) >= 0) {
+			uint16_t ins = opcodearr[opcode] << 12;
+			uint8_t opmask = opmaskarr[opcode];									// essentially an array of 8 booleans
+			if (opmask & DRSR) {
+				int8_t reg = isregister (token[1]);
+				if (reg >= 0) {
+					ins += reg << 9;
+				} else {
+					alt->err++;
+					// error message TODO
+				}
+			}
+			if (opmask & SRC1) {
+				int8_t reg;
+				if (opcode == JMP || opcode == JSRR || opcode == RET)
+					reg = isregister (token[1]);
+				else
+					reg = isregister (token[2]);
 
+				if (reg >= 0) {
+					ins += reg << 6;
+				} else {
+					alt->err++;
+					// error message TODO
+				}
+			}
+			if (opmask & SRC2) {
+				int8_t reg = isregister (token[3]);
+				uint8_t offt;
+				if (reg >= 0) {
+					ins += reg;
+				} else if ((offt = offtype (token[3])) > 0) {
+					// check offset range TODO
+					ins += 0x20;												// 1 in bit 5 indicates immediate value
+					ins += offset (offt, token[3]) & 0x1F;
+				} else {
+					alt->err++;
+					// error message TODO
+				}
+			}
+			if (opmask & COND) {
+				ins += isbranch (token[0]) << 9;
+			}
+			if (opmask & PC09) {
+				uint8_t tmp, offt;
+				if (opcode == BR) tmp = 1;
+				else tmp = 2;
+
+				uint16_t laddr = labeladdr (arrs->label, token[tmp]);
+				if (laddr > 0) {
+					// check offset range TODO
+					ins += (laddr - (addr + 1)) & 0x1FF;
+				} else if ((offt = offtype (token[tmp])) > 0) {
+					// check offset range TODO
+					ins += offset (offt, token[tmp]) & 0x1FF;
+				} else {
+					alt->err++;
+					// error message TODO
+				}
+			}
+			if (opmask & PC11) {
+				uint8_t offt;
+				uint16_t laddr = labeladdr (arrs->label, token[1]);
+
+				ins += 0x800;													// 1 in bit 11 indicates JSR (JSRR is 0)
+				if (laddr) {
+					// check offset range TODO
+					ins += (laddr - addr) & 0x7FF;
+				} else if ((offt = offtype (token[1])) > 0) {
+					// check offset range TODO
+					ins += offset (offt, token[1]) & 0x7FF;
+				} else {
+					alt->err++;
+					// error message TODO
+				}
+			}
+			if (opcode ==  NOT) {
+				ins += 0x3F;													// this is in the spec for some reason
+			}
+			if (opmask & OFF6) {
+				uint8_t offt = offtype (token[3]);
+				if (offt > 0) {
+					// check offset range TODO
+					ins += offset (offt, token[3]) & 0x3F;
+				} else {
+					alt->err++;
+					// error message TODO
+				}
+			}
+			if (opmask & TVEC) {
+				int8_t trapvect8 = istrap (token[0]);
+				if (trapvect8 > 0) {
+					ins += trapvect8;
+				} else if (trapvect8 == 0) {
+					uint8_t offt = offtype (token[1]);
+					if (offt > 0) {
+						ins += offset (offt, token[1]) & 0xFF;
+					} else {
+						alt->err++;
+						// error message TODO
+					}
+				} else {
+					alt->err++;
+					// error message TODO
+				}
+			}
+			addr++;
 		} else if ((pseudoop = ispseudoop (token[0])) >= 0) {
 
 		} else {
 			alt->err++;
-			error (ERR, f.log_, i, "Unrecognized token '%s'", token[0]);
+			error (ERR, f.log_, curln, "Unrecognized token '%s'", token[0]);
 		}
 
 		freetokenarr (buf);
 		if (end) break;
 	}
 
-	instruction_t ins = {0, 0, ""};
 	if (!end) error (ERR, f.log_, i, "No end detected!");
 }
 

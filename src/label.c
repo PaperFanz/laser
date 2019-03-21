@@ -19,15 +19,16 @@ Label* addlabel (Label *l, uint32_t ln, Token *label, uint16_t addr)
 	return l;
 }
 
-uint8_t isvalidlabel (char *str)
+uint8_t isvalidlabel (Token *tok)
 {
+	char *str = tok->str;
 	if (!(isalpha (str[0]) || str[0] == '_')) return 0;
 
 	for (uint16_t i = 0; str[i]; i++) {
 		if (!(isalnum (str[i]) || str[i] == '_')) return 0;
 	}
 
-	if (isoperand (str) + isregister (str) + 2) return 0;
+	if (isoperand (tok) + isregister (tok) + 2) return 0;
 
 	return 1;
 }

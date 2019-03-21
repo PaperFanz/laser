@@ -105,10 +105,10 @@ int16_t decoffset (char *offset)
 		dec = offset;
 	} else {
 		dec++;
-		neg = 1;
 	}
 
 	if (dec[0] == '-') {
+		neg = 1;
 		dec++;
 	}
 
@@ -129,8 +129,9 @@ enum OFF_TYPE {
 	DEC
 };
 
-uint8_t offtype (char *token)
+uint8_t offtype (Token *tok)
 {
+	char *token = tok->str;
 	char *tmp;
 	char c;
 	if ((tmp = strchr (token, 'x')) != NULL) {
@@ -165,8 +166,9 @@ uint8_t offtype (char *token)
 	}
 }
 
-int16_t offset (uint8_t off_type, char *token)
+int16_t offset (uint8_t off_type, Token *tok)
 {
+	char *token = tok->str;
 	int16_t off = 0;
 
 	if (off_type == HEX) {
