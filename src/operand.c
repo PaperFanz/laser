@@ -38,8 +38,10 @@ int8_t isbranch (Token *token)
 		{"BRnz", "brnz"},
 		{"BRnzp", "brnzp"}
 	};
-	
-	return arrcmp (token->str, brs, 8);
+
+	int8_t tmp = arrcmp (token->str, brs, 8);
+	tmp = (tmp == 0) ? 7 : tmp;
+	return tmp;
 }
 
 int8_t istrap (Token *token)
@@ -56,7 +58,7 @@ int8_t istrap (Token *token)
 
 	int8_t tmp = arrcmp (token->str, traps, 7);
 	if (tmp == -1) return -1;
-	else if (tmp == 7) return 0;
+	else if (tmp == 6) return 0;
 	else return 32 + tmp;
 }
 

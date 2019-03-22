@@ -74,7 +74,7 @@
 #endif
 
 #ifdef USES_FILE
-	struct Files {
+	typedef struct Files {
 		FILE *asm_;
 		FILE *sym_;
 		FILE *bin_;
@@ -82,7 +82,7 @@
 		FILE *obj_;
 		FILE *lst_;
 		FILE *log_;
-	};
+	} Files;
 
 	uint8_t openasmfiles (struct Files *f, char *file);
 

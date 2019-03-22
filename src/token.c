@@ -29,7 +29,7 @@ Token* putstr (char *line, uint16_t *lineptr)
 	while (line[i] != '\0') {
 		if (line[i] == '\"') {
 			break;
-		} else if (line[i] == '\\') {
+		} else if (line[i] == '\\') {											// this bit's not necessary but it makes .STRINGZ much simpler
 			i++;
 			tmp[j] = escval(line[i]);
 			j++;

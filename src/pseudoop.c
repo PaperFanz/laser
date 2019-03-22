@@ -34,18 +34,3 @@ uint16_t addrnum (uint8_t popcode, Token *token)
 		return 0;
 	}
 }
-
-int16_t fillval ()
-{
-
-}
-
-uint16_t fillstring ()
-{
-
-}
-
-uint16_t blkwval ()
-{
-	
-}
