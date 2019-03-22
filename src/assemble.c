@@ -55,7 +55,7 @@ uint16_t preorig (struct Files f, uint32_t *ln, Alert *alt, Arrays *a)
 	int32_t i = 0;
 	char line[MAX_LEN + 1];
 
-	for (i = *ln; fgets (line, MAX_LEN + 1, f.asm_) != NULL; i++) {
+	for (i = *ln; fgets (line, MAX_LEN + 1, f.fp) != NULL; i++) {
 
 		TokenBuffer *buf = tokenize (line);
 		Token **token = buf->token;
@@ -73,10 +73,10 @@ uint16_t preorig (struct Files f, uint32_t *ln, Alert *alt, Arrays *a)
 			break;
 		case ORIG:
 			orig_addr = offset(1, token[1]);
-			printf ("%04X\n", orig_addr);
+			writefilebuf (orig_addr, i);
 			break;
 		default:
-			error (WARN, f.log_, i,
+			error (WARN, f.log, i,
 				   "Ignoring invalid token '%s' before '.ORIG'", token[0]);
 			break;
 		}
@@ -85,7 +85,7 @@ uint16_t preorig (struct Files f, uint32_t *ln, Alert *alt, Arrays *a)
 		if (orig_addr) break;
 	}
 
-	if (!orig_addr) error (ERR, f.log_, i, "No origin detected!");
+	if (!orig_addr) error (ERR, f.log, i, "No origin detected!");
 
 	*ln = i;
 	return orig_addr;
@@ -123,7 +123,7 @@ const uint8_t popnumarr[] = {
 	1	// FILL
 };
 
-uint8_t passone (FILE *lg, uint32_t i, uint16_t *addr, TokenBuffer *buf,
+uint8_t passone (FILE *lg, uint32_t ln, uint16_t *addr, TokenBuffer *buf,
 				Alert *alt, Arrays *arrs)
 {
 	uint8_t end = 0;
@@ -143,18 +143,19 @@ uint8_t passone (FILE *lg, uint32_t i, uint16_t *addr, TokenBuffer *buf,
 	}
 
 	Token **token = buf->token;
-	instruction_t ins = {0, i + 1, NULL};
 	int8_t op = -1, pop = -1, opnum = -1, opcount = 0;
+	char *tok;
 
 	for (uint8_t j = 0; j < buf->toknum; j++) {
-		char *tok = token[j]->str;
 		if (isvalidlabel (token[j]) && j == 0) {
-			arrs->label = addlabel (arrs->label, i, token[j], *addr);
+			arrs->label = addlabel (arrs->label, ln, token[j], *addr);
 			opnum = 0;
 		} else if ((op = isoperand (token[j])) >= 0) {
+			tok = token[j]->str;
 			opnum = opnumarr[op];
 			*addr += 1;
 		} else if ((pop = ispseudoop (token[j])) >= 0) {
+			tok = token[j]->str;
 			opnum = popnumarr [pop];
 			if (pop == END) {
 				end = 1;
@@ -184,18 +185,16 @@ uint8_t passone (FILE *lg, uint32_t i, uint16_t *addr, TokenBuffer *buf,
 			opcount++;
 		} else {																// unrecognized token
 			alt->err++;
-			error (ERR, lg, i, "Unrecognized token '%s'", token[j]->str);
+			error (ERR, lg, ln, "Unrecognized token '%s'", token[j]->str);
 		}
 	}
 
 	if (opcount > opnum) {
 		alt->warn++;
-		error (WARN, lg, i,
-			"'%s' expects %d operands", ins.op, opnum);
+		error (WARN, lg, ln, "'%s' expects %d operands", tok, opnum);
 	} else if (opcount < opnum) {
 		alt->err++;
-		error (ERR, lg, i,
-			"'%s' expects %d operands", ins.op, opnum);
+		error (ERR, lg, ln,	"'%s' expects %d operands", tok, opnum);
 	}
 
 	freetokenarr (buf);
@@ -262,7 +261,7 @@ const uint8_t opmaskarr[] = {
 #define INRANGEB(x) (-1024 <= (x)) && ((x) <= 1023)
 
 
-uint8_t passtwo (FILE *lg, uint32_t i, uint16_t *addr, TokenBuffer *buf,
+uint8_t passtwo (FILE *lg, uint32_t ln, uint16_t *addr, TokenBuffer *buf,
 				Alert *alt, Arrays *arrs)
 {
 	uint8_t end = 0;
@@ -282,7 +281,6 @@ uint8_t passtwo (FILE *lg, uint32_t i, uint16_t *addr, TokenBuffer *buf,
 	}
 	
 	Token **token = buf->token;
-	uint32_t curln = i + 1;
 	int8_t opcode = -1, pseudoop = -1;
 
 	uint32_t label = labeladdr (arrs->label, token[0]);
@@ -419,14 +417,14 @@ uint8_t passtwo (FILE *lg, uint32_t i, uint16_t *addr, TokenBuffer *buf,
 				// error message TODO
 			}
 		}
-		printf ("%04X\n", ins);
+		writefilebuf (ins, ln);
 		*addr += 1;
 	} else if ((pseudoop = ispseudoop (token[0])) >= 0) {
 		if (pseudoop == END) {
 			end = 1;
 		} else if (pseudoop == STRINGZ) {
 			for (uint16_t k = 0; k < token[1]->len; k++)
-				printf ("%04X\n", token[1]->str[k]);
+				writefilebuf (token[1]->str[k], ln);
 			*addr += token[1]->len;
 		} else if (pseudoop == BLKW) {
 			uint8_t offt = offtype (token[1]);
@@ -440,15 +438,18 @@ uint8_t passtwo (FILE *lg, uint32_t i, uint16_t *addr, TokenBuffer *buf,
 			}
 
 			for (uint16_t k = 0; k < blknum; k++)
-				printf ("%04X\n", 0);
+				writefilebuf (0, ln);
 
 			*addr += blknum;
 		} else if (pseudoop == FILL) {
 			uint8_t offt = offtype (token[1]);
+			uint16_t laddr;
 
 			if (offt > 0) {
-				printf ("%04X\n", offset (offt, token[1]));
+				writefilebuf (offset (offt, token[1]), ln);
 				*addr += 1;
+			} else if ((laddr = labeladdr (arrs->label, token[1])) > 0) {
+				writefilebuf (laddr, ln);
 			} else {
 				alt->err++;
 				// error message TODO
@@ -459,12 +460,21 @@ uint8_t passtwo (FILE *lg, uint32_t i, uint16_t *addr, TokenBuffer *buf,
 		}
 	} else {
 		alt->err++;
-		error (ERR, lg, curln, "Unrecognized token '%s'", token[0]);
+		error (ERR, lg, ln, "Unrecognized token '%s'", token[0]);
 	}
 
 	freetokenarr (buf);
 	if (end) return 1;
 	else return 0;
+}
+
+void writesym (FILE *sym, Label *l)
+{
+	uint16_t labelnum = l[0].count;
+	for (uint16_t i = 1; i < labelnum; i++) {
+		Label tmp = l[i];
+		printsymbol (sym, tmp.label, tmp.address);
+	}
 }
 
 int8_t assemble (char *file)
@@ -483,46 +493,57 @@ int8_t assemble (char *file)
 		initlabelarr()
 	};
 
+	resetfilebuf();
+
 	uint32_t ln = 1;
 	uint16_t origaddr = preorig (f, &ln, &alt, &arrs);
 	uint32_t ln_st = ln;
 
 	fpos_t origpos;
-	fgetpos (f.asm_, &origpos);
+	fgetpos (f.fp, &origpos);
 
 	char line[MAX_LEN + 1];
 	uint8_t end = 0;
 	uint16_t addr = origaddr;
 
 	// pass one
-	for (uint32_t i = ln; fgets (line, MAX_LEN + 1, f.asm_) != NULL; i++) {
+	for (uint32_t i = ln + 1; fgets (line, MAX_LEN + 1, f.fp) != NULL; i++) {
 		TokenBuffer *buf = tokenize (line);
 		if (buf->toknum == 0) {													// skip empty lines
 			freetokenarr (buf);
 			continue;
 		}
-		end = passone (f.log_, i, &addr, buf, &alt, &arrs);
+		end = passone (f.log, i, &addr, buf, &alt, &arrs);
 		if (end) break;
 	}
-	if (!end) error (ERR, f.log_, ln, "No end detected!");
+	if (!end) {
+		alt.err++;
+		error (ERR, f.log, ln, "No end detected!");
+	}
 
-	// pass two
-	if (!alt.err) {																// if there are errors in pass one, do not do pass two
-		fsetpos (f.asm_, &origpos);
+	// pass two does not execute if errors are encountered in pass one
+	if (!alt.err) {
+		fsetpos (f.fp, &origpos);
 		end = 0;
 		addr = origaddr;
-		for (uint32_t i = ln; fgets (line, MAX_LEN + 1, f.asm_) != NULL; i++) {
+		for (uint32_t i = ln + 1; fgets (line, MAX_LEN + 1, f.fp) != NULL; i++) {
 			TokenBuffer *buf = tokenize (line);
 			if (buf->toknum == 0) {												// skip empty lines
 				freetokenarr (buf);
 				continue;
 			}
-			end = passtwo (f.log_, i, &addr, buf, &alt, &arrs);
+			end = passtwo (f.log, i, &addr, buf, &alt, &arrs);
 			if (end) break;
 		}
 	}
 
 	// error summary TODO
+
+	writeobj (f.obj);
+	writehex (f.hex);
+	writebin (f.bin);
+	writelst (f.fp, f.lst);
+	writesym (f.sym, arrs.label);
 
 	notify ("Done!\n");
 	// cleanup

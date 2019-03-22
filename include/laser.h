@@ -73,34 +73,6 @@
 	int8_t parseFlag (int8_t flag);
 #endif
 
-#ifdef USES_FILE
-	typedef struct Files {
-		FILE *asm_;
-		FILE *sym_;
-		FILE *bin_;
-		FILE *hex_;
-		FILE *obj_;
-		FILE *lst_;
-		FILE *log_;
-	} Files;
-
-	uint8_t openasmfiles (struct Files *f, char *file);
-
-	void closeasmfiles (struct Files *f);
-
-	int8_t checkextension (char *file, char *extension);
-
-	char* replaceextension (char *file, const char *extension);
-
-	int8_t parsefile (char *file, int8_t last_flag);
-
-	void fprintintarr (FILE *fp, int *num, int size);
-
-	void fprintchararr (FILE *fp, char *hex, int size);
-
-	void printsymbol (FILE *fp, Token *symbol, uint16_t addr);
-#endif
-
 #ifdef USES_LABEL
 	typedef struct Label {
 		uint32_t ln;
@@ -120,12 +92,48 @@
 	void freelabelarr (Label *l);
 #endif
 
-#ifdef USES_OPERAND
-	typedef struct Instruction {
-		uint16_t bin;
+#ifdef USES_FILE
+	typedef struct Files {
+		FILE *fp;
+		FILE *sym;
+		FILE *bin;
+		FILE *hex;
+		FILE *obj;
+		FILE *lst;
+		FILE *log;
+	} Files;
+
+	typedef struct iframe {
+		uint16_t ins;
 		uint32_t ln;
-		char *op;
-	} instruction_t;
+	} iframe_t;
+
+	uint8_t openasmfiles (struct Files *f, char *file);
+
+	void closeasmfiles (struct Files *f);
+
+	int8_t checkextension (char *file, char *extension);
+
+	char* replaceextension (char *file, const char *extension);
+
+	int8_t parsefile (char *file, int8_t last_flag);
+
+	void printsymbol (FILE *fp, Token *symbol, uint16_t addr);
+
+	void writefilebuf (uint16_t ins, uint32_t ln);
+
+	void resetfilebuf ();
+
+	void writeobj (FILE *obj);
+
+	void writehex (FILE *hex);
+
+	void writebin (FILE *bin);
+
+	void writelst (FILE *fp, FILE *lst);
+#endif
+
+#ifdef USES_OPERAND
 
 	enum opcodes {BR, ADD, LD, ST,
 			   JSR, AND, LDR, STR,

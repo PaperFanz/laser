@@ -43,6 +43,7 @@ int8_t main (int argc, char **argv)
 		char *s = "jobs";
 		if (jobs == 1) s = "job";
 		notify ("%d %s completed in %02.0f:%02.0f:%03.0f\n", jobs, s, mins, secs, msecs);
+		// notify ("%d %s completed in %f\n", jobs, s, cpu_time);
 	}
 
 
