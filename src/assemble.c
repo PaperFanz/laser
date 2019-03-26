@@ -163,8 +163,7 @@ uint8_t passone (FILE *lg, uint32_t ln, uint16_t *addr, TokenBuffer *buf,
 			}
 
 			if (j + 1 >= buf->toknum) {
-				alt->err++;
-				// error message TODO
+				// error will be handled later
 				break;
 			}
 
@@ -177,7 +176,8 @@ uint8_t passone (FILE *lg, uint32_t ln, uint16_t *addr, TokenBuffer *buf,
 				*addr += 1;
 			} else {
 				alt->warn++;
-				// ignoring invalid warning TODO
+				error (WARN, lg, ln, "Ignoring unexpected use of '%s' in program body",
+						token[j]);
 			}
 		} else if (isregister (token[j]) >= 0) {
 			opcount++;
@@ -301,23 +301,21 @@ uint8_t passtwo (FILE *lg, uint32_t ln, uint16_t *addr, TokenBuffer *buf,
 				ins += reg << 9;
 			} else {
 				alt->err++;
-				// error message TODO
+				error (ERR, lg, ln, "'%s' is not a register", token[1]->str);
 			}
 		}
 		if (opmask & SRC1) {
-			int8_t reg;
+			int8_t reg, tmp;
 			if (opcode == RET)
 				reg = 7;
-			else if (opcode == JMP || opcode == JSRR)
-				reg = isregister (token[1]);
-			else
-				reg = isregister (token[2]);
+			else if (opcode == JMP || opcode == JSRR) tmp = 1;
+			else tmp = 2;
 
-			if (reg >= 0) {
+			if ((reg = isregister (token[tmp])) >= 0) {
 				ins += reg << 6;
 			} else {
 				alt->err++;
-				// error message TODO
+				error (ERR, lg, ln, "'%s' is not a register", token[tmp]->str);
 			}
 		}
 		if (opmask & SRC2) {
@@ -329,13 +327,15 @@ uint8_t passtwo (FILE *lg, uint32_t ln, uint16_t *addr, TokenBuffer *buf,
 				int16_t off = offset (offt, token[3]);
 				if (!INRANGE5 (off)) {
 					alt->err++;
-					// range warning TODO
+					error (ERR, lg, ln, "'%s' is not expressible in 5 bits",
+							token[3]->str);
 				}
 				ins += 0x20;													// 1 in bit 5 indicates immediate value
 				ins += off & 0x1F;
 			} else {
 				alt->err++;
-				// error message TODO
+				error (ERR, lg, ln, "'%s' is not a valid argument for '%s'",
+						token[3]->str, token[0]->str);
 			}
 		}
 		if (opmask & COND) {
@@ -351,19 +351,22 @@ uint8_t passtwo (FILE *lg, uint32_t ln, uint16_t *addr, TokenBuffer *buf,
 				int16_t off = (laddr - (*addr + 1));
 				if (!INRANGE9 (off)) {
 					alt->err++;
-					// range warning TODO
+					error (ERR, lg, ln, "'%s' is not expressible in 9 bits",
+							token[tmp]->str);
 				}
 				ins += off & 0x1FF;
 			} else if ((offt = offtype (token[tmp])) > 0) {
 				int16_t off = offset (offt, token[tmp]);
 				if (!INRANGE9 (off)) {
 					alt->err++;
-					// range warning TODO
+					error (ERR, lg, ln, "'%s' is not expressible in 9 bits",
+							token[tmp]->str);
 				}
 				ins += off & 0x1FF;
 			} else {
 				alt->err++;
-				// error message TODO
+				error (ERR, lg, ln, "'%s' is not a valid argument for '%s'",
+						token[tmp]->str, token[0]->str);
 			}
 		}
 		if (opmask & PC11) {
@@ -374,17 +377,22 @@ uint8_t passtwo (FILE *lg, uint32_t ln, uint16_t *addr, TokenBuffer *buf,
 				int16_t off = (laddr - (*addr + 1));
 				if (!INRANGEB (off)) {
 					alt->err++;
+					error (ERR, lg, ln, "'%s' is not expressible in 11 bits",
+							token[1]->str);
 				}
 				ins += off & 0x7FF;
 			} else if ((offt = offtype (token[1])) > 0) {
 				int16_t off = offset (offt, token[1]);
 				if (!INRANGEB (off)) {
 					alt->err++;
+					error (ERR, lg, ln, "'%s' is not expressible in 11 bits",
+							token[1]->str);
 				}
 				ins += off & 0x7FF;
 			} else {
 				alt->err++;
-				// error message TODO
+				error (ERR, lg, ln, "'%s' is not a valid argument for '%s'",
+						token[1]->str, token[0]->str);
 			}
 		}
 		if (opcode ==  NOT) {
@@ -393,29 +401,44 @@ uint8_t passtwo (FILE *lg, uint32_t ln, uint16_t *addr, TokenBuffer *buf,
 		if (opmask & OFF6) {
 			uint8_t offt = offtype (token[3]);
 			if (offt > 0) {
-				// check offset range TODO
-				ins += offset (offt, token[3]) & 0x3F;
+				int16_t off = offset (offt, token[3]);
+				if (!INRANGE6 (off)) {
+					alt->err++;
+					error (ERR, lg, ln, "'%s' is not expressible in 6 bits",
+							token[3]->str);
+				}
+				ins += off & 0x3F;
 			} else {
 				alt->err++;
-				// error message TODO
+				error (ERR, lg, ln, "'%s' is not a valid argument for '%s'",
+						token[3]->str, token[0]->str);
 			}
 		}
 		if (opmask & TVEC) {
-			int8_t trapvect8 = istrap (token[0]);
-			if (trapvect8 > 0) {
-				ins += trapvect8;
-			} else if (trapvect8 == 0) {
+			int16_t trapvect8 = istrap (token[0]);
+			
+			if (trapvect8 == 0) {
 				uint8_t offt = offtype (token[1]);
+
 				if (offt > 0) {
-					ins += offset (offt, token[1]) & 0xFF;
+					int16_t tvect = offset (offt, token[1]);
+					if (tvect > 0x25 || tvect < 0x20) {
+						alt->warn++;
+						error (WARN, lg, ln, "'%s' is not a predefined trap routine",
+								token[1]->str);
+					}
+					if (tvect > 0xFF || tvect < 0) {
+						alt->err++;
+						error (ERR, lg, ln, "'%s' is not a valid trap vector",
+								token[1]->str);
+					}
 				} else {
 					alt->err++;
-					// error message TODO
+					error (ERR, lg, ln, "'%s' is not a valid trap vector",
+							token[1]->str);
 				}
-			} else {
-				alt->err++;
-				// error message TODO
 			}
+			ins += trapvect8 & 0xFF;
 		}
 		writefilebuf (ins, ln);
 		*addr += 1;
@@ -434,7 +457,8 @@ uint8_t passtwo (FILE *lg, uint32_t ln, uint16_t *addr, TokenBuffer *buf,
 				blknum = offset (offt, token[1]);
 			} else {
 				alt->err++;
-				// error message TODO
+				error (ERR, lg, ln, "'%s' is not a valid argument for '%s'",
+						token[1]->str, token[0]->str);
 			}
 
 			for (uint16_t k = 0; k < blknum; k++)
@@ -452,11 +476,13 @@ uint8_t passtwo (FILE *lg, uint32_t ln, uint16_t *addr, TokenBuffer *buf,
 				writefilebuf (laddr, ln);
 			} else {
 				alt->err++;
-				// error message TODO
+				error (ERR, lg, ln, "'%s' is not a valid argument for '%s'",
+						token[1]->str, token[0]->str);
 			}
 		} else {
-			alt->err++;
-			// error message TODO
+			alt->warn++;
+			error (WARN, lg, ln, "Ignoring unexpected use of '%s' in program body",
+					token[0]->str);
 		}
 	} else {
 		alt->err++;
@@ -497,7 +523,7 @@ int8_t assemble (char *file)
 
 	uint32_t ln = 1;
 	uint16_t origaddr = preorig (f, &ln, &alt, &arrs);
-	uint32_t ln_st = ln;
+	++ln;
 
 	fpos_t origpos;
 	fgetpos (f.fp, &origpos);
@@ -521,6 +547,7 @@ int8_t assemble (char *file)
 		error (ERR, f.log, ln, "No end detected!");
 	}
 
+	notify ("%d error(s) and %d warning(s) in pass one", alt.err, alt.warn);
 	// pass two does not execute if errors are encountered in pass one
 	if (!alt.err) {
 		fsetpos (f.fp, &origpos);
@@ -535,19 +562,23 @@ int8_t assemble (char *file)
 			end = passtwo (f.log, i, &addr, buf, &alt, &arrs);
 			if (end) break;
 		}
+		notify ("%d error(s) and %d warning(s) in pass two", alt.err, alt.warn);
+	} else {
+		notify ("Unresolved errors encountered in pass one, exiting...");
 	}
 
-	// error summary TODO
-
-	writeobj (f.obj);
-	writehex (f.hex);
-	writebin (f.bin);
-	writelst (f.fp, f.lst);
-	writesym (f.sym, arrs.label);
-
+	// write buffers to file
+	if (alt.err == 0) {
+		writeobj (f.obj);
+		writehex (f.hex);
+		writebin (f.bin);
+		writelst (f.fp, f.lst);
+		writesym (f.sym, arrs.label);
+	} else {
+		clean (file);
+	}
 	notify ("Done!\n");
-	// cleanup
-	if (alt.err > 0 || alt.exceptions > 0) clean (file);
+
 	freealiasarr (arrs.alias);
 	freemacroarr (arrs.macro);
 	freelabelarr (arrs.label);
