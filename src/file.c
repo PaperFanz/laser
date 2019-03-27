@@ -7,7 +7,7 @@
 
 int8_t checkextension (char *file, char *extension)
 {
-	char *dot=strrchr(file, '.');
+	char *dot = strrchr(file, '.');
 	if (dot == NULL)
 		return 0;
 	else if (strcmp (dot, extension) == 0)
@@ -18,7 +18,7 @@ int8_t checkextension (char *file, char *extension)
 
 char* replaceextension (char *file, const char *extension)
 {
-	char *dot=strrchr(file, '.');
+	char *dot = strrchr(file, '.');
 	int i=0;
 	while (dot[i] != '\0') {
 		dot[i] = extension[i];
@@ -40,6 +40,13 @@ int8_t parsefile (char *file, int8_t last_flag)
 	} else {
 		return -1;
 	}
+}
+
+static FILE *LOGFILE = NULL;
+
+FILE* getlog (void)
+{
+	return LOGFILE;
 }
 
 uint8_t openasmfiles (struct Files *f, char *file)
@@ -86,10 +93,10 @@ uint8_t openasmfiles (struct Files *f, char *file)
 		failed++;
 	}
 
-	if (ENABLE_LOGGING) {
+	if (islogging ()) {
 		replaceextension (file, ".log");
-		f->log = fopen (file, "w");
-		if (f->log == NULL) {
+		LOGFILE = fopen (file, "w");
+		if (LOGFILE == NULL) {
 			notify ("Unable to open %s!\n", file);
 			failed++;
 		}
@@ -107,7 +114,6 @@ void closeasmfiles (struct Files *f)
 	if (f->hex != NULL) fclose (f->hex);
 	if (f->obj != NULL) fclose (f->obj);
 	if (f->lst != NULL) fclose (f->lst);
-	if (f->log != NULL) fclose (f->log);
 }
 
 static uint16_t insfilebuffer[0xFFFF];

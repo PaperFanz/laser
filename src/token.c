@@ -159,3 +159,69 @@ void freetokenarr (TokenBuffer *tokenbuffer)
 	free (tokenbuffer->token);
 	free (tokenbuffer);
 }
+
+/*
+	This is a small personal experiment to see if I can wring out more
+	performance at the expense of some RAM. This implementation would fit much
+	better in a C++ program or some other OOP language.
+*/
+
+typedef struct LineInfo {
+	TokenBuffer *buf;
+	uint32_t ln;
+} lineinfo_t;
+
+typedef struct TokenBufferArray {
+	lineinfo_t **arr;
+	uint16_t cap;
+	uint16_t ind;
+} tokbufarr_t;
+
+#define TOKBUFARR_STEP 200
+
+static tokbufarr_t TBUFARR;
+
+void inittokenbufferarray ()
+{
+	TBUFARR.cap = TOKBUFARR_STEP;
+	TBUFARR.ind = 0;
+	TBUFARR.arr = (lineinfo_t**) malloc (TBUFARR.cap * sizeof (lineinfo_t*));
+}
+
+void abuttokenbufferarray (TokenBuffer *buf, uint32_t ln)
+{
+	if (TBUFARR.ind == TBUFARR.cap) {
+		TBUFARR.cap *= 2;
+		TBUFARR.arr = (lineinfo_t**) realloc (TBUFARR.arr, TBUFARR.cap * sizeof (lineinfo_t*));
+	}
+	TBUFARR.arr[TBUFARR.ind] = (lineinfo_t*) malloc (sizeof (lineinfo_t));
+	TBUFARR.arr[TBUFARR.ind]->buf = buf;
+	TBUFARR.arr[TBUFARR.ind]->ln = ln;
+	TBUFARR.ind++;
+}
+
+TokenBuffer* fromtokenbufferarray (uint16_t index)
+{
+	if (index > TBUFARR.ind) return NULL;
+	else return TBUFARR.arr[index]->buf;
+}
+
+uint32_t linetokenbufferarray (uint16_t index)
+{
+	if (index > TBUFARR.ind) return 0;
+	else return TBUFARR.arr[index]->ln;
+}
+
+uint16_t tokenbufferarrayend (void)
+{
+	return TBUFARR.ind;
+}
+
+void freetokenbufferarray ()
+{
+	for (uint16_t i = 0; i < TBUFARR.ind; i++) {
+		freetokenarr (TBUFARR.arr[i]->buf);
+		free (TBUFARR.arr[i]);
+	}
+	free (TBUFARR.arr);
+}

@@ -1,16 +1,7 @@
 #ifndef MAX_LEN
 
-// set to 0 for all, 1 for warnings and errors, and 2 for errors only
-#define DEFAULT_VERBOSITY_LEVEL 0
-
-// set to 1 to enable logging in <file>.log file
-#define ENABLE_LOGGING 0
-
 // set to 1 to use spaces, 0 to use tabs
 #define USE_SPACES_IN_SYM 1
-
-// set to 1 to print binary in lst file alongside hex
-#define PRINT_BIN_IN_LST 0
 
 /*
 	fill in your tabsize to properly format symbol file if using tabs

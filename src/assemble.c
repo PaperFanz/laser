@@ -1,4 +1,5 @@
 #define USES_FILE
+#define USES_FLAG
 #define USES_ALIAS
 #define USES_MACRO
 #define USES_LABEL
@@ -7,35 +8,6 @@
 #define USES_OPERAND
 #define USES_PSEUDOOP
 #include "laser.h"
-
-const char *extensions[] = {
-	".sym",
-	".bin",
-	".hex",
-	".lst",
-	".obj",
-	".log"
-};
-
-int8_t clean (char *file)
-{
-	bool err = 0;
-	notify ("Cleaning up...");
-	for (int i = 0; i < (ENABLE_LOGGING ? 6 : 5); i++) {
-		file = replaceextension (file, extensions[i]);
-		notify ("  Deleting %s...", file);
-		if (remove (file)) {
-			notify ("    Unable to delete %s!", file);
-			err = 1;
-		}
-	}
-	notify ("Finished!\n");
-
-	file = replaceextension (file, ".sym");
-
-	if (err) return -2;
-	else return 0;
-}
 
 typedef struct Alert {
 	int32_t warn;
@@ -49,7 +21,7 @@ typedef struct Arrays {
 	struct Label *label;
 } Arrays;
 
-uint16_t preorig (struct Files f, uint32_t *ln, Alert *alt, Arrays *a)
+uint16_t preorig (struct Files f, uint32_t *ln, Arrays *a)
 {
 	uint16_t orig_addr = 0;
 	int32_t i = 0;
@@ -76,8 +48,7 @@ uint16_t preorig (struct Files f, uint32_t *ln, Alert *alt, Arrays *a)
 			writefilebuf (orig_addr, i);
 			break;
 		default:
-			error (WARN, f.log, i,
-				   "Ignoring invalid token '%s' before '.ORIG'", token[0]);
+			warning (i, "Ignoring invalid token '%s' before '.ORIG'", token[0]);
 			break;
 		}
 
@@ -85,7 +56,7 @@ uint16_t preorig (struct Files f, uint32_t *ln, Alert *alt, Arrays *a)
 		if (orig_addr) break;
 	}
 
-	if (!orig_addr) error (ERR, f.log, i, "No origin detected!");
+	if (!orig_addr) error (i, "No origin detected!");
 
 	*ln = i;
 	return orig_addr;
@@ -123,8 +94,7 @@ const uint8_t popnumarr[] = {
 	1	// FILL
 };
 
-uint8_t passone (FILE *lg, uint32_t ln, uint16_t *addr, TokenBuffer *buf,
-				Alert *alt, Arrays *arrs)
+uint8_t passone (uint32_t ln, uint16_t *addr, TokenBuffer *buf, Arrays *arrs)
 {
 	uint8_t end = 0;
 	uint32_t macro = findmacro (arrs->macro, buf->token[0]);
@@ -175,29 +145,25 @@ uint8_t passone (FILE *lg, uint32_t ln, uint16_t *addr, TokenBuffer *buf,
 			} else if (pop == FILL) {
 				*addr += 1;
 			} else {
-				alt->warn++;
-				error (WARN, lg, ln, "Ignoring unexpected use of '%s' in program body",
+				warning (ln, "Ignoring unexpected use of '%s' in program body",
 						token[j]);
 			}
 		} else if (isregister (token[j]) >= 0) {
 			opcount++;
 		} else if (offtype (token[j]) >= 0) {
 			opcount++;
-		} else {																// unrecognized token
-			alt->err++;
-			error (ERR, lg, ln, "Unrecognized token '%s'", token[j]->str);
+		} else {
+			error (ln, "Unrecognized token '%s'", token[j]->str);
 		}
 	}
 
 	if (opcount > opnum) {
-		alt->warn++;
-		error (WARN, lg, ln, "'%s' expects %d operands", tok, opnum);
+		warning (ln, "'%s' expects %d operands", tok, opnum);
 	} else if (opcount < opnum) {
-		alt->err++;
-		error (ERR, lg, ln,	"'%s' expects %d operands", tok, opnum);
+		error (ln,	"'%s' expects %d operands", tok, opnum);
 	}
 
-	freetokenarr (buf);
+	abuttokenbufferarray (buf, ln);
 	if (end) return 1;
 	else return 0;
 }
@@ -261,34 +227,18 @@ const uint8_t opmaskarr[] = {
 #define INRANGEB(x) (-1024 <= (x)) && ((x) <= 1023)
 
 
-uint8_t passtwo (FILE *lg, uint32_t ln, uint16_t *addr, TokenBuffer *buf,
-				Alert *alt, Arrays *arrs)
+uint8_t passtwo (uint32_t tbufind, uint16_t *addr, Arrays *arrs)
 {
+	TokenBuffer *buf = fromtokenbufferarray (tbufind);
+	uint32_t ln = linetokenbufferarray (tbufind);
 	uint8_t end = 0;
-	uint32_t macro = findmacro (arrs->macro, buf->token[0]);
-	if (macro) {
-		freetokenarr (buf);
-		buf = tokenize (arrs->macro[macro].replace->str);
-	}
-
-	for (uint8_t j = 0; j < buf->toknum; j++) {
-		uint32_t alias = findalias (arrs->alias, buf->token[j]);
-		if (alias) {
-			freetoken (buf->token[j]);
-			buf->token[j] = (Token*) malloc (sizeof (Token));
-			copytoken (buf->token[j], arrs->alias[alias].reg);
-		}
-	}
 	
 	Token **token = buf->token;
 	int8_t opcode = -1, pseudoop = -1;
 
 	uint32_t label = labeladdr (arrs->label, token[0]);
 	if (label) {
-		if (buf->toknum == 1) {													// continue if label is only token
-			freetokenarr (buf);
-			return 0;
-		}
+		if (buf->toknum == 1) return 0;											// don't do anything if there's only a label
 		token++;																// increment past labels
 	}
 
@@ -300,22 +250,24 @@ uint8_t passtwo (FILE *lg, uint32_t ln, uint16_t *addr, TokenBuffer *buf,
 			if (reg >= 0) {
 				ins += reg << 9;
 			} else {
-				alt->err++;
-				error (ERR, lg, ln, "'%s' is not a register", token[1]->str);
+				error (ln, "'%s' is not a register", token[1]->str);
 			}
 		}
 		if (opmask & SRC1) {
-			int8_t reg, tmp;
-			if (opcode == RET)
+			int8_t reg = 0, tmp = 0;
+			if (opcode == RET) {
 				reg = 7;
-			else if (opcode == JMP || opcode == JSRR) tmp = 1;
-			else tmp = 2;
+			} else if (opcode == JMP || opcode == JSRR) {
+				tmp = 1;
+			}
+			else {
+				tmp = 2;
+			}
 
-			if ((reg = isregister (token[tmp])) >= 0) {
+			if (reg == 7 || (reg = isregister (token[tmp])) >= 0) {
 				ins += reg << 6;
 			} else {
-				alt->err++;
-				error (ERR, lg, ln, "'%s' is not a register", token[tmp]->str);
+				error (ln, "'%s' is not a register", token[tmp]->str);
 			}
 		}
 		if (opmask & SRC2) {
@@ -326,15 +278,13 @@ uint8_t passtwo (FILE *lg, uint32_t ln, uint16_t *addr, TokenBuffer *buf,
 			} else if ((offt = offtype (token[3])) > 0) {
 				int16_t off = offset (offt, token[3]);
 				if (!INRANGE5 (off)) {
-					alt->err++;
-					error (ERR, lg, ln, "'%s' is not expressible in 5 bits",
+					error (ln, "'%s' is not expressible in 5 bits",
 							token[3]->str);
 				}
 				ins += 0x20;													// 1 in bit 5 indicates immediate value
 				ins += off & 0x1F;
 			} else {
-				alt->err++;
-				error (ERR, lg, ln, "'%s' is not a valid argument for '%s'",
+				error (ln, "'%s' is not a valid argument for '%s'",
 						token[3]->str, token[0]->str);
 			}
 		}
@@ -350,22 +300,19 @@ uint8_t passtwo (FILE *lg, uint32_t ln, uint16_t *addr, TokenBuffer *buf,
 			if (laddr > 0) {
 				int16_t off = (laddr - (*addr + 1));
 				if (!INRANGE9 (off)) {
-					alt->err++;
-					error (ERR, lg, ln, "'%s' is not expressible in 9 bits",
+					error (ln, "'%s' is not expressible in 9 bits",
 							token[tmp]->str);
 				}
 				ins += off & 0x1FF;
 			} else if ((offt = offtype (token[tmp])) > 0) {
 				int16_t off = offset (offt, token[tmp]);
 				if (!INRANGE9 (off)) {
-					alt->err++;
-					error (ERR, lg, ln, "'%s' is not expressible in 9 bits",
+					error (ln, "'%s' is not expressible in 9 bits",
 							token[tmp]->str);
 				}
 				ins += off & 0x1FF;
 			} else {
-				alt->err++;
-				error (ERR, lg, ln, "'%s' is not a valid argument for '%s'",
+				error (ln, "'%s' is not a valid argument for '%s'",
 						token[tmp]->str, token[0]->str);
 			}
 		}
@@ -376,22 +323,19 @@ uint8_t passtwo (FILE *lg, uint32_t ln, uint16_t *addr, TokenBuffer *buf,
 			if (laddr) {
 				int16_t off = (laddr - (*addr + 1));
 				if (!INRANGEB (off)) {
-					alt->err++;
-					error (ERR, lg, ln, "'%s' is not expressible in 11 bits",
+					error (ln, "'%s' is not expressible in 11 bits",
 							token[1]->str);
 				}
 				ins += off & 0x7FF;
 			} else if ((offt = offtype (token[1])) > 0) {
 				int16_t off = offset (offt, token[1]);
 				if (!INRANGEB (off)) {
-					alt->err++;
-					error (ERR, lg, ln, "'%s' is not expressible in 11 bits",
+					error (ln, "'%s' is not expressible in 11 bits",
 							token[1]->str);
 				}
 				ins += off & 0x7FF;
 			} else {
-				alt->err++;
-				error (ERR, lg, ln, "'%s' is not a valid argument for '%s'",
+				error (ln, "'%s' is not a valid argument for '%s'",
 						token[1]->str, token[0]->str);
 			}
 		}
@@ -403,14 +347,12 @@ uint8_t passtwo (FILE *lg, uint32_t ln, uint16_t *addr, TokenBuffer *buf,
 			if (offt > 0) {
 				int16_t off = offset (offt, token[3]);
 				if (!INRANGE6 (off)) {
-					alt->err++;
-					error (ERR, lg, ln, "'%s' is not expressible in 6 bits",
+					error (ln, "'%s' is not expressible in 6 bits",
 							token[3]->str);
 				}
 				ins += off & 0x3F;
 			} else {
-				alt->err++;
-				error (ERR, lg, ln, "'%s' is not a valid argument for '%s'",
+				error (ln, "'%s' is not a valid argument for '%s'",
 						token[3]->str, token[0]->str);
 			}
 		}
@@ -421,20 +363,17 @@ uint8_t passtwo (FILE *lg, uint32_t ln, uint16_t *addr, TokenBuffer *buf,
 				uint8_t offt = offtype (token[1]);
 
 				if (offt > 0) {
-					int16_t tvect = offset (offt, token[1]);
-					if (tvect > 0x25 || tvect < 0x20) {
-						alt->warn++;
-						error (WARN, lg, ln, "'%s' is not a predefined trap routine",
+					trapvect8 = offset (offt, token[1]);
+					if (trapvect8 > 0x25 || trapvect8 < 0x20) {
+						warning (ln, "'%s' is not a predefined trap routine",
 								token[1]->str);
 					}
-					if (tvect > 0xFF || tvect < 0) {
-						alt->err++;
-						error (ERR, lg, ln, "'%s' is not a valid trap vector",
+					if (trapvect8 > 0xFF || trapvect8 < 0) {
+						error (ln, "'%s' is not a valid trap vector",
 								token[1]->str);
 					}
 				} else {
-					alt->err++;
-					error (ERR, lg, ln, "'%s' is not a valid trap vector",
+					error (ln, "'%s' is not a valid trap vector",
 							token[1]->str);
 				}
 			}
@@ -456,8 +395,7 @@ uint8_t passtwo (FILE *lg, uint32_t ln, uint16_t *addr, TokenBuffer *buf,
 			if (offt > 0) {
 				blknum = offset (offt, token[1]);
 			} else {
-				alt->err++;
-				error (ERR, lg, ln, "'%s' is not a valid argument for '%s'",
+				error (ln, "'%s' is not a valid argument for '%s'",
 						token[1]->str, token[0]->str);
 			}
 
@@ -475,21 +413,17 @@ uint8_t passtwo (FILE *lg, uint32_t ln, uint16_t *addr, TokenBuffer *buf,
 			} else if ((laddr = labeladdr (arrs->label, token[1])) > 0) {
 				writefilebuf (laddr, ln);
 			} else {
-				alt->err++;
-				error (ERR, lg, ln, "'%s' is not a valid argument for '%s'",
+				error (ln, "'%s' is not a valid argument for '%s'",
 						token[1]->str, token[0]->str);
 			}
 		} else {
-			alt->warn++;
-			error (WARN, lg, ln, "Ignoring unexpected use of '%s' in program body",
+			warning (ln, "Ignoring unexpected use of '%s' in program body",
 					token[0]->str);
 		}
 	} else {
-		alt->err++;
-		error (ERR, lg, ln, "Unrecognized token '%s'", token[0]);
+		error (ln, "Unrecognized token '%s'", token[0]);
 	}
 
-	freetokenarr (buf);
 	if (end) return 1;
 	else return 0;
 }
@@ -503,26 +437,55 @@ void writesym (FILE *sym, Label *l)
 	}
 }
 
+const char *extensions[] = {
+	".sym",
+	".bin",
+	".hex",
+	".lst",
+	".obj",
+	".log"
+};
+
+int8_t clean (char *file)
+{
+	bool err = 0;
+	notify ("Cleaning up...");
+	for (int i = 0; i < (islogging () ? 6 : 5); i++) {
+		file = replaceextension (file, extensions[i]);
+		notify ("  Deleting %s...", file);
+		if (remove (file)) {
+			notify ("    Unable to delete %s!", file);
+			err = 1;
+		}
+	}
+	notify ("Finished!\n");
+
+	file = replaceextension (file, ".sym");
+
+	if (err) return -2;
+	else return 0;
+}
+
 int8_t assemble (char *file)
 {
 	int8_t err = 0;
-	Alert alt = {0, 0, 0};
 	notify ("Assembling %s...", file);
 
-	Files f = {NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+	Files f = {NULL, NULL, NULL, NULL, NULL, NULL};
 	err += openasmfiles (&f, file);
 	if (err) return err;														// exit with error if files unopenable
 
 	Arrays arrs = {
-		initaliasarr(),
-		initmacroarr(),
-		initlabelarr()
+		initaliasarr (),
+		initmacroarr (),
+		initlabelarr ()
 	};
 
-	resetfilebuf();
+	resetfilebuf ();
+	inittokenbufferarray ();
 
 	uint32_t ln = 1;
-	uint16_t origaddr = preorig (f, &ln, &alt, &arrs);
+	uint16_t origaddr = preorig (f, &ln, &arrs);
 	++ln;
 
 	fpos_t origpos;
@@ -533,52 +496,51 @@ int8_t assemble (char *file)
 	uint16_t addr = origaddr;
 
 	// pass one
-	for (uint32_t i = ln + 1; fgets (line, MAX_LEN + 1, f.fp) != NULL; i++) {
+	for (uint32_t i = ln ; fgets (line, MAX_LEN + 1, f.fp); i++) {
 		TokenBuffer *buf = tokenize (line);
 		if (buf->toknum == 0) {													// skip empty lines
 			freetokenarr (buf);
 			continue;
 		}
-		end = passone (f.log, i, &addr, buf, &alt, &arrs);
+		end = passone (i, &addr, buf, &arrs);
 		if (end) break;
 	}
 	if (!end) {
-		alt.err++;
-		error (ERR, f.log, ln, "No end detected!");
+		error (ln, "No end detected!");
 	}
 
-	notify ("%d error(s) and %d warning(s) in pass one", alt.err, alt.warn);
+	notify ("%d error(s) and %d warning(s) in pass one",
+			geterrors(), getwarnings());
 	// pass two does not execute if errors are encountered in pass one
-	if (!alt.err) {
+	if (!geterrors()) {
 		fsetpos (f.fp, &origpos);
 		end = 0;
 		addr = origaddr;
-		for (uint32_t i = ln + 1; fgets (line, MAX_LEN + 1, f.fp) != NULL; i++) {
-			TokenBuffer *buf = tokenize (line);
-			if (buf->toknum == 0) {												// skip empty lines
-				freetokenarr (buf);
-				continue;
-			}
-			end = passtwo (f.log, i, &addr, buf, &alt, &arrs);
+
+		uint16_t endofprogram = tokenbufferarrayend ();
+		for (uint16_t i = 0; endofprogram; ++i, --endofprogram) {
+			end = passtwo (i, &addr, &arrs);
 			if (end) break;
 		}
-		notify ("%d error(s) and %d warning(s) in pass two", alt.err, alt.warn);
+		notify ("%d error(s) and %d warning(s) in pass two",
+				geterrors(), getwarnings());
 	} else {
 		notify ("Unresolved errors encountered in pass one, exiting...");
 	}
 
 	// write buffers to file
-	if (alt.err == 0) {
-		writeobj (f.obj);
-		writehex (f.hex);
-		writebin (f.bin);
-		writelst (f.fp, f.lst);
-		writesym (f.sym, arrs.label);
-	} else {
-		clean (file);
-	}
+
+	writeobj (f.obj);
+	writehex (f.hex);
+	writebin (f.bin);
+	writelst (f.fp, f.lst);
+	writesym (f.sym, arrs.label);
+	
+	if (geterrors()) clean (file);
+
 	notify ("Done!\n");
 
+	freetokenbufferarray ();
 	freealiasarr (arrs.alias);
 	freemacroarr (arrs.macro);
 	freelabelarr (arrs.label);

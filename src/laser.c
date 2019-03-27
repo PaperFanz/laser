@@ -9,15 +9,16 @@ int8_t main (int argc, char **argv)
 	int8_t last_flag = -1, err = -1;
 	uint32_t jobs = 0;
 	clock_t start, end;
-	setVerbosity(ALL);
+
+	if (argc == 1) printf ("%s\n\n%s", usage, about);
 
 	start = clock ();
 	for (uint32_t i = 1; i < argc; i++) {
 		char *file = argv[i];
-		int8_t flag = checkFlags (file);
+		int8_t flag = checkflags (file);
 
 		if (flag >= 0) {
-			err = last_flag = parseFlag (flag);
+			err = last_flag = parseflag (flag);
 		} else {
 			err = parsefile (file, last_flag);
 			jobs++;
@@ -31,6 +32,7 @@ int8_t main (int argc, char **argv)
 		}
 	}
 	end = clock ();
+
 	if (jobs > 0) {
 		double cpu_time = (double) (end - start) / CLOCKS_PER_SEC;
 		double mins = cpu_time / 60;

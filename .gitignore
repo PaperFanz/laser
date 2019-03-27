@@ -15,4 +15,5 @@ laser.exe
 
 # ignore personal configs
 .vscode
+test
 *.pdf

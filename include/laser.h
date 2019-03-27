@@ -51,26 +51,32 @@
 #endif
 
 #ifdef USES_FLAG
-	const char *version_num;
-
-	const char *usage;
-
-	const char *help;
-
-	const char *flags[6];
-
 	enum flags {
 		VERSION,
 		HELP,
 		QUIET,
 		SILENT,
 		ASSEMBLE,
-		CLEAN
+		CLEAN,
+		LOG,
+		HIPERF,
 	};
 
-	int8_t checkFlags (char *f);
+	const char *about;
 
-	int8_t parseFlag (int8_t flag);
+	const char *version_num;
+
+	const char *usage;
+
+	const char *help;
+
+	int8_t islogging (void);
+
+	int8_t ishiperf (void);
+
+	int8_t checkflags (char *f);
+
+	int8_t parseflag (int8_t flag);
 #endif
 
 #ifdef USES_LABEL
@@ -100,7 +106,6 @@
 		FILE *hex;
 		FILE *obj;
 		FILE *lst;
-		FILE *log;
 	} Files;
 
 	typedef struct iframe {
@@ -108,13 +113,15 @@
 		uint32_t ln;
 	} iframe_t;
 
+	int8_t checkextension (char *file, char *extension);
+
+	char* replaceextension (char *file, const char *extension);
+
 	uint8_t openasmfiles (struct Files *f, char *file);
 
 	void closeasmfiles (struct Files *f);
 
-	int8_t checkextension (char *file, char *extension);
-
-	char* replaceextension (char *file, const char *extension);
+	FILE* getlog (void);
 
 	int8_t parsefile (char *file, int8_t last_flag);
 
@@ -151,22 +158,23 @@
 #endif
 
 #ifdef USES_NOTIFY
-	enum notify_t {
-		WARN = 1,
-		ERR
-	};
-
-	enum verbosity_t {
-		ALL,
-		WARNS_ONLY,
-		ERRS_ONLY
+	enum verbosity {
+		all,
+		noWarn,
+		noErrs,
 	};
 
 	void setVerbosity (int8_t q);
 
 	void notify (const char *format, ...);
 
-	void error (int8_t type, FILE *fp, uint32_t ln, const char *format, ...);
+	void warning (uint32_t ln, const char *format, ...);
+
+	void error (uint32_t ln, const char *format, ...);
+
+	uint32_t getwarnings (void);
+
+	uint32_t geterrors (void);
 #endif
 
 #ifdef USES_OFFSET
