@@ -1,11 +1,16 @@
-#define USES_ASSEMBLE
-#define USES_LABEL
 #define USES_FLAG
 #define USES_FILE
+#define USES_LABEL
 #define USES_NOTIFY
 #include "laser.h"
 
-int8_t checkextension (char *file, char *extension)
+/*
+	Checkextension: checks if the passed string ends in the given extension
+
+	Inputs: filename as a string, extension as a string
+	Outputs: return 0 if no match, return 1 if match
+*/
+int8_t checkextension (char *file, const char *extension)
 {
 	char *dot = strrchr(file, '.');
 	if (dot == NULL)
@@ -16,29 +21,19 @@ int8_t checkextension (char *file, char *extension)
 		return 0;
 }
 
-char* replaceextension (char *file, const char *extension)
+/*
+	replaceextension: replaces the extension of a given string
+
+	inputs: filename as a string, extension as a string
+	outputs: none
+*/
+void replaceextension (char *file, const char *extension)
 {
 	char *dot = strrchr(file, '.');
 	int i=0;
 	while (dot[i] != '\0') {
 		dot[i] = extension[i];
 		i++;
-	}
-	return file;
-}
-
-int8_t parsefile (char *file, int8_t last_flag)
-{
-	if (checkextension (file, ".asm")) {
-		if (last_flag == ASSEMBLE) {
-			return assemble (file);
-		} else if (last_flag == CLEAN) {
-			return clean (file);
-		} else {
-			return -1;
-		}
-	} else {
-		return -1;
 	}
 }
 
@@ -49,7 +44,7 @@ FILE* getlog (void)
 	return LOGFILE;
 }
 
-uint8_t openasmfiles (struct Files *f, char *file)
+uint8_t openasmfiles (filearr_t *f, char *file)
 {
 	uint8_t failed = 0;
 	f->fp = fopen (file, "r");
@@ -106,7 +101,36 @@ uint8_t openasmfiles (struct Files *f, char *file)
 	return failed;
 }
 
-void closeasmfiles (struct Files *f)
+const char *extensions[] = {
+	".sym",
+	".bin",
+	".hex",
+	".lst",
+	".obj",
+	".log"
+};
+
+int8_t clean (char *file)
+{
+	bool err = 0;
+	notify ("Cleaning up...");
+	for (int i = 0; i < (islogging () ? 6 : 5); i++) {
+		replaceextension (file, extensions[i]);
+		notify ("  Deleting %s...", file);
+		if (remove (file)) {
+			notify ("    Unable to delete %s!", file);
+			err = 1;
+		}
+	}
+	notify ("Finished!\n");
+
+	replaceextension (file, ".sym");
+
+	if (err) return -2;
+	else return 0;
+}
+
+void closeasmfiles (filearr_t *f)
 {
 	if (f->fp != NULL) fclose (f->fp);
 	if (f->sym != NULL) fclose (f->sym);
@@ -116,44 +140,57 @@ void closeasmfiles (struct Files *f)
 	if (f->lst != NULL) fclose (f->lst);
 }
 
-static uint16_t insfilebuffer[0xFFFF];
-static uint32_t lnfilebuffer[0xFFFF];
-static uint32_t filebufferindex = 0;
+#define DEFAULT_FILEBUF_SIZE 256
 
-void writefilebuf (uint16_t ins, uint32_t ln)
+void writefilebuf (filebuf_t *buf, uint16_t ins, uint32_t ln)
 {
-	static uint8_t note = 0;
-	if (filebufferindex < 0xFFFF) {
-		insfilebuffer[filebufferindex] = ins;
-		lnfilebuffer[filebufferindex] = ln;
-		filebufferindex++;
-	} else if (!note) {
-		notify ("Congratulations, you've somehow managed to write a program long enough to saturate the LC3 memory...");
-		note = 1;
+	uint16_t index = buf->ind;
+	if (index == buf->cap) {
+		buf->cap *= 2;
+		buf->insbuf = (uint16_t*) realloc (buf->insbuf, buf->cap * sizeof (uint16_t));
+		buf->lnbuf = (uint32_t*) realloc (buf->lnbuf, buf->cap * sizeof (uint32_t));
 	}
+	buf->insbuf[index] = ins;
+	buf->lnbuf[index] = ln;
+	buf->ind++;
 }
 
-void resetfilebuf ()
+filebuf_t* inifilebuf(void)
 {
-	filebufferindex = 0;
+	filebuf_t *buf = (filebuf_t*) malloc (sizeof (filebuf_t));
+	buf->ind = 0;
+	buf->cap = DEFAULT_FILEBUF_SIZE;
+	buf->insbuf = (uint16_t*) malloc (buf->cap * sizeof (uint16_t));
+	buf->lnbuf = (uint32_t*) malloc (buf->cap * sizeof (uint32_t));
+	return buf;
 }
 
-void writeobj (FILE *obj)
+void freefilebuf(filebuf_t *buf)
 {
-	uint32_t bytenum = filebufferindex * 2;
+	if (buf == 0) return;
+	if (buf->insbuf != 0) free (buf->insbuf);
+	if (buf->lnbuf != 0) free (buf->lnbuf);
+	free (buf);
+}
+
+void writeobj (filebuf_t *buf, FILE *obj)
+{
+	uint16_t index = buf->ind;
+	uint32_t bytenum = index * 2;
 	uint8_t tmp[bytenum];
-	for (uint16_t i = 0; i < filebufferindex; i++) {
-		tmp[i * 2 + 1] = insfilebuffer[i] & 0xFF;
-		tmp[i * 2] = insfilebuffer[i] >> 8;
+	for (uint16_t i = 0; i < index; i++) {
+		tmp[i * 2 + 1] = buf->insbuf[i] & 0xFF;
+		tmp[i * 2] = buf->insbuf[i] >> 8;
 	}
 
 	fwrite (tmp, sizeof (uint8_t), bytenum, obj);
 }
 
-void writehex (FILE *hex)
+void writehex (filebuf_t *buf, FILE *hex)
 {
-	for (uint32_t i = 0; i < filebufferindex; i++) {
-		fprintf (hex, "%04X\n", insfilebuffer[i]);
+	uint16_t index = buf->ind;
+	for (uint32_t i = 0; i < index; i++) {
+		fprintf (hex, "%04X\n", buf->insbuf[i]);
 	}
 }
 
@@ -170,57 +207,61 @@ const char *XtoB[16] = {
 	XtoB[(ins >> 4) & 0xF], \
 	XtoB[ins & 0xF]
 
-void writebin (FILE *bin)
+void writebin (filebuf_t *buf, FILE *bin)
 {
-	for (uint32_t i = 0; i < filebufferindex; i++) {
-		uint16_t tmp = insfilebuffer[i];
+	uint16_t index = buf->ind;
+	for (uint32_t i = 0; i < index; i++) {
+		uint16_t tmp = buf->insbuf[i];
 		fprintf (bin, "%s%s%s%s\n", instobin(tmp));
 	}
 }
 
-void printsymbol (FILE *fp, Token *symbol, uint16_t addr)
+void writesym (labelarr_t *symarr, FILE *sym)
 {
-	uint16_t len = symbol->len;
-	if (len >= 75) len = 75;
-	else len = len;
-	fprintf (fp, "%s", symbol->str);
+	uint16_t symbolnum = symarr->ind;
+	for (uint16_t i = 0; i < symbolnum; i++) {
+		uint16_t len = symarr->arr[1].label->len;
+		if (len >= 75) len = 75;
+		fprintf (sym, "%s", symarr->arr[1].label->str);
 
-	if (USE_SPACES_IN_SYM) {
-		for (uint16_t i = (76 - len); i > 0; i--)
-			fprintf (fp, " ");
-	} else {
-		for (uint16_t i = (72 - len) / TABSIZE; i > 0; i--)
-			fprintf (fp, "\t");
+		for (uint16_t i = (76 - len); i > 0; i--) fprintf (sym, " ");
+
+		fprintf (sym, "x%04X", symarr->arr[1].address);
+		fprintf (sym, "\n");
 	}
-
-	fprintf (fp, "x%04X", addr);
-	fprintf (fp, "\n");
 }
 
 const char* lstheader = "  HEX  |      BINARY      |  LN  |  ASSEMBLY\n";
 
-void writelst (FILE *fp, FILE *lst)
+void writelst (filebuf_t *buf, FILE *fp, FILE *lst)
 {
-	fseek (fp, 0, SEEK_SET);													// find beginning of .asm file
+	fseek (fp, 0, SEEK_SET);			// find beginning of .asm file
 	fprintf (lst, "%s", lstheader);
 
 	char line[MAX_LEN + 1];
-	uint16_t lnindex = 0;
+	uint16_t lnindex = 0, maxind = buf->ind;
 	for (uint32_t i = 1; fgets (line, MAX_LEN + 1, fp); i++) {
-		if (lnfilebuffer[lnindex] == i) {
-			uint16_t tmp = insfilebuffer[lnindex];
+		if (buf->lnbuf[lnindex] == i) {
+			uint16_t tmp = buf->insbuf[lnindex];
 			fprintf (lst, " x%04X | %s%s%s%s ", tmp, instobin(tmp));
 			lnindex++;
+			if (lnindex == maxind) break;
 		} else {
 			fprintf (lst, "       |                  ");
 		}
 
 		fprintf (lst, "| %4d | %s", i, line);
 
-		while (lnfilebuffer[lnindex] == i) {									// necessary for STRINGZ and BLKW where
-			uint16_t tmp = insfilebuffer[lnindex];								// a single line of assembly generates
-			fprintf (lst, " x%04X | %s%s%s%s |      |\n", tmp, instobin(tmp));	// multiple lines of values
+		/*
+			for cases such as .STRINGZ and .BLKW where a single line of
+			assembly generates multiple instructions
+		*/
+		while (buf->lnbuf[lnindex] == i) {
+			uint16_t tmp = buf->insbuf[lnindex];
+			fprintf (lst, " x%04X | %s%s%s%s |      |\n", tmp, instobin(tmp));
 			lnindex++;
+			if (lnindex == maxind) break;
 		}
+		if (lnindex == maxind) break;
 	}
 }

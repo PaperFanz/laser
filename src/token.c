@@ -1,4 +1,4 @@
-#include "laser.h"
+#include "token.h"
 
 const char escapeChars[] = {'\'', '\"', '\?', '\\', 'a', 'b', 'f', 'n', 'r', 't', 'v'};
 
@@ -29,7 +29,7 @@ Token* putstr (char *line, uint16_t *lineptr)
 	while (line[i] != '\0') {
 		if (line[i] == '\"') {
 			break;
-		} else if (line[i] == '\\') {											// this bit's not necessary but it makes .STRINGZ much simpler
+		} else if (line[i] == '\\') {		// process escape characters
 			i++;
 			tmp[j] = escval(line[i]);
 			j++;
@@ -107,8 +107,8 @@ TokenBuffer* tokenize (char *line)
 	buf->token = (Token**) malloc (sizeof (Token*));
 
 	uint8_t newtok = 0;
-	bool delim = 0, quote = 0;
-	bool wasdelim = 1;
+	int8_t delim = 0, quote = 0;
+	int8_t wasdelim = 1;
 
 	for(uint16_t i = 0; !iseeol (line[i]); i++) {
 		delim = (line[i] == ' ' || line[i] == '\t' || line[i] == ',');
@@ -139,16 +139,16 @@ TokenBuffer* tokenize (char *line)
 
 void freetoken (Token *t)
 {
-	if (t != NULL) {
-		if (t->str != NULL) free (t->str);
+	if (t) {
+		if (t->str) free (t->str);
 		free (t);
 	}
 }
 
 void freetokenarr (TokenBuffer *tokenbuffer)
 {
-	if (tokenbuffer == NULL) return;
-	if (tokenbuffer->token == NULL) return;
+	if (tokenbuffer == 0) return;
+	if (tokenbuffer->token == 0) return;
 
 	for (uint8_t i = 0; i < tokenbuffer->toknum; i++) {
 		if(tokenbuffer->token[i]->len){
@@ -166,62 +166,39 @@ void freetokenarr (TokenBuffer *tokenbuffer)
 	better in a C++ program or some other OOP language.
 */
 
-typedef struct LineInfo {
-	TokenBuffer *buf;
-	uint32_t ln;
-} lineinfo_t;
-
-typedef struct TokenBufferArray {
-	lineinfo_t **arr;
-	uint16_t cap;
-	uint16_t ind;
-} tokbufarr_t;
-
-#define TOKBUFARR_STEP 200
-
-static tokbufarr_t TBUFARR;
-
-void inittokenbufferarray ()
+tokbufarr_t* inittokenbufferarray ()
 {
-	TBUFARR.cap = TOKBUFARR_STEP;
-	TBUFARR.ind = 0;
-	TBUFARR.arr = (lineinfo_t**) malloc (TBUFARR.cap * sizeof (lineinfo_t*));
+	tokbufarr_t *tmp = (tokbufarr_t*) malloc (sizeof (tokbufarr_t));
+	tmp->cap = DEFAULT_ARR_SIZE;
+	tmp->ind = 0;
+	tmp->arr = (lineinfo_t**) malloc (tmp->cap * sizeof (lineinfo_t*));
+	return tmp;
 }
 
-void abuttokenbufferarray (TokenBuffer *buf, uint32_t ln)
+void abuttokenbufferarray (tokbufarr_t *arr, TokenBuffer *buf, uint32_t ln)
 {
-	if (TBUFARR.ind == TBUFARR.cap) {
-		TBUFARR.cap *= 2;
-		TBUFARR.arr = (lineinfo_t**) realloc (TBUFARR.arr, TBUFARR.cap * sizeof (lineinfo_t*));
+	if (arr->ind == arr->cap) {
+		arr->cap *= 2;
+		arr->arr = (lineinfo_t**) realloc (arr->arr, arr->cap * sizeof (lineinfo_t*));
 	}
-	TBUFARR.arr[TBUFARR.ind] = (lineinfo_t*) malloc (sizeof (lineinfo_t));
-	TBUFARR.arr[TBUFARR.ind]->buf = buf;
-	TBUFARR.arr[TBUFARR.ind]->ln = ln;
-	TBUFARR.ind++;
+	arr->arr[arr->ind] = (lineinfo_t*) malloc (sizeof (lineinfo_t));
+	arr->arr[arr->ind]->buf = buf;
+	arr->arr[arr->ind]->ln = ln;
+	arr->ind++;
 }
 
-TokenBuffer* fromtokenbufferarray (uint16_t index)
+lineinfo_t* fromtokenbufferarray (tokbufarr_t *arr, uint16_t index)
 {
-	if (index > TBUFARR.ind) return NULL;
-	else return TBUFARR.arr[index]->buf;
+	if (index > arr->ind) return 0;
+	else return arr->arr[index];
 }
 
-uint32_t linetokenbufferarray (uint16_t index)
+void freetokenbufferarray (tokbufarr_t *arr)
 {
-	if (index > TBUFARR.ind) return 0;
-	else return TBUFARR.arr[index]->ln;
-}
-
-uint16_t tokenbufferarrayend (void)
-{
-	return TBUFARR.ind;
-}
-
-void freetokenbufferarray ()
-{
-	for (uint16_t i = 0; i < TBUFARR.ind; i++) {
-		freetokenarr (TBUFARR.arr[i]->buf);
-		free (TBUFARR.arr[i]);
+	for (uint16_t i = 0; i < arr->ind; i++) {
+		freetokenarr (arr->arr[i]->buf);
+		free (arr->arr[i]);
 	}
-	free (TBUFARR.arr);
+	free (arr->arr);
+	free (arr);
 }

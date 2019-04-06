@@ -1,6 +1,4 @@
 #define USES_FLAG
-#define USES_FILE
-#define USES_NOTIFY
 #include "laser.h"
 
 const char *about = "Copyright Notice:\n\n"
@@ -48,9 +46,6 @@ const char *help = "Description:\n"
 
 const char *flags[] = { "-v", "-h", "-q", "-s", "-a", "-c", "-l", "-p"};
 
-static int8_t LOGENABLED = 0;
-static int8_t HIPERFMODE = 0;
-
 int8_t checkflags (char *f)
 {
 	for (int8_t i = 0; i < 8; i++) {
@@ -61,53 +56,47 @@ int8_t checkflags (char *f)
 	return -1;
 }
 
+static int8_t CLEANMODE = 0;
+static int8_t LOGENABLED = 0;
+static int8_t PROJECTMODE = 0;
+static int8_t ASSEMBLEMODE = 0;
+
+int8_t isclean (void)
+{
+	return CLEANMODE;
+}
+
 int8_t islogging (void)
 {
 	return LOGENABLED;
 }
 
-int8_t ishiperf (void)
+int8_t isproject (void)
 {
-	return HIPERFMODE;
+	return PROJECTMODE;
 }
 
-int8_t parseflag (int8_t flag)
+int8_t isassemble (void)
 {
-	switch (flag) {
-		case VERSION: {
-			printf ("laser version %s\n", version_num);
-			break;
-		}		
-		case HELP: {
-			printf ("%s", help);
-			break;
-		}
-		case QUIET: {
-			setVerbosity (noWarn);
-			break;
-		}
-		case SILENT: {
-			setVerbosity (noErrs);
-			break;
-		}
-		case ASSEMBLE: {
-			break;
-		}
-		case CLEAN: {
-			break;
-		}
-		case LOG: {
-			LOGENABLED = 1;
-			break;
-		}
-		case HIPERF: {
-			HIPERFMODE = 1;
-			break;
-		}
-		default: {
-			return -1;
-		}
-	}
+	return ASSEMBLEMODE;
+}
 
-	return flag;
+void setassemble (void)
+{
+	ASSEMBLEMODE = 1;
+}
+
+void setclean (void)
+{
+	CLEANMODE = 1;
+}
+
+void setlog (void)
+{
+	LOGENABLED = 1;
+}
+
+void setproject (void)
+{
+	PROJECTMODE = 1;
 }

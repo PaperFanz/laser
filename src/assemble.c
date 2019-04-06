@@ -1,5 +1,4 @@
 #define USES_FILE
-#define USES_FLAG
 #define USES_ALIAS
 #define USES_MACRO
 #define USES_LABEL
@@ -10,18 +9,20 @@
 #include "laser.h"
 
 typedef struct Alert {
-	int32_t warn;
-	int32_t err;
-	int32_t exceptions;
+	uint32_t warn;
+	uint32_t err;
+	uint32_t exceptions;
 } Alert;
 
 typedef struct Arrays {
-	struct Alias *alias;
-	struct Macro *macro;
-	struct Label *label;
-} Arrays;
+	filebuf_t *filebuf;
+	aliasarr_t *alias;
+	macroarr_t *macro;
+	labelarr_t *label;
+	tokbufarr_t *tokbufarr;
+} arrs_t;
 
-uint16_t preorig (struct Files f, uint32_t *ln, Arrays *a)
+uint16_t preorig (filearr_t f, uint32_t *ln, arrs_t *a)
 {
 	uint16_t orig_addr = 0;
 	int32_t i = 0;
@@ -41,11 +42,11 @@ uint16_t preorig (struct Files f, uint32_t *ln, Arrays *a)
 			addalias (a->alias, *ln, token[1], token[2]);
 			break;
 		case MACRO:
-			a->macro = addmacro (a->macro, *ln, token[1], token[2]);
+			addmacro (a->macro, *ln, token[1], token[2]);
 			break;
 		case ORIG:
 			orig_addr = offset(1, token[1]);
-			writefilebuf (orig_addr, i);
+			writefilebuf (a->filebuf, orig_addr, i);
 			break;
 		default:
 			warning (i, "Ignoring invalid token '%s' before '.ORIG'", token[0]);
@@ -94,21 +95,21 @@ const uint8_t popnumarr[] = {
 	1	// FILL
 };
 
-uint8_t passone (uint32_t ln, uint16_t *addr, TokenBuffer *buf, Arrays *arrs)
+uint8_t passone (uint32_t ln, uint16_t *addr, TokenBuffer *buf, arrs_t *arrs)
 {
 	uint8_t end = 0;
 	uint32_t macro = findmacro (arrs->macro, buf->token[0]);
-	if (macro) {
+	if (macro != -1) {
 		freetokenarr (buf);
-		buf = tokenize (arrs->macro[macro].replace->str);
+		buf = tokenize (arrs->macro->arr[macro].replace->str);
 	}
 	
 	for (uint8_t j = 0; j < buf->toknum; j++) {
 		uint32_t alias = findalias (arrs->alias, buf->token[j]);
-		if (alias) {
+		if (alias != -1) {
 			freetoken (buf->token[j]);
 			buf->token[j] = (Token*) malloc (sizeof (Token));
-			copytoken (buf->token[j], arrs->alias[alias].reg);
+			copytoken (buf->token[j], arrs->alias->arr[alias].reg);
 		}
 	}
 
@@ -118,7 +119,7 @@ uint8_t passone (uint32_t ln, uint16_t *addr, TokenBuffer *buf, Arrays *arrs)
 
 	for (uint8_t j = 0; j < buf->toknum; j++) {
 		if (isvalidlabel (token[j]) && j == 0) {
-			arrs->label = addlabel (arrs->label, ln, token[j], *addr);
+			addlabel (arrs->label, ln, token[j], *addr);
 			opnum = 0;
 		} else if ((op = isoperand (token[j])) >= 0) {
 			tok = token[j]->str;
@@ -163,7 +164,7 @@ uint8_t passone (uint32_t ln, uint16_t *addr, TokenBuffer *buf, Arrays *arrs)
 		error (ln,	"'%s' expects %d operands", tok, opnum);
 	}
 
-	abuttokenbufferarray (buf, ln);
+	abuttokenbufferarray (arrs->tokbufarr, buf, ln);
 	if (end) return 1;
 	else return 0;
 }
@@ -227,18 +228,18 @@ const uint8_t opmaskarr[] = {
 #define INRANGEB(x) (-1024 <= (x)) && ((x) <= 1023)
 
 
-uint8_t passtwo (uint32_t tbufind, uint16_t *addr, Arrays *arrs)
+uint8_t passtwo (uint32_t tbufind, uint16_t *addr, arrs_t *arrs)
 {
-	TokenBuffer *buf = fromtokenbufferarray (tbufind);
-	uint32_t ln = linetokenbufferarray (tbufind);
+	lineinfo_t *line = fromtokenbufferarray (arrs->tokbufarr, tbufind);
+	uint32_t ln = line->ln;
 	uint8_t end = 0;
 	
-	Token **token = buf->token;
+	Token **token = line->buf->token;
 	int8_t opcode = -1, pseudoop = -1;
 
 	uint32_t label = labeladdr (arrs->label, token[0]);
 	if (label) {
-		if (buf->toknum == 1) return 0;											// don't do anything if there's only a label
+		if (line->buf->toknum == 1) return 0;									// don't do anything if there's only a label
 		token++;																// increment past labels
 	}
 
@@ -379,14 +380,14 @@ uint8_t passtwo (uint32_t tbufind, uint16_t *addr, Arrays *arrs)
 			}
 			ins += trapvect8 & 0xFF;
 		}
-		writefilebuf (ins, ln);
+		writefilebuf (arrs->filebuf, ins, ln);
 		*addr += 1;
 	} else if ((pseudoop = ispseudoop (token[0])) >= 0) {
 		if (pseudoop == END) {
 			end = 1;
 		} else if (pseudoop == STRINGZ) {
 			for (uint16_t k = 0; k < token[1]->len; k++)
-				writefilebuf (token[1]->str[k], ln);
+				writefilebuf (arrs->filebuf, token[1]->str[k], ln);
 			*addr += token[1]->len;
 		} else if (pseudoop == BLKW) {
 			uint8_t offt = offtype (token[1]);
@@ -400,7 +401,7 @@ uint8_t passtwo (uint32_t tbufind, uint16_t *addr, Arrays *arrs)
 			}
 
 			for (uint16_t k = 0; k < blknum; k++)
-				writefilebuf (0, ln);
+				writefilebuf (arrs->filebuf, 0, ln);
 
 			*addr += blknum;
 		} else if (pseudoop == FILL) {
@@ -408,10 +409,10 @@ uint8_t passtwo (uint32_t tbufind, uint16_t *addr, Arrays *arrs)
 			uint16_t laddr;
 
 			if (offt > 0) {
-				writefilebuf (offset (offt, token[1]), ln);
+				writefilebuf (arrs->filebuf, offset (offt, token[1]), ln);
 				*addr += 1;
 			} else if ((laddr = labeladdr (arrs->label, token[1])) > 0) {
-				writefilebuf (laddr, ln);
+				writefilebuf (arrs->filebuf, laddr, ln);
 			} else {
 				error (ln, "'%s' is not a valid argument for '%s'",
 						token[1]->str, token[0]->str);
@@ -428,61 +429,21 @@ uint8_t passtwo (uint32_t tbufind, uint16_t *addr, Arrays *arrs)
 	else return 0;
 }
 
-void writesym (FILE *sym, Label *l)
-{
-	uint16_t labelnum = l[0].count;
-	for (uint16_t i = 1; i < labelnum; i++) {
-		Label tmp = l[i];
-		printsymbol (sym, tmp.label, tmp.address);
-	}
-}
-
-const char *extensions[] = {
-	".sym",
-	".bin",
-	".hex",
-	".lst",
-	".obj",
-	".log"
-};
-
-int8_t clean (char *file)
-{
-	bool err = 0;
-	notify ("Cleaning up...");
-	for (int i = 0; i < (islogging () ? 6 : 5); i++) {
-		file = replaceextension (file, extensions[i]);
-		notify ("  Deleting %s...", file);
-		if (remove (file)) {
-			notify ("    Unable to delete %s!", file);
-			err = 1;
-		}
-	}
-	notify ("Finished!\n");
-
-	file = replaceextension (file, ".sym");
-
-	if (err) return -2;
-	else return 0;
-}
-
 int8_t assemble (char *file)
 {
-	int8_t err = 0;
 	notify ("Assembling %s...", file);
 
-	Files f = {NULL, NULL, NULL, NULL, NULL, NULL};
-	err += openasmfiles (&f, file);
-	if (err) return err;														// exit with error if files unopenable
+	filearr_t f = {NULL, NULL, NULL, NULL, NULL, NULL};
+	if (openasmfiles (&f, file))
+		return 1;		// exit with error if files unopenable
 
-	Arrays arrs = {
+	arrs_t arrs = {
+		inifilebuf (),
 		initaliasarr (),
 		initmacroarr (),
-		initlabelarr ()
+		initlabelarr (),
+		inittokenbufferarray ()
 	};
-
-	resetfilebuf ();
-	inittokenbufferarray ();
 
 	uint32_t ln = 1;
 	uint16_t origaddr = preorig (f, &ln, &arrs);
@@ -517,7 +478,7 @@ int8_t assemble (char *file)
 		end = 0;
 		addr = origaddr;
 
-		uint16_t endofprogram = tokenbufferarrayend ();
+		uint16_t endofprogram = arrs.tokbufarr->ind;
 		for (uint16_t i = 0; endofprogram; ++i, --endofprogram) {
 			end = passtwo (i, &addr, &arrs);
 			if (end) break;
@@ -530,21 +491,22 @@ int8_t assemble (char *file)
 
 	// write buffers to file
 
-	writeobj (f.obj);
-	writehex (f.hex);
-	writebin (f.bin);
-	writelst (f.fp, f.lst);
-	writesym (f.sym, arrs.label);
+	writeobj (arrs.filebuf, f.obj);
+	writehex (arrs.filebuf, f.hex);
+	writebin (arrs.filebuf, f.bin);
+	writesym (arrs.label, f.sym);
+	writelst (arrs.filebuf, f.fp, f.lst);
 	
 	if (geterrors()) clean (file);
 
 	notify ("Done!\n");
 
-	freetokenbufferarray ();
+	freefilebuf (arrs.filebuf);
 	freealiasarr (arrs.alias);
 	freemacroarr (arrs.macro);
 	freelabelarr (arrs.label);
+	freetokenbufferarray (arrs.tokbufarr);
 	closeasmfiles (&f);
 
-	return err;
+	return 0;
 }

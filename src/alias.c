@@ -2,52 +2,54 @@
 #define USES_OPERAND
 #include "laser.h"
 
-void addalias (Alias *a, uint32_t ln, Token *word, Token *reg)
+#define DEFAULT_ALIAS_SIZE 8
+
+void addalias (aliasarr_t *a, uint32_t ln, Token *word, Token *reg)
 {
-	a[0].count++;
-	uint32_t aliasnum = a[0].count;
+	uint16_t index = a->ind;
+	if (index == a->cap) {
+		a->cap *= 2;
+		a->arr = (alias_t*) realloc (a->arr, a->cap * sizeof (alias_t));
+	}
 
-	if (aliasnum >= DEFAULT_ALIAS_NUM)
-		a = (Alias*) realloc (a, (aliasnum + 1) * sizeof (Alias));
+	a->arr[index].count = 0;
+	a->arr[index].ln = ln;
+	a->arr[index].word = (Token*) malloc (sizeof (Token));
+	copytoken (a->arr[index].word, word);
+	a->arr[index].reg = (Token*) malloc (sizeof (Token));
+	copytoken (a->arr[index].reg, reg);
 
-	a[aliasnum].count = 0;
-	a[aliasnum].ln = ln;
-	a[aliasnum].word = (Token*) malloc (sizeof (Token));
-	copytoken (a[aliasnum].word, word);
-	a[aliasnum].reg = (Token*) malloc (sizeof (Token));
-	copytoken (a[aliasnum].reg, reg);
+	++a->ind;
 }
 
-uint32_t findalias (Alias *a, Token *word)
+int32_t findalias (aliasarr_t *a, Token *word)
 {
-	uint32_t aliasnum = a[0].count;
-	for (uint32_t i = 1; i <= aliasnum; i++) {
-		if (strcmp (word->str, a[i].word->str) == 0) {
+	for (uint16_t i = 0; i < a->ind; i++) {
+		if (strcmp (word->str, a->arr[i].word->str) == 0) {
 			return i;
 		}
 	}
-	return 0;
+	return -1;
 }
 
-Alias* initaliasarr (void)
+aliasarr_t* initaliasarr (void)
 {
-	Alias *a = (Alias*) malloc (DEFAULT_ALIAS_NUM * sizeof (struct Alias));
-	a[0].count = 0;																// tracks aliasnum
-	a[0].ln = DEFAULT_ALIAS_NUM;												// tracks capacity
-	a[0].word = NULL;
-	a[0].reg = NULL;
+	aliasarr_t *a = (aliasarr_t*) malloc (sizeof (aliasarr_t));
+	a->ind = 0;
+	a->cap = DEFAULT_ALIAS_SIZE;
+	a->arr = (alias_t*) malloc (a->cap * sizeof (alias_t));
 	return a;
 }
 
-void freealiasarr (Alias *a)
+void freealiasarr (aliasarr_t *a)
 {
-	if (a == NULL) return;
-	uint32_t aliasnum = a[0].count;
+	if (a == 0) return;
 
-	for (uint32_t i = 1; i <= aliasnum; i++) {
-		if (a[i].word != NULL) freetoken (a[i].word);
-		if (a[i].reg != NULL) freetoken (a[i].reg);
+	for (uint16_t i = 0; i < a->ind; i++) {
+		if (a->arr[i].word) freetoken (a->arr[i].word);
+		if (a->arr[i].reg) freetoken (a->arr[i].reg);
 	}
 
+	free (a->arr);
 	free (a);
 }

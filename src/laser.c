@@ -1,36 +1,108 @@
 #define USES_FLAG
 #define USES_FILE
 #define USES_NOTIFY
-#define USES_OPERAND
+#define USES_ASSEMBLE
 #include "laser.h"
 
 int8_t main (int argc, char **argv)
 {
-	int8_t last_flag = -1, err = -1;
-	uint32_t jobs = 0;
-	clock_t start, end;
+	int8_t err = 0;
 
 	if (argc == 1) printf ("%s\n\n%s", usage, about);
 
-	start = clock ();
-	for (uint32_t i = 1; i < argc; i++) {
-		char *file = argv[i];
-		int8_t flag = checkflags (file);
+	++argv;	// skip past first argument 'laser'
+	int8_t flag = 0;
 
-		if (flag >= 0) {
-			err = last_flag = parseflag (flag);
-		} else {
-			err = parsefile (file, last_flag);
-			jobs++;
-		}
+	/*
+		stop parsing flags once an assemble/project/clean flag is
+		encountered or the end of the argument vector is reached and
+		assume that all remaining elements are either null or files for
+		assembly
+	*/
+	for (; *argv &&
+			flag != ASSEMBLE &&
+			flag != PROJECT &&
+			flag != CLEAN &&
+			flag != -1;
+			argv++)
+	{
+		flag = checkflags (*argv);
 
-		if (err == -1) {
-			notify ("Invalid flags!\n");
-		} else if (err == -2) {
-			notify ("Parse error!\n");
-			return 1;
+		switch (flag) {
+		case VERSION:
+			printf ("laser version %s\n", version_num);
+			break;
+		case HELP:
+			printf ("%s", help);
+			break;
+		case QUIET:
+			setVerbosity (noWarn);		// notify.c
+			break;
+		case SILENT:
+			setVerbosity (noErrs);		// notify.c
+			break;
+		case ASSEMBLE:
+			setassemble ();				// flag.c
+			break;
+		case CLEAN:
+			setclean ();				// flag.c
+			break;
+		case LOG:
+			setlog ();					// flag.c
+			break;
+		case PROJECT:
+			setproject ();				// flag.c
+			break;
+		default:
+			break;
 		}
 	}
+
+	/*
+		keep track of how long files take to assemble, 
+		no need to track how long it takes to parse flags	
+	*/
+	clock_t start, end;
+	start = clock ();
+	uint32_t jobs = 0;
+
+	if (isproject ()) {
+		uint8_t validproject = 1;
+		for (uint32_t i = 0; *(argv + i); i++) {
+			if (!checkextension (*(argv + i), ".asm")) {
+				notify ("'%s' is not an assembly file, exiting...",
+						*(argv + i));
+				validproject = 0;
+			}
+		}
+
+		if (validproject) {
+			// assemble a project TODO
+		}
+	} else if (isassemble ()) {
+		for (; *argv; argv++) {
+			if (checkextension (*argv, ".asm")) {
+				assemble (*argv);
+			} else {
+				notify ("'%s' is not an assembly file, continuing...",
+						*argv);
+			}
+		}
+	} else if (isclean ()) {
+		for (; *argv; argv++) {
+			if (checkextension (*argv, ".asm")) {
+				assemble (*argv);
+			} else {
+				notify ("'%s' is not an assembly file, continuing...",
+						*argv);
+			}
+		}
+	} else {
+		for (; *argv; argv++) {
+			notify ("'%s' is not a valid option!", *argv);
+		}
+	}
+
 	end = clock ();
 
 	if (jobs > 0) {
@@ -49,5 +121,5 @@ int8_t main (int argc, char **argv)
 	}
 
 
-	return 0;
+	return err;
 }

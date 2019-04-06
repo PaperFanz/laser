@@ -6,7 +6,7 @@ ODIR = obj
 CC = gcc
 CFLAGS = -I $(IDIR) -g
 
-_DEPS = laser.h config.h token.h
+_DEPS = laser.h token.h
 DEPS = $(patsubst %, $(IDIR)/%,$(_DEPS))
 
 _MAIN_OBJ =  laser.o

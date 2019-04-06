@@ -2,55 +2,54 @@
 #define USES_OPERAND
 #include "laser.h"
 
-Macro* addmacro (Macro *m, uint32_t ln, Token *macro, Token *replace)
+#define DEFAULT_MACRO_SIZE 8
+
+void addmacro (macroarr_t *m, uint32_t ln, Token *macro, Token *replace)
 {
-	m[0].count++;
-	uint32_t macronum = m[0].count;
+	uint16_t index = m->ind;
+	if (index == m->cap) {
+		m->cap *= 2;
+		m->arr = (macro_t*) realloc (m->arr, m->cap * sizeof (macro_t));
+	}
 
-	if (macronum >= DEFAULT_MACRO_NUM)
-		m = (Macro*) realloc (m, (macronum + 1) * sizeof (Macro));
+	m->arr[index].count = 0;
+	m->arr[index].ln = ln;
+	m->arr[index].macro = (Token*) malloc (sizeof (Token));
+	copytoken (m->arr[index].macro, macro);
+	m->arr[index].replace = (Token*) malloc (sizeof (Token));
+	copytoken (m->arr[index].replace, replace);
 
-	m[macronum].count = 0;
-	m[macronum].ln = ln;
-	m[macronum].macro = (Token*) malloc (sizeof (Token));
-	copytoken (m[macronum].macro, macro);
-	m[macronum].replace = (Token*) malloc (sizeof (Token));
-	copytoken (m[macronum].replace, replace);
-
-	return m;
+	m->ind++;
 }
 
-uint32_t findmacro (Macro *m, Token *macro)
+int32_t findmacro (macroarr_t *m, Token *macro)
 {
-	uint32_t macronum = m[0].count;
-	for (uint32_t i = 1; i <= macronum; i++) {
-		if (strcmp (macro->str, m[i].macro->str) == 0) {
+	for (uint16_t i = 0; i < m->ind; i++) {
+		if (strcmp (macro->str, m->arr[i].macro->str) == 0) {
 			return i;
 		}
 	}
-	return 0;
+	return -1;
 }
 
-Macro* initmacroarr (void)
+macroarr_t* initmacroarr (void)
 {
-	Macro *m = (Macro*) malloc (DEFAULT_MACRO_NUM * sizeof (struct Macro));
-	m[0].count = 0;																// tracks macronum
-	m[0].ln = DEFAULT_MACRO_NUM;												// tracks capacity
-	m[0].macro = NULL;
-	m[0].replace = NULL;
+	macroarr_t *m = (macroarr_t*) malloc (sizeof (macroarr_t));
+	m->ind = 0;
+	m->cap = DEFAULT_MACRO_SIZE;
+	m->arr = (macro_t*) malloc (m->cap * sizeof (macro_t));
 	return m;
 }
 
-void freemacroarr (Macro *m)
+void freemacroarr (macroarr_t *m)
 {
-	if (m == NULL) return;
+	if (m == 0) return;
 
-	uint32_t macronum = m[0].count;
-
-	for (uint32_t i = 1; i <= macronum; i++) {
-		freetoken (m[i].macro);
-		freetoken (m[i].replace);
+	for (uint16_t i = 0; i < m->ind; i++) {
+		freetoken (m->arr[i].macro);
+		freetoken (m->arr[i].replace);
 	}
 
+	free (m->arr);
 	free (m);
 }

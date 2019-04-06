@@ -1,4 +1,14 @@
 #include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+
+/*
+	if you are getting read errors, increase these numbers
+	(you really shouldn't have to)
+*/
+#define MAX_WORD_NUM 6		// max # of words per line
+#define MAX_WORD_SIZE 1025	// max # of chars for a label, filename, or .STRINGZ
+#define MAX_LEN 6150		// MAX_WORD_NUM * MAX_WORD_SIZE
 
 typedef struct Token {
 	uint16_t len;
@@ -18,14 +28,23 @@ void freetoken (Token *t);
 
 void freetokenarr (TokenBuffer *tokenbuffer);
 
-void inittokenbufferarray ();
+typedef struct LineInfo {
+	TokenBuffer *buf;
+	uint32_t ln;
+} lineinfo_t;
 
-void abuttokenbufferarray (TokenBuffer *buf, uint32_t ln);
+typedef struct TokenBufferArray {
+	lineinfo_t **arr;
+	uint16_t cap;
+	uint16_t ind;
+} tokbufarr_t;
 
-TokenBuffer* fromtokenbufferarray (uint16_t index);
+#define DEFAULT_ARR_SIZE 200
 
-uint32_t linetokenbufferarray (uint16_t index);
+tokbufarr_t* inittokenbufferarray ();
 
-uint16_t tokenbufferarrayend (void);
+void abuttokenbufferarray (tokbufarr_t *arr, TokenBuffer *buf, uint32_t ln);
 
-void freetokenbufferarray ();
+lineinfo_t* fromtokenbufferarray (tokbufarr_t *arr, uint16_t index);
+
+void freetokenbufferarray (tokbufarr_t *arr);

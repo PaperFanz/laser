@@ -7,7 +7,6 @@
 #include <ctype.h>
 #include <time.h>
 
-#include "config.h"
 #include "token.h"
 
 #ifdef USES_ASSEMBLE
@@ -22,15 +21,21 @@
 		uint32_t ln;
 		Token *word;
 		Token *reg;
-	} Alias;
+	} alias_t;
 
-	void addalias (Alias *a, uint32_t ln, Token *word, Token *replace);
+	typedef struct AliasArr {
+		alias_t *arr;
+		uint16_t ind;
+		uint16_t cap;
+	} aliasarr_t;
 
-	uint32_t findalias (Alias *a, Token *word);
+	void addalias (aliasarr_t *a, uint32_t ln, Token *word, Token *replace);
 
-	Alias* initaliasarr (void);
+	int32_t findalias (aliasarr_t *a, Token *word);
 
-	void freealiasarr (Alias *a);
+	aliasarr_t* initaliasarr (void);
+
+	void freealiasarr (aliasarr_t *a);
 #endif
 
 #ifdef USES_MACRO
@@ -39,15 +44,21 @@
 		Token *macro;
 		Token *replace;
 		uint32_t count;
-	} Macro;
+	} macro_t;
 
-	Macro* addmacro (Macro *m, uint32_t ln, Token *macro, Token *replace);
+	typedef struct MacroArr {
+		macro_t *arr;
+		uint16_t ind;
+		uint16_t cap;
+	} macroarr_t;
 
-	uint32_t findmacro (Macro *m, Token *macro);
+	void addmacro (macroarr_t *m, uint32_t ln, Token *macro, Token *replace);
 
-	Macro* initmacroarr (void);
+	int32_t findmacro (macroarr_t *m, Token *macro);
 
-	void freemacroarr (Macro *m);
+	macroarr_t* initmacroarr (void);
+
+	void freemacroarr (macroarr_t *m);
 #endif
 
 #ifdef USES_FLAG
@@ -59,7 +70,7 @@
 		ASSEMBLE,
 		CLEAN,
 		LOG,
-		HIPERF,
+		PROJECT,
 	};
 
 	const char *about;
@@ -70,13 +81,23 @@
 
 	const char *help;
 
+	int8_t isclean (void);
+
 	int8_t islogging (void);
 
-	int8_t ishiperf (void);
+	int8_t isproject (void);
+
+	int8_t isassemble (void);
 
 	int8_t checkflags (char *f);
 
-	int8_t parseflag (int8_t flag);
+	void setassemble (void);
+
+	void setclean (void);
+
+	void setlog (void);
+
+	void setproject (void);
 #endif
 
 #ifdef USES_LABEL
@@ -85,17 +106,25 @@
 		Token *label;
 		uint16_t address;
 		uint32_t count;
-	} Label;
+	} label_t;
+
+	typedef struct LabelArr {
+		label_t *arr;
+		uint16_t ind;
+		uint16_t cap;
+	} labelarr_t;
 
 	uint8_t isvalidlabel (Token *token);
 
-	Label* addlabel (Label *l, uint32_t ln, Token *label, uint16_t addr);
+	void addlabel (labelarr_t *l, uint32_t ln, Token *label, uint16_t addr);
 
-	uint16_t labeladdr (Label *l, Token *label);
+	uint16_t labeladdr (labelarr_t *l, Token *label);
 
-	Label* initlabelarr (void);
+	labelarr_t* initlabelarr (void);
 
-	void freelabelarr (Label *l);
+	void freelabelarr (labelarr_t *l);
+
+	void writesym (labelarr_t *symarr, FILE *sym);
 #endif
 
 #ifdef USES_FILE
@@ -106,42 +135,43 @@
 		FILE *hex;
 		FILE *obj;
 		FILE *lst;
-	} Files;
+	} filearr_t;
 
-	typedef struct iframe {
-		uint16_t ins;
-		uint32_t ln;
-	} iframe_t;
+	typedef struct FileBuffer {
+		uint16_t *insbuf;
+		uint32_t *lnbuf;
+		uint16_t ind;
+		uint16_t cap;
+	} filebuf_t;
 
-	int8_t checkextension (char *file, char *extension);
+	int8_t checkextension (char *file, const char *extension);
 
-	char* replaceextension (char *file, const char *extension);
+	void replaceextension (char *file, const char *extension);
 
-	uint8_t openasmfiles (struct Files *f, char *file);
+	uint8_t openasmfiles (filearr_t *f, char *file);
 
-	void closeasmfiles (struct Files *f);
+	void closeasmfiles (filearr_t *f);
+
+	int8_t clean (char *file);
 
 	FILE* getlog (void);
 
-	int8_t parsefile (char *file, int8_t last_flag);
+	void writefilebuf (filebuf_t *buf, uint16_t ins, uint32_t ln);
 
-	void printsymbol (FILE *fp, Token *symbol, uint16_t addr);
+	filebuf_t* inifilebuf(void);
 
-	void writefilebuf (uint16_t ins, uint32_t ln);
+	void freefilebuf(filebuf_t *buf);
 
-	void resetfilebuf ();
+	void writeobj (filebuf_t *buf, FILE *obj);
 
-	void writeobj (FILE *obj);
+	void writehex (filebuf_t *buf, FILE *hex);
 
-	void writehex (FILE *hex);
+	void writebin (filebuf_t *buf, FILE *bin);
 
-	void writebin (FILE *bin);
-
-	void writelst (FILE *fp, FILE *lst);
+	void writelst (filebuf_t *buf, FILE *fp, FILE *lst);
 #endif
 
 #ifdef USES_OPERAND
-
 	enum opcodes {BR, ADD, LD, ST,
 			   JSR, AND, LDR, STR,
 			   RTI, NOT, LDI, STI,
