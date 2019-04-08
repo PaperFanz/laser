@@ -96,7 +96,7 @@ uint8_t openasmfiles (filearr_t *f, char *file)
 			failed++;
 		}
 	}
-	replaceextension (file, ".sym");
+	replaceextension (file, ".asm");
 
 	return failed;
 }
@@ -113,16 +113,16 @@ const char *extensions[] = {
 int8_t clean (char *file)
 {
 	bool err = 0;
-	notify ("Cleaning up...");
+	notify ("Cleaning up...\n");
 	for (int i = 0; i < (islogging () ? 6 : 5); i++) {
 		replaceextension (file, extensions[i]);
-		notify ("  Deleting %s...", file);
+		notify ("  Deleting \"%s\"...\n", file);
 		if (remove (file)) {
-			notify ("    Unable to delete %s!", file);
+			notify ("    Unable to delete '%s'!\n", file);
 			err = 1;
 		}
 	}
-	notify ("Finished!\n");
+	notify ("Done!\n\n");
 
 	replaceextension (file, ".sym");
 
@@ -220,13 +220,13 @@ void writesym (labelarr_t *symarr, FILE *sym)
 {
 	uint16_t symbolnum = symarr->ind;
 	for (uint16_t i = 0; i < symbolnum; i++) {
-		uint16_t len = symarr->arr[1].label->len;
+		uint16_t len = symarr->arr[i].label->len;
 		if (len >= 75) len = 75;
-		fprintf (sym, "%s", symarr->arr[1].label->str);
+		fprintf (sym, "%s", symarr->arr[i].label->str);
 
 		for (uint16_t i = (76 - len); i > 0; i--) fprintf (sym, " ");
 
-		fprintf (sym, "x%04X", symarr->arr[1].address);
+		fprintf (sym, "x%04X", symarr->arr[i].address);
 		fprintf (sym, "\n");
 	}
 }
@@ -239,29 +239,29 @@ void writelst (filebuf_t *buf, FILE *fp, FILE *lst)
 	fprintf (lst, "%s", lstheader);
 
 	char line[MAX_LEN + 1];
-	uint16_t lnindex = 0, maxind = buf->ind;
-	for (uint32_t i = 1; fgets (line, MAX_LEN + 1, fp); i++) {
-		if (buf->lnbuf[lnindex] == i) {
-			uint16_t tmp = buf->insbuf[lnindex];
+	uint16_t ind = 0, maxind = buf->ind;
+	for (uint32_t ln = 1; fgets (line, MAX_LEN + 1, fp) && ind < maxind; ln++) {
+		if (buf->lnbuf[ind] == ln) {
+			uint16_t tmp = buf->insbuf[ind];
 			fprintf (lst, " x%04X | %s%s%s%s ", tmp, instobin(tmp));
-			lnindex++;
-			if (lnindex == maxind) break;
+			ind++;
 		} else {
 			fprintf (lst, "       |                  ");
 		}
 
-		fprintf (lst, "| %4d | %s", i, line);
+		fprintf (lst, "| %4d | %s", ln, line);
+		if (ind == maxind) break;
 
 		/*
 			for cases such as .STRINGZ and .BLKW where a single line of
 			assembly generates multiple instructions
 		*/
-		while (buf->lnbuf[lnindex] == i) {
-			uint16_t tmp = buf->insbuf[lnindex];
+		while (buf->lnbuf[ind] == ln) {
+			uint16_t tmp = buf->insbuf[ind];
 			fprintf (lst, " x%04X | %s%s%s%s |      |\n", tmp, instobin(tmp));
-			lnindex++;
-			if (lnindex == maxind) break;
+			ind++;
+			if (ind == maxind) break;
 		}
-		if (lnindex == maxind) break;
+		if (ind == maxind) break;
 	}
 }

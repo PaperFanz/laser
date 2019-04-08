@@ -1,4 +1,5 @@
 #define USES_FILE
+#define USES_FLAG
 #define USES_ALIAS
 #define USES_MACRO
 #define USES_LABEL
@@ -8,12 +9,6 @@
 #define USES_PSEUDOOP
 #include "laser.h"
 
-typedef struct Alert {
-	uint32_t warn;
-	uint32_t err;
-	uint32_t exceptions;
-} Alert;
-
 typedef struct Arrays {
 	filebuf_t *filebuf;
 	aliasarr_t *alias;
@@ -22,10 +17,10 @@ typedef struct Arrays {
 	tokbufarr_t *tokbufarr;
 } arrs_t;
 
-uint16_t preorig (filearr_t f, uint32_t *ln, arrs_t *a)
+uint16_t preorig (filearr_t f, uint32_t *ln, arrs_t *arrs)
 {
 	uint16_t orig_addr = 0;
-	int32_t i = 0;
+	uint32_t i;
 	char line[MAX_LEN + 1];
 
 	for (i = *ln; fgets (line, MAX_LEN + 1, f.fp) != NULL; i++) {
@@ -39,21 +34,27 @@ uint16_t preorig (filearr_t f, uint32_t *ln, arrs_t *a)
 
 		switch (ispseudoop (token[0])) {
 		case ALIAS:
-			addalias (a->alias, *ln, token[1], token[2]);
+			addalias (arrs->alias, i, token[1], token[2]);
 			break;
 		case MACRO:
-			addmacro (a->macro, *ln, token[1], token[2]);
+			addmacro (arrs->macro, i, token[1], token[2]);
 			break;
 		case ORIG:
 			orig_addr = offset(1, token[1]);
-			writefilebuf (a->filebuf, orig_addr, i);
+			writefilebuf (arrs->filebuf, orig_addr, i);
+			break;
+		case EXPORT:
+		case IMPORT:
+			if (!isproject ())
+				warning (i, "'%s' is only used in project mode", token[0]->str);
 			break;
 		default:
-			warning (i, "Ignoring invalid token '%s' before '.ORIG'", token[0]);
+			warning (i, "Ignoring invalid token '%s' before '.ORIG'",
+					token[0]->str);
 			break;
 		}
 
-		freetokenarr (buf);
+		abuttokenbufferarray (arrs->tokbufarr, buf, i);
 		if (orig_addr) break;
 	}
 
@@ -92,7 +93,9 @@ const uint8_t popnumarr[] = {
 	0,	// END
 	1,	// STRINGZ
 	1,	// BLKW
-	1	// FILL
+	1,	// FILL
+	1,	// EXPORT
+	1	// IMPORT
 };
 
 uint8_t passone (uint32_t ln, uint16_t *addr, TokenBuffer *buf, arrs_t *arrs)
@@ -127,16 +130,13 @@ uint8_t passone (uint32_t ln, uint16_t *addr, TokenBuffer *buf, arrs_t *arrs)
 			*addr += 1;
 		} else if ((pop = ispseudoop (token[j])) >= 0) {
 			tok = token[j]->str;
-			opnum = popnumarr [pop];
+			opnum = popnumarr[pop];
 			if (pop == END) {
 				end = 1;
 				break;
 			}
 
-			if (j + 1 >= buf->toknum) {
-				// error will be handled later
-				break;
-			}
+			if (j + 1 >= buf->toknum) break;
 
 			if (pop == STRINGZ) {
 				*addr += token[j + 1]->len;
@@ -147,7 +147,7 @@ uint8_t passone (uint32_t ln, uint16_t *addr, TokenBuffer *buf, arrs_t *arrs)
 				*addr += 1;
 			} else {
 				warning (ln, "Ignoring unexpected use of '%s' in program body",
-						token[j]);
+						token[j]->str);
 			}
 		} else if (isregister (token[j]) >= 0) {
 			opcount++;
@@ -222,11 +222,10 @@ const uint8_t opmaskarr[] = {
 	SRC1,					// RET
 };
 
-#define INRANGE5(x) (-16 <= (x)) && ((x) <= 15)
-#define INRANGE6(x) (-32 <= (x)) && ((x) <= 31)
-#define INRANGE9(x) (-256 <= (x)) && ((x) <= 255)
-#define INRANGEB(x) (-1024 <= (x)) && ((x) <= 1023)
-
+#define INRANGE5(x) ((-16 <= (x)) && ((x) <= 15))
+#define INRANGE6(x) ((-32 <= (x)) && ((x) <= 31))
+#define INRANGE9(x) ((-256 <= (x)) && ((x) <= 255))
+#define INRANGEB(x) ((-1024 <= (x)) && ((x) <= 1023))
 
 uint8_t passtwo (uint32_t tbufind, uint16_t *addr, arrs_t *arrs)
 {
@@ -239,13 +238,14 @@ uint8_t passtwo (uint32_t tbufind, uint16_t *addr, arrs_t *arrs)
 
 	uint32_t label = labeladdr (arrs->label, token[0]);
 	if (label) {
-		if (line->buf->toknum == 1) return 0;									// don't do anything if there's only a label
-		token++;																// increment past labels
+		if (line->buf->toknum == 1) return 0;	// ignore label-only lines
+		token++;								// increment past labels
 	}
 
 	if ((opcode = isoperand (token[0])) >= 0) {
+
 		uint16_t ins = opcodearr[opcode] << 12;
-		uint8_t opmask = opmaskarr[opcode];										// essentially an array of 8 booleans
+		uint8_t opmask = opmaskarr[opcode];		// essentially an array of 8 bools
 		if (opmask & DRSR) {
 			int8_t reg = isregister (token[1]);
 			if (reg >= 0) {
@@ -282,7 +282,7 @@ uint8_t passtwo (uint32_t tbufind, uint16_t *addr, arrs_t *arrs)
 					error (ln, "'%s' is not expressible in 5 bits",
 							token[3]->str);
 				}
-				ins += 0x20;													// 1 in bit 5 indicates immediate value
+				ins += 0x20;			// 1 in bit 5 indicates immediate value
 				ins += off & 0x1F;
 			} else {
 				error (ln, "'%s' is not a valid argument for '%s'",
@@ -320,7 +320,7 @@ uint8_t passtwo (uint32_t tbufind, uint16_t *addr, arrs_t *arrs)
 		if (opmask & PC11) {
 			uint8_t offt;
 			uint16_t laddr = labeladdr (arrs->label, token[1]);
-			ins += 0x800;														// 1 in bit 11 indicates JSR (JSRR is 0)
+			ins += 0x800;				// 1 in bit 11 indicates JSR (JSRR is 0)
 			if (laddr) {
 				int16_t off = (laddr - (*addr + 1));
 				if (!INRANGEB (off)) {
@@ -382,14 +382,21 @@ uint8_t passtwo (uint32_t tbufind, uint16_t *addr, arrs_t *arrs)
 		}
 		writefilebuf (arrs->filebuf, ins, ln);
 		*addr += 1;
+
 	} else if ((pseudoop = ispseudoop (token[0])) >= 0) {
-		if (pseudoop == END) {
+
+		switch (pseudoop) {
+		case END: {
 			end = 1;
-		} else if (pseudoop == STRINGZ) {
+			break;
+		}
+		case STRINGZ: {
 			for (uint16_t k = 0; k < token[1]->len; k++)
 				writefilebuf (arrs->filebuf, token[1]->str[k], ln);
 			*addr += token[1]->len;
-		} else if (pseudoop == BLKW) {
+			break;
+		}
+		case BLKW: {
 			uint8_t offt = offtype (token[1]);
 			uint16_t blknum = 0;
 
@@ -404,7 +411,9 @@ uint8_t passtwo (uint32_t tbufind, uint16_t *addr, arrs_t *arrs)
 				writefilebuf (arrs->filebuf, 0, ln);
 
 			*addr += blknum;
-		} else if (pseudoop == FILL) {
+			break;
+		}
+		case FILL: {
 			uint8_t offt = offtype (token[1]);
 			uint16_t laddr;
 
@@ -417,10 +426,17 @@ uint8_t passtwo (uint32_t tbufind, uint16_t *addr, arrs_t *arrs)
 				error (ln, "'%s' is not a valid argument for '%s'",
 						token[1]->str, token[0]->str);
 			}
-		} else {
+			break;
+		}
+		case EXPORT:
+		case IMPORT:
+			if (isproject ()) break;
+		default:
 			warning (ln, "Ignoring unexpected use of '%s' in program body",
 					token[0]->str);
+			break;
 		}
+
 	} else {
 		error (ln, "Unrecognized token '%s'", token[0]);
 	}
@@ -429,13 +445,21 @@ uint8_t passtwo (uint32_t tbufind, uint16_t *addr, arrs_t *arrs)
 	else return 0;
 }
 
+/*
+	assemble: assembles a single file specified by the filename passed as
+	a string, without checking file extension or format
+
+	input: filename as string
+	output: 0 if successful, 1 if unsuccessful
+*/
 int8_t assemble (char *file)
 {
-	notify ("Assembling %s...", file);
+	initnotify ();
+	setcurrentfile (file);
+	notify ("Assembling \"%s\"...\n", file);
 
 	filearr_t f = {NULL, NULL, NULL, NULL, NULL, NULL};
-	if (openasmfiles (&f, file))
-		return 1;		// exit with error if files unopenable
+	if (openasmfiles (&f, file)) return 1;			// exit if files unopenable
 
 	arrs_t arrs = {
 		inifilebuf (),
@@ -447,10 +471,8 @@ int8_t assemble (char *file)
 
 	uint32_t ln = 1;
 	uint16_t origaddr = preorig (f, &ln, &arrs);
+	uint32_t origind = arrs.tokbufarr->ind;
 	++ln;
-
-	fpos_t origpos;
-	fgetpos (f.fp, &origpos);
 
 	char line[MAX_LEN + 1];
 	uint8_t end = 0;
@@ -459,7 +481,7 @@ int8_t assemble (char *file)
 	// pass one
 	for (uint32_t i = ln ; fgets (line, MAX_LEN + 1, f.fp); i++) {
 		TokenBuffer *buf = tokenize (line);
-		if (buf->toknum == 0) {													// skip empty lines
+		if (buf->toknum == 0) {								// skip empty lines
 			freetokenarr (buf);
 			continue;
 		}
@@ -470,27 +492,25 @@ int8_t assemble (char *file)
 		error (ln, "No end detected!");
 	}
 
-	notify ("%d error(s) and %d warning(s) in pass one",
-			geterrors(), getwarnings());
-	// pass two does not execute if errors are encountered in pass one
-	if (!geterrors()) {
-		fsetpos (f.fp, &origpos);
-		end = 0;
+	uint32_t p1errs = geterrors ();
+	uint32_t p1warns = getwarnings ();
+	notify ("%d error(s) and %d warning(s) in pass one\n",
+			p1errs, p1warns);
+
+	if (p1errs == 0) {
 		addr = origaddr;
 
-		uint16_t endofprogram = arrs.tokbufarr->ind;
-		for (uint16_t i = 0; endofprogram; ++i, --endofprogram) {
-			end = passtwo (i, &addr, &arrs);
-			if (end) break;
+		uint16_t endofprogram = arrs.tokbufarr->ind - origind;
+		for (uint16_t i = origind; endofprogram; ++i, --endofprogram) {
+			passtwo (i, &addr, &arrs);
 		}
-		notify ("%d error(s) and %d warning(s) in pass two",
-				geterrors(), getwarnings());
+		notify ("%d error(s) and %d warning(s) in pass two\n",
+				geterrors() - p1errs, getwarnings() - p1warns);
 	} else {
-		notify ("Unresolved errors encountered in pass one, exiting...");
+		notify ("Unresolved errors encountered in pass one, exiting...\n");
 	}
 
 	// write buffers to file
-
 	writeobj (arrs.filebuf, f.obj);
 	writehex (arrs.filebuf, f.hex);
 	writebin (arrs.filebuf, f.bin);
@@ -499,8 +519,6 @@ int8_t assemble (char *file)
 	
 	if (geterrors()) clean (file);
 
-	notify ("Done!\n");
-
 	freefilebuf (arrs.filebuf);
 	freealiasarr (arrs.alias);
 	freemacroarr (arrs.macro);
@@ -508,5 +526,189 @@ int8_t assemble (char *file)
 	freetokenbufferarray (arrs.tokbufarr);
 	closeasmfiles (&f);
 
-	return 0;
+	notify ("Done!\n\n");
+
+	if (geterrors ()) return 1;
+	else return 0;
+}
+
+typedef struct ProjectNode {
+	filearr_t out;
+	arrs_t res;
+	uint16_t origaddr;
+	uint32_t origind;
+	uint32_t ln;
+} pnode_t;
+
+void generateshared (labelarr_t* share, pnode_t *node)
+{
+	uint32_t end = node->res.tokbufarr->ind - 1;
+	lineinfo_t **tmp = node->res.tokbufarr->arr;
+	for (uint32_t i = 0; end; --end, ++i) {
+		Token **tbuf = tmp[i]->buf->token;
+		if (strcmp(tbuf[0]->str, ".EXPORT") == 0 ||
+			strcmp(tbuf[0]->str, ".export") == 0)
+		{
+			uint32_t ln = tmp[i]->ln;
+			if (tmp[i]->buf->toknum < 2) {
+				error (ln, "'%s' requires an argument!", tbuf[0]->str);
+				break;
+			}
+
+			uint16_t addr = labeladdr (node->res.label, tbuf[1]);
+
+			if (addr) {
+				addlabel (share, ln, tbuf[1], addr);
+			}
+		}
+	}
+}
+
+void extendprivate (labelarr_t* share, pnode_t *node)
+{
+	uint16_t end = node->res.tokbufarr->ind - 1;
+	lineinfo_t **tmp = node->res.tokbufarr->arr;
+	for (uint32_t i = 0; end; --end, ++i) {
+		Token **tbuf = tmp[i]->buf->token;
+		if (strcmp(tbuf[0]->str, ".IMPORT") == 0 ||
+			strcmp(tbuf[0]->str, ".import") == 0)
+		{
+			uint32_t ln = tmp[i]->ln;
+			if (tmp[i]->buf->toknum < 2) {
+				error (ln, "'%s' requires an argument!", tbuf[0]->str);
+				break;
+			}
+
+			uint16_t addr = labeladdr (share, tbuf[1]);
+
+			if (addr) {
+				addlabel (node->res.label, ln, tbuf[1], addr);
+			}
+		}
+	}
+}
+
+/*
+	project: assembles a project comprised of multiple files specified in
+	an array of strings
+
+	input: filenames as array of strings
+	output: 0 if successful, 1 if unsuccessful
+*/
+int8_t project (char **files)
+{
+	if (!*files) return 1;		// nothing to assemble
+
+	notify ("Assembling ");
+	uint32_t filecount = 0;
+	for (; *(files + filecount); filecount++) {
+		notify ("\"%s\" ", *(files + filecount));
+	}
+	notify ("in project mode...\n");
+
+	pnode_t *project = (pnode_t*) calloc (filecount, sizeof (pnode_t));
+
+	notify ("Beginning pass one...\n");
+
+	for (uint32_t i = 0; i < filecount; i++) {
+		setcurrentfile (*(files + i));
+
+		if (openasmfiles (&project[i].out, *(files + i))) return 1;
+		project[i].res.filebuf = inifilebuf ();
+		project[i].res.alias = initaliasarr ();
+		project[i].res.macro = initmacroarr ();
+		project[i].res.label = initlabelarr ();
+		project[i].res.tokbufarr = inittokenbufferarray ();
+
+		project[i].ln = 1;
+		project[i].origaddr = preorig (project[i].out,
+									   &project[i].ln,
+									   &project[i].res);
+		project[i].origind = project[i].res.tokbufarr->ind;
+		project[i].ln++;
+
+		char line[MAX_LEN + 1];
+		uint8_t end = 0;
+		uint16_t addr = project[i].origaddr;
+
+		for (uint32_t j = project[i].ln;
+			 fgets (line, MAX_LEN + 1, project[i].out.fp);
+			 j++)
+		{
+			TokenBuffer *buf = tokenize (line);
+			if (buf->toknum == 0) {							// skip empty lines
+				freetokenarr (buf);
+				continue;
+			}
+			end = passone (j, &addr, buf, &project[i].res);
+			if (end) break;
+		}
+		if (!end) {
+			error (project[i].ln, "No end detected!");
+		}
+	}
+
+	uint32_t p1errs = geterrors ();
+	uint32_t p1warns = getwarnings ();
+	notify ("%d error(s) and %d warning(s) in pass one\n",
+			p1errs, p1warns);
+
+	if (p1errs == 0) {
+
+		labelarr_t *shared = initlabelarr ();
+		for (uint32_t i = 0; i < filecount; i++) {
+			generateshared (shared, &project[i]);
+		}
+
+		for (uint32_t i = 0; i < filecount; i++) {
+			extendprivate (shared, &project[i]);
+		}
+		freelabelarr (shared);
+
+		// pass two for all project files
+		for (uint32_t i = 0; i < filecount; i++) {
+			setcurrentfile (*(files + i));
+
+			uint16_t addr = project[i].origaddr;
+
+			uint16_t end = project[i].res.tokbufarr->ind - project[i].origind;
+			for (uint16_t j = project[i].origind;
+				 end;
+				 ++j, --end)
+			{
+				passtwo (j, &addr, &project[i].res);
+			}
+		}
+		notify ("%d error(s) and %d warning(s) in pass two\n",
+				geterrors() - p1errs, getwarnings() - p1warns);
+	} else {
+		notify ("Unresolved errors encountered in pass one, exiting...\n");
+	}
+
+
+	// write buffers to file and clean up
+	for (uint32_t i = 0; i < filecount; i++) {
+		writeobj (project[i].res.filebuf, project[i].out.obj);
+		writehex (project[i].res.filebuf, project[i].out.hex);
+		writebin (project[i].res.filebuf, project[i].out.bin);
+		writesym (project[i].res.label, project[i].out.sym);
+		writelst (project[i].res.filebuf,
+				  project[i].out.fp,
+				  project[i].out.lst);
+		
+		if (geterrors()) clean (*(files + i));
+
+		freefilebuf (project[i].res.filebuf);
+		freealiasarr (project[i].res.alias);
+		freemacroarr (project[i].res.macro);
+		freelabelarr (project[i].res.label);
+		freetokenbufferarray (project[i].res.tokbufarr);
+		closeasmfiles (&project[i].out);
+	}
+	free (project);
+
+	notify ("Done!\n\n");
+
+	if (geterrors ()) return 1;
+	else return 0;
 }

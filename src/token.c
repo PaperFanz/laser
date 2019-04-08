@@ -195,7 +195,7 @@ lineinfo_t* fromtokenbufferarray (tokbufarr_t *arr, uint16_t index)
 
 void freetokenbufferarray (tokbufarr_t *arr)
 {
-	for (uint16_t i = 0; i < arr->ind; i++) {
+	for (uint32_t i = 0; i < arr->ind; i++) {
 		freetokenarr (arr->arr[i]->buf);
 		free (arr->arr[i]);
 	}

@@ -13,6 +13,8 @@
 	int8_t clean (char *file);
 
 	int8_t assemble (char *file);
+
+	int8_t project (char **files);
 #endif
 
 #ifdef USES_ALIAS
@@ -196,11 +198,15 @@
 
 	void setVerbosity (int8_t q);
 
+	void setcurrentfile (char *file);
+
 	void notify (const char *format, ...);
 
 	void warning (uint32_t ln, const char *format, ...);
 
 	void error (uint32_t ln, const char *format, ...);
+
+	void initnotify (void);
 
 	uint32_t getwarnings (void);
 
@@ -214,14 +220,16 @@
 #endif
 
 #ifdef USES_PSEUDOOP
-	enum pseudoops {
+	enum popcodes {
 		ALIAS,
 		MACRO,
 		ORIG,
 		END,
 		STRINGZ,
 		BLKW,
-		FILL
+		FILL,
+		EXPORT,
+		IMPORT
 	};
 
 	int8_t ispseudoop (Token *token);

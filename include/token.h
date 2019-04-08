@@ -35,8 +35,8 @@ typedef struct LineInfo {
 
 typedef struct TokenBufferArray {
 	lineinfo_t **arr;
-	uint16_t cap;
-	uint16_t ind;
+	uint32_t cap;
+	uint32_t ind;
 } tokbufarr_t;
 
 #define DEFAULT_ARR_SIZE 200

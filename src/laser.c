@@ -70,36 +70,41 @@ int8_t main (int argc, char **argv)
 		uint8_t validproject = 1;
 		for (uint32_t i = 0; *(argv + i); i++) {
 			if (!checkextension (*(argv + i), ".asm")) {
-				notify ("'%s' is not an assembly file, exiting...",
+				notify ("'%s' is not an assembly file, exiting...\n",
 						*(argv + i));
 				validproject = 0;
 			}
+			jobs++;
 		}
 
 		if (validproject) {
-			// assemble a project TODO
+			project (argv);
+		} else {
+			jobs = 0;
 		}
 	} else if (isassemble ()) {
 		for (; *argv; argv++) {
 			if (checkextension (*argv, ".asm")) {
 				assemble (*argv);
+				jobs++;
 			} else {
-				notify ("'%s' is not an assembly file, continuing...",
+				notify ("'%s' is not an assembly file, continuing...\n",
 						*argv);
 			}
 		}
 	} else if (isclean ()) {
 		for (; *argv; argv++) {
 			if (checkextension (*argv, ".asm")) {
-				assemble (*argv);
+				clean (*argv);
+				jobs++;
 			} else {
-				notify ("'%s' is not an assembly file, continuing...",
+				notify ("'%s' is not an assembly file, continuing...\n",
 						*argv);
 			}
 		}
 	} else {
 		for (; *argv; argv++) {
-			notify ("'%s' is not a valid option!", *argv);
+			notify ("'%s' is not a valid option!\n", *argv);
 		}
 	}
 
@@ -116,7 +121,8 @@ int8_t main (int argc, char **argv)
 
 		char *s = "jobs";
 		if (jobs == 1) s = "job";
-		notify ("%d %s completed in %02.0f:%02.0f:%03.0f\n", jobs, s, mins, secs, msecs);
+		notify ("%d %s completed in %02.0f:%02.0f:%03.0f\n",
+				jobs, s, mins, secs, msecs);
 		// notify ("%d %s completed in %f\n", jobs, s, cpu_time);
 	}
 

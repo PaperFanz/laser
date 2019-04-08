@@ -14,13 +14,13 @@ int8_t isregister (Token *token)
 {
 	const char *regs[][2] = {
 		{"R0", "r0"},
-		{"R1", "r0"},
-		{"R2", "r0"},
-		{"R3", "r0"},
-		{"R4", "r0"},
-		{"R5", "r0"},
-		{"R6", "r0"},
-		{"R7", "r0"}
+		{"R1", "r1"},
+		{"R2", "r2"},
+		{"R3", "r3"},
+		{"R4", "r4"},
+		{"R5", "r5"},
+		{"R6", "r6"},
+		{"R7", "r7"}
 	};
 
 	return arrcmp (token->str, regs, 8);

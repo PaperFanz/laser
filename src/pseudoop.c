@@ -1,3 +1,4 @@
+#define USES_PSEUDOOP
 #define USES_OFFSET
 #include "laser.h"
 
@@ -12,12 +13,12 @@ int8_t ispseudoop (Token *token)
 		".END", ".end",			// 3
 		".STRINGZ", ".stringz",	// 4
 		".BLKW", ".blkw",		// 5
-		".FILL", ".fill"		// 6
+		".FILL", ".fill",		// 6
+		".EXPORT", ".export",	// 7
+		".IMPORT", ".import"	// 8
 	};
-	return arrcmp (token->str, pops, 7);
+	return arrcmp (token->str, pops, 9);
 }
-
-enum popcodes {ALIAS, MACRO, ORIG, END, STRINGZ, BLKW, FILL};
 
 uint16_t addrnum (uint8_t popcode, Token *token)
 {
