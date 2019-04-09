@@ -9,6 +9,13 @@
 #define USES_PSEUDOOP
 #include "laser.h"
 
+/*
+	arrs_t: this typedef'd struct is used to keep project assembly organized,
+	since each '.asm' file requires a filebuffer, an array of relevant resources
+	(aliases, macros, and labels), and an array of tokens from preorig and
+	passone
+*/
+
 typedef struct Arrays {
 	filebuf_t *filebuf;
 	aliasarr_t *alias;
@@ -16,6 +23,18 @@ typedef struct Arrays {
 	labelarr_t *label;
 	tokbufarr_t *tokbufarr;
 } arrs_t;
+
+/*
+	preorig: travels through and assembly file until it encounters the '.ORIG'
+	statement, then returns the specified origin address. Returns 0 if no
+	'.ORIG' is encountered
+
+	inputs: an array of files relevant to the currently assembled file
+			a pointer to the line number for error reporting
+			pointer to an arrs_t struct initialized in assemble()
+
+	outputs: origin address or 0 (err)
+*/
 
 uint16_t preorig (filearr_t f, uint32_t *ln, arrs_t *arrs)
 {
@@ -41,7 +60,7 @@ uint16_t preorig (filearr_t f, uint32_t *ln, arrs_t *arrs)
 			break;
 		case ORIG:
 			orig_addr = offset(1, token[1]);
-			writefilebuf (arrs->filebuf, orig_addr, i);
+			writefilebuf (arrs->filebuf, 0, orig_addr, i);
 			break;
 		case EXPORT:
 		case IMPORT:
@@ -97,6 +116,18 @@ const uint8_t popnumarr[] = {
 	1,	// EXPORT
 	1	// IMPORT
 };
+
+/*
+	passone: parses a single line of assembly, checking for number of arguments
+			 based on opcode and generating the symbol table
+
+	inputs: line number
+			pointer to the address
+			a token buffer with the tokenized line
+			pointer to an arrs_t with the populated resources
+
+	outputs: 0, 1 when '.END' is reached
+*/
 
 uint8_t passone (uint32_t ln, uint16_t *addr, TokenBuffer *buf, arrs_t *arrs)
 {
@@ -227,6 +258,19 @@ const uint8_t opmaskarr[] = {
 #define INRANGE9(x) ((-256 <= (x)) && ((x) <= 255))
 #define INRANGEB(x) ((-1024 <= (x)) && ((x) <= 1023))
 
+/*
+	passtwo: converts a single line of assembly to an instruction, and writing
+			 the relevant information to a filebuffer (in arrs_t)
+
+	inputs: an index for the populated array of token buffers that will
+			be used to fetch the token buffer to parse,
+			a pointer to the address,
+			a pointer to an arrs_t generated in assemble() and populated in
+			preorig() and passone()
+
+	outputs: 0, 1 when '.END' is reached
+*/
+
 uint8_t passtwo (uint32_t tbufind, uint16_t *addr, arrs_t *arrs)
 {
 	lineinfo_t *line = fromtokenbufferarray (arrs->tokbufarr, tbufind);
@@ -341,7 +385,7 @@ uint8_t passtwo (uint32_t tbufind, uint16_t *addr, arrs_t *arrs)
 			}
 		}
 		if (opcode ==  NOT) {
-			ins += 0x3F;														// this is in the spec for some reason
+			ins += 0x3F;				// this is in the spec for some reason
 		}
 		if (opmask & OFF6) {
 			uint8_t offt = offtype (token[3]);
@@ -380,7 +424,7 @@ uint8_t passtwo (uint32_t tbufind, uint16_t *addr, arrs_t *arrs)
 			}
 			ins += trapvect8 & 0xFF;
 		}
-		writefilebuf (arrs->filebuf, ins, ln);
+		writefilebuf (arrs->filebuf, *addr, ins, ln);
 		*addr += 1;
 
 	} else if ((pseudoop = ispseudoop (token[0])) >= 0) {
@@ -391,9 +435,10 @@ uint8_t passtwo (uint32_t tbufind, uint16_t *addr, arrs_t *arrs)
 			break;
 		}
 		case STRINGZ: {
-			for (uint16_t k = 0; k < token[1]->len; k++)
-				writefilebuf (arrs->filebuf, token[1]->str[k], ln);
-			*addr += token[1]->len;
+			for (uint16_t k = 0; k < token[1]->len; k++) {
+				writefilebuf (arrs->filebuf, *addr, token[1]->str[k], ln);
+				*addr += 1;
+			}
 			break;
 		}
 		case BLKW: {
@@ -407,10 +452,10 @@ uint8_t passtwo (uint32_t tbufind, uint16_t *addr, arrs_t *arrs)
 						token[1]->str, token[0]->str);
 			}
 
-			for (uint16_t k = 0; k < blknum; k++)
-				writefilebuf (arrs->filebuf, 0, ln);
-
-			*addr += blknum;
+			for (uint16_t k = 0; k < blknum; k++) {
+				writefilebuf (arrs->filebuf, *addr, 0, ln);
+				*addr += 1;
+			}
 			break;
 		}
 		case FILL: {
@@ -418,10 +463,11 @@ uint8_t passtwo (uint32_t tbufind, uint16_t *addr, arrs_t *arrs)
 			uint16_t laddr;
 
 			if (offt > 0) {
-				writefilebuf (arrs->filebuf, offset (offt, token[1]), ln);
+				writefilebuf (arrs->filebuf, *addr, offset (offt, token[1]), ln);
 				*addr += 1;
 			} else if ((laddr = labeladdr (arrs->label, token[1])) > 0) {
-				writefilebuf (arrs->filebuf, laddr, ln);
+				writefilebuf (arrs->filebuf, *addr, laddr, ln);
+				*addr += 1;
 			} else {
 				error (ln, "'%s' is not a valid argument for '%s'",
 						token[1]->str, token[0]->str);
@@ -462,7 +508,7 @@ int8_t assemble (char *file)
 	if (openasmfiles (&f, file)) return 1;			// exit if files unopenable
 
 	arrs_t arrs = {
-		inifilebuf (),
+		initfilebuf (),
 		initaliasarr (),
 		initmacroarr (),
 		initlabelarr (),
@@ -532,6 +578,10 @@ int8_t assemble (char *file)
 	else return 0;
 }
 
+/*
+	pnode_t: contains everything needed to assemble a single assembly file,
+			 and used in project-mode assembly to keep everything organized
+*/
 typedef struct ProjectNode {
 	filearr_t out;
 	arrs_t res;
@@ -540,6 +590,17 @@ typedef struct ProjectNode {
 	uint32_t ln;
 } pnode_t;
 
+/*
+	generateshared: called by project() between pass one and pass two of ALL
+			assemble jobs in order to generate a shared symbol table based on
+			'.EXPORT' statements
+
+	inputs: a pointer to a shared symbol table
+			a pointer to a pnode_t initialized in project() and populated in
+			pass one
+
+	outputs: none
+*/
 void generateshared (labelarr_t* share, pnode_t *node)
 {
 	uint32_t end = node->res.tokbufarr->ind - 1;
@@ -564,6 +625,17 @@ void generateshared (labelarr_t* share, pnode_t *node)
 	}
 }
 
+/*
+	extendprivate: called by project() after call to generate shared between
+			pass one and pass two of ALL assemble jobs in order to populate
+			each pnode's own resource arrays based on '.IMPORT' statements
+
+	inputs: a pointer to a shared symbol table
+			a pointer to a pnode_t initialized in project() and populated in
+			pass one
+
+	outputs: none
+*/
 void extendprivate (labelarr_t* share, pnode_t *node)
 {
 	uint16_t end = node->res.tokbufarr->ind - 1;
@@ -614,7 +686,7 @@ int8_t project (char **files)
 		setcurrentfile (*(files + i));
 
 		if (openasmfiles (&project[i].out, *(files + i))) return 1;
-		project[i].res.filebuf = inifilebuf ();
+		project[i].res.filebuf = initfilebuf ();
 		project[i].res.alias = initaliasarr ();
 		project[i].res.macro = initmacroarr ();
 		project[i].res.label = initlabelarr ();

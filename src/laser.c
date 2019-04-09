@@ -64,7 +64,7 @@ int8_t main (int argc, char **argv)
 	*/
 	clock_t start, end;
 	start = clock ();
-	uint32_t jobs = 0;
+	uint32_t jobs = 0, failed = 0;
 
 	if (isproject ()) {
 		uint8_t validproject = 1;
@@ -74,18 +74,18 @@ int8_t main (int argc, char **argv)
 						*(argv + i));
 				validproject = 0;
 			}
-			jobs++;
 		}
 
 		if (validproject) {
-			project (argv);
+			failed += project (argv);
+			jobs++;
 		} else {
 			jobs = 0;
 		}
 	} else if (isassemble ()) {
 		for (; *argv; argv++) {
 			if (checkextension (*argv, ".asm")) {
-				assemble (*argv);
+				failed += assemble (*argv);
 				jobs++;
 			} else {
 				notify ("'%s' is not an assembly file, continuing...\n",
@@ -95,7 +95,7 @@ int8_t main (int argc, char **argv)
 	} else if (isclean ()) {
 		for (; *argv; argv++) {
 			if (checkextension (*argv, ".asm")) {
-				clean (*argv);
+				failed += clean (*argv);
 				jobs++;
 			} else {
 				notify ("'%s' is not an assembly file, continuing...\n",
@@ -121,9 +121,10 @@ int8_t main (int argc, char **argv)
 
 		char *s = "jobs";
 		if (jobs == 1) s = "job";
-		notify ("%d %s completed in %02.0f:%02.0f:%03.0f\n",
-				jobs, s, mins, secs, msecs);
 		// notify ("%d %s completed in %f\n", jobs, s, cpu_time);
+		notify ("%d %s processed in %02.0f:%02.0f:%03.0f\n",
+				jobs, s, mins, secs, msecs);
+		notify ("%d successful, %d failed\n", jobs - failed, failed);
 	}
 
 

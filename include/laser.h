@@ -140,6 +140,7 @@
 	} filearr_t;
 
 	typedef struct FileBuffer {
+		uint16_t *addrbuf;
 		uint16_t *insbuf;
 		uint32_t *lnbuf;
 		uint16_t ind;
@@ -158,9 +159,9 @@
 
 	FILE* getlog (void);
 
-	void writefilebuf (filebuf_t *buf, uint16_t ins, uint32_t ln);
+	void writefilebuf (filebuf_t *buf, uint16_t addr, uint16_t ins, uint32_t ln);
 
-	filebuf_t* inifilebuf(void);
+	filebuf_t* initfilebuf(void);
 
 	void freefilebuf(filebuf_t *buf);
 

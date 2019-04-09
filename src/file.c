@@ -113,21 +113,17 @@ const char *extensions[] = {
 int8_t clean (char *file)
 {
 	bool err = 0;
-	notify ("Cleaning up...\n");
+	notify ("\nCleaning up...\n");
 	for (int i = 0; i < (islogging () ? 6 : 5); i++) {
 		replaceextension (file, extensions[i]);
-		notify ("  Deleting \"%s\"...\n", file);
+		notify ("Deleting \"%s\"...\n", file);
 		if (remove (file)) {
-			notify ("    Unable to delete '%s'!\n", file);
+			notify ("Unable to delete '%s'!\n", file);
 			err = 1;
 		}
 	}
-	notify ("Done!\n\n");
-
 	replaceextension (file, ".sym");
-
-	if (err) return -2;
-	else return 0;
+	return err;
 }
 
 void closeasmfiles (filearr_t *f)
@@ -142,24 +138,27 @@ void closeasmfiles (filearr_t *f)
 
 #define DEFAULT_FILEBUF_SIZE 256
 
-void writefilebuf (filebuf_t *buf, uint16_t ins, uint32_t ln)
+void writefilebuf (filebuf_t *buf, uint16_t addr, uint16_t ins, uint32_t ln)
 {
 	uint16_t index = buf->ind;
 	if (index == buf->cap) {
 		buf->cap *= 2;
+		buf->addrbuf = (uint16_t*) realloc (buf->addrbuf, buf->cap * sizeof (uint16_t));
 		buf->insbuf = (uint16_t*) realloc (buf->insbuf, buf->cap * sizeof (uint16_t));
 		buf->lnbuf = (uint32_t*) realloc (buf->lnbuf, buf->cap * sizeof (uint32_t));
 	}
+	buf->addrbuf[index] = addr;
 	buf->insbuf[index] = ins;
 	buf->lnbuf[index] = ln;
 	buf->ind++;
 }
 
-filebuf_t* inifilebuf(void)
+filebuf_t* initfilebuf(void)
 {
 	filebuf_t *buf = (filebuf_t*) malloc (sizeof (filebuf_t));
 	buf->ind = 0;
 	buf->cap = DEFAULT_FILEBUF_SIZE;
+	buf->addrbuf = (uint16_t*) malloc (buf->cap * sizeof (uint16_t));
 	buf->insbuf = (uint16_t*) malloc (buf->cap * sizeof (uint16_t));
 	buf->lnbuf = (uint32_t*) malloc (buf->cap * sizeof (uint32_t));
 	return buf;
@@ -168,6 +167,7 @@ filebuf_t* inifilebuf(void)
 void freefilebuf(filebuf_t *buf)
 {
 	if (buf == 0) return;
+	if (buf->addrbuf != 0) free (buf->addrbuf);
 	if (buf->insbuf != 0) free (buf->insbuf);
 	if (buf->lnbuf != 0) free (buf->lnbuf);
 	free (buf);
@@ -231,7 +231,7 @@ void writesym (labelarr_t *symarr, FILE *sym)
 	}
 }
 
-const char* lstheader = "  HEX  |      BINARY      |  LN  |  ASSEMBLY\n";
+const char* lstheader = "  ADDR  |  HEX  |      BINARY      |  LN  |  ASSEMBLY\n";
 
 void writelst (filebuf_t *buf, FILE *fp, FILE *lst)
 {
@@ -239,29 +239,27 @@ void writelst (filebuf_t *buf, FILE *fp, FILE *lst)
 	fprintf (lst, "%s", lstheader);
 
 	char line[MAX_LEN + 1];
-	uint16_t ind = 0, maxind = buf->ind;
-	for (uint32_t ln = 1; fgets (line, MAX_LEN + 1, fp) && ind < maxind; ln++) {
-		if (buf->lnbuf[ind] == ln) {
-			uint16_t tmp = buf->insbuf[ind];
-			fprintf (lst, " x%04X | %s%s%s%s ", tmp, instobin(tmp));
+	uint16_t ind = 1, maxind = buf->ind;
+	for (uint32_t ln = 1; fgets (line, MAX_LEN + 1, fp); ln++) {
+		if (ind != maxind && buf->lnbuf[ind] == ln) {
+			uint16_t ins = buf->insbuf[ind];
+			uint16_t addr = buf->addrbuf[ind];
+			fprintf (lst, " x%04X  | x%04X | %s%s%s%s ", addr, ins, instobin(ins));
 			ind++;
 		} else {
-			fprintf (lst, "       |                  ");
+			fprintf (lst, "        |       |                  ");
 		}
 
 		fprintf (lst, "| %4d | %s", ln, line);
-		if (ind == maxind) break;
 
 		/*
 			for cases such as .STRINGZ and .BLKW where a single line of
 			assembly generates multiple instructions
 		*/
-		while (buf->lnbuf[ind] == ln) {
-			uint16_t tmp = buf->insbuf[ind];
-			fprintf (lst, " x%04X | %s%s%s%s |      |\n", tmp, instobin(tmp));
+		while (ind != maxind && buf->lnbuf[ind] == ln) {
+			uint16_t ins = buf->insbuf[ind];
+			fprintf (lst, " x%04X | %s%s%s%s |      |\n", ins, instobin(ins));
 			ind++;
-			if (ind == maxind) break;
 		}
-		if (ind == maxind) break;
 	}
 }
