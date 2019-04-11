@@ -128,31 +128,38 @@ const uint8_t popnumarr[] = {
 
     outputs: 0, 1 when '.END' is reached
 */
-
 uint8_t passone (uint32_t ln, uint16_t *addr, TokenBuffer *buf, arrs_t *arrs)
 {
-    uint8_t end = 0;
-    uint32_t macro = findmacro (arrs->macro, buf->token[0]);
-    if (macro != -1) {
-        freetokenarr (buf);
-        buf = tokenize (arrs->macro->arr[macro].replace->str);
-    }
-    
-    for (uint8_t j = 0; j < buf->toknum; j++) {
-        uint32_t alias = findalias (arrs->alias, buf->token[j]);
-        if (alias != -1) {
-            freetoken (buf->token[j]);
-            buf->token[j] = (Token*) malloc (sizeof (Token));
-            copytoken (buf->token[j], arrs->alias->arr[alias].reg);
-        }
-    }
+    uint8_t end = 0;    // return value
 
+    // if line begins with a macro, replace the token buffer with the declared
+    // replacement and variables (if any)
+    // uint32_t macro = findmacro (arrs->macro, buf->token[0]);
+    // if (macro != -1) {
+    //     buf = replacemacro (buf, arrs->macro->arr[macro].replace);
+    //     if (buf == NULL) {
+    //         error (ln, "macro '%s : %s' requires an argument!",
+    //                 arrs->macro->arr[macro].macro->str,
+    //                 arrs->macro->arr[macro].replace->str);
+    //         return 1;
+    //     }
+    // }
+
+    // some shortcuts
     Token **token = buf->token;
     int8_t op = -1, pop = -1, opnum = -1, opcount = 0;
-    char *tok;
+    char *tok;  // used to store the operator for this tokenbuffer
 
-    for (uint8_t j = 0; j < buf->toknum; j++) {
-        if (isvalidlabel (token[j]) && j == 0) {
+    for (uint8_t j = 0; j < buf->toknum; ++j) {
+
+        uint32_t alias = -1;    // value must be reset to -1 with every loop
+
+        if (j == 0 && isvalidlabel (token[j])) {
+            /*
+                a label should only be added to the sumbol table if it is the
+                first token in a line
+            */
+            tok = token[j]->str;
             addlabel (arrs->label, ln, token[j], *addr);
             opnum = 0;
         } else if ((op = isoperand (token[j])) >= 0) {
@@ -167,6 +174,7 @@ uint8_t passone (uint32_t ln, uint16_t *addr, TokenBuffer *buf, arrs_t *arrs)
                 break;
             }
 
+            // this error will be handled later, in the opnum checking
             if (j + 1 >= buf->toknum) break;
 
             if (pop == STRINGZ) {
@@ -177,12 +185,20 @@ uint8_t passone (uint32_t ln, uint16_t *addr, TokenBuffer *buf, arrs_t *arrs)
             } else if (pop == FILL) {
                 *addr += 1;
             } else {
+                // catch
                 warning (ln, "Ignoring unexpected use of '%s' in program body",
                         token[j]->str);
             }
         } else if (isregister (token[j]) >= 0) {
             opcount++;
-        } else if (offtype (token[j]) >= 0) {
+        } else if (offtype (token[j]) > 0) {
+            opcount++;
+        } else if ((alias = findalias (arrs->alias, token[j])) != -1) {
+            freetoken (buf->token[j]);
+            buf->token[j] = (Token*) malloc (sizeof (Token));
+            copytoken (buf->token[j], arrs->alias->arr[alias].reg);
+            opcount++;
+        } else if (isvalidlabel (token[j])) {
             opcount++;
         } else {
             error (ln, "Unrecognized token '%s'", token[j]->str);
@@ -531,6 +547,16 @@ int8_t assemble (char *file)
             freetokenarr (buf);
             continue;
         }
+        uint32_t macro = findmacro (arrs.macro, buf->token[0]);
+        if (macro != -1) {
+            buf = replacemacro (buf, arrs.macro->arr[macro].replace);
+            if (buf == NULL) {
+                error (ln, "macro '%s : %s' requires an argument!",
+                        arrs.macro->arr[macro].macro->str,
+                        arrs.macro->arr[macro].replace->str);
+                continue;
+            }
+        }
         end = passone (i, &addr, buf, &arrs);
         if (end) break;
     }
@@ -702,21 +728,32 @@ int8_t project (char **files)
         char line[MAX_LEN + 1];
         uint8_t end = 0;
         uint16_t addr = project[i].origaddr;
+        macroarr_t *curmacro = project[i].res.macro;
 
-        for (uint32_t j = project[i].ln;
+        for (uint32_t ln = project[i].ln;
              fgets (line, MAX_LEN + 1, project[i].out.fp);
-             j++)
+             ln++)
         {
             TokenBuffer *buf = tokenize (line);
             if (buf->toknum == 0) {							// skip empty lines
                 freetokenarr (buf);
                 continue;
             }
-            end = passone (j, &addr, buf, &project[i].res);
+            uint32_t macro = findmacro (curmacro, buf->token[0]);
+            if (macro != -1) {
+                buf = replacemacro (buf, curmacro->arr[macro].replace);
+                if (buf == NULL) {
+                    error (ln, "macro '%s : %s' requires an argument!",
+                            curmacro->arr[macro].macro->str,
+                            curmacro->arr[macro].replace->str);
+                    continue;
+                }
+            }
+            end = passone (ln, &addr, buf, &project[i].res);
             if (end) break;
         }
         if (!end) {
-            error (project[i].ln, "No end detected!");
+            error (project[i].ln, "no end detected!");
         }
     }
 
@@ -727,17 +764,19 @@ int8_t project (char **files)
 
     if (p1errs == 0) {
 
+        notify ("Generating shared symbol table...\n");
         labelarr_t *shared = initlabelarr ();
         for (uint32_t i = 0; i < filecount; i++) {
             generateshared (shared, &project[i]);
         }
 
+        notify ("Extending private symbol tables...\n");
         for (uint32_t i = 0; i < filecount; i++) {
             extendprivate (shared, &project[i]);
         }
         freelabelarr (shared);
 
-        // pass two for all project files
+        notify ("Beginning pass two...\n");
         for (uint32_t i = 0; i < filecount; i++) {
             setcurrentfile (*(files + i));
 

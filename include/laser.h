@@ -58,6 +58,8 @@
 
     int32_t findmacro (macroarr_t *m, Token *macro);
 
+    TokenBuffer* replacemacro (TokenBuffer *buf, Token *replace);
+
     macroarr_t* initmacroarr (void);
 
     void freemacroarr (macroarr_t *m);
