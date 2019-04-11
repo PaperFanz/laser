@@ -17,18 +17,18 @@ _OBJ = $(_MAIN_OBJ) $(_PARSE_OBJ) $(_DEP_OBJ) $(_ASM_OBJ)
 OBJ = $(patsubst %, $(ODIR)/%,$(_OBJ))
 
 $(ODIR)/%.o: %.c $(DEPS)
-    $(CC) -c -o $@ $< $(CFLAGS)
+	$(CC) -c -o $@ $< $(CFLAGS)
 
 laser: $(OBJ)
-    $(CC) -o $@ $^ $(CFLAGS)
+	$(CC) -o $@ $^ $(CFLAGS)
 
 .PHONY: clean install uninstall
 
 clean:
-    rm -f $(ODIR)/*.o && rm -f laser
+	rm -f $(ODIR)/*.o && rm -f laser
 
 install:
-    cp laser /usr/local/bin
+	cp laser /usr/local/bin
 
 uninstall:
-    rm -f /usr/local/bin/laser
+	rm -f /usr/local/bin/laser

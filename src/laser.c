@@ -30,29 +30,34 @@ int8_t main (int argc, char **argv)
 
         switch (flag) {
         case VERSION:
-            printf ("laser version %s\n", version_num);
-            break;
+        printf ("laser version %s\n", version_num);
+        break;
         case HELP:
-            printf ("%s", help);
-            break;
+        printf ("%s", help);
+        break;
         case QUIET:
-            setVerbosity (noWarn);		// notify.c
-            break;
+        setVerbosity (noWarn);		// notify.c
+        break;
         case SILENT:
-            setVerbosity (noErrs);		// notify.c
-            break;
+        setVerbosity (noErrs);		// notify.c
+        break;
         case ASSEMBLE:
-            setassemble ();				// flag.c
-            break;
+        setassemble ();				// flag.c
+        break;
         case CLEAN:
-            setclean ();				// flag.c
-            break;
+        setclean ();				// flag.c
+        break;
         case LOG:
-            setlog ();					// flag.c
-            break;
+        if (*(argv + 1)) {
+            if (checkflags (*(++argv)) == -1) {
+                if (!setcurrentlog (*argv)) setlog ();
+            }
+            else notify ("Please pass a valid log file after '-l'\n");
+        }
+        break;
         case PROJECT:
-            setproject ();				// flag.c
-            break;
+        setproject ();				// flag.c
+        break;
         default:
             break;
         }
@@ -127,6 +132,8 @@ int8_t main (int argc, char **argv)
         notify ("%d successful, %d failed\n", jobs - failed, failed);
     }
 
+    if (islogging ()) endlog ();
 
+    if (failed) err = 1;
     return err;
 }

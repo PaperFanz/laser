@@ -157,8 +157,6 @@
 
     int8_t clean (char *file);
 
-    FILE* getlog (void);
-
     void writefilebuf (filebuf_t *buf, uint16_t addr, uint16_t ins, uint32_t ln);
 
     filebuf_t* initfilebuf(void);
@@ -198,6 +196,10 @@
     };
 
     void setVerbosity (int8_t q);
+
+    uint8_t setcurrentlog (char *file);
+
+    void endlog (void);
 
     void setcurrentfile (char *file);
 

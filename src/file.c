@@ -37,13 +37,6 @@ void replaceextension (char *file, const char *extension)
     }
 }
 
-static FILE *LOGFILE = NULL;
-
-FILE* getlog (void)
-{
-    return LOGFILE;
-}
-
 uint8_t openasmfiles (filearr_t *f, char *file)
 {
     uint8_t failed = 0;
@@ -86,15 +79,6 @@ uint8_t openasmfiles (filearr_t *f, char *file)
     if (f->lst == NULL) {
         notify ("Unable to open %s!\n", file);
         failed++;
-    }
-
-    if (islogging ()) {
-        replaceextension (file, ".log");
-        LOGFILE = fopen (file, "w");
-        if (LOGFILE == NULL) {
-            notify ("Unable to open %s!\n", file);
-            failed++;
-        }
     }
     replaceextension (file, ".asm");
 
