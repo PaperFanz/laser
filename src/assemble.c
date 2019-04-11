@@ -1,3 +1,26 @@
+/*
+*   Laser- a command line utility to assemble LC3 assembly code
+*
+*   Copyright Notice:
+*
+*       Copyright 2018, 2019 Zhiyuan Fan
+*
+*   License Notice:
+*
+*       Laser is free software: you can redistribute it and/or modify
+*       it under the terms of the GNU General Public License as published by
+*       the Free Software Foundation, either version 3 of the License, or
+*       (at your option) any later version.
+*
+*       Laser is distributed in the hope that it will be useful,
+*       but WITHOUT ANY WARRANTY; without even the implied warranty of
+*       MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+*       GNU General Public License for more details.
+*
+*       You should have received a copy of the GNU General Public License
+*       along with Laser.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 #define USES_FILE
 #define USES_FLAG
 #define USES_ALIAS
@@ -76,9 +99,6 @@ uint16_t preorig (filearr_t f, uint32_t *ln, arrs_t *arrs)
         abuttokenbufferarray (arrs->tokbufarr, buf, i);
         if (orig_addr) break;
     }
-
-    if (!orig_addr) error (i, "No origin detected!");
-
     *ln = i;
     return orig_addr;
 }
@@ -176,18 +196,21 @@ uint8_t passone (uint32_t ln, uint16_t *addr, TokenBuffer *buf, arrs_t *arrs)
 
             // this error will be handled later, in the opnum checking
             if (j + 1 >= buf->toknum) break;
+            ++j;
 
             if (pop == STRINGZ) {
-                *addr += token[j + 1]->len;
+                *addr += token[j]->len;
+                ++opcount;
             } else if (pop == BLKW) {
-                uint8_t offt = offtype (token[j + 1]);
-                if (offt > 0) *addr += offset (offt, token[j + 1]);
+                uint8_t offt = offtype (token[j]);
+                if (offt > 0) *addr += offset (offt, token[j]);
+                ++opcount;
             } else if (pop == FILL) {
                 *addr += 1;
+                ++opcount;
             } else {
-                // catch
                 warning (ln, "Ignoring unexpected use of '%s' in program body",
-                        token[j]->str);
+                        token[j - 1]->str);
             }
         } else if (isregister (token[j]) >= 0) {
             opcount++;
@@ -532,13 +555,18 @@ int8_t assemble (char *file)
     };
 
     uint32_t ln = 1;
-    uint16_t origaddr = preorig (f, &ln, &arrs);
-    uint32_t origind = arrs.tokbufarr->ind;
+    uint16_t addr = 0;
+    uint32_t origind = 0;
+    if (preorig (f, &ln, &arrs)) {
+        addr = arrs.filebuf->insbuf[0];
+        origind = arrs.tokbufarr->ind;
+    } else {
+        error (ln, "No origin address declared!\n");
+    }
     ++ln;
 
     char line[MAX_LEN + 1];
     uint8_t end = 0;
-    uint16_t addr = origaddr;
 
     // pass one
     for (uint32_t i = ln ; fgets (line, MAX_LEN + 1, f.fp); i++) {
@@ -570,7 +598,7 @@ int8_t assemble (char *file)
             p1errs, p1warns);
 
     if (p1errs == 0) {
-        addr = origaddr;
+        addr = arrs.filebuf->insbuf[0];
 
         uint16_t endofprogram = arrs.tokbufarr->ind - origind;
         for (uint16_t i = origind; endofprogram; ++i, --endofprogram) {
@@ -579,7 +607,7 @@ int8_t assemble (char *file)
         notify ("%d error(s) and %d warning(s) in pass two\n",
                 geterrors() - p1errs, getwarnings() - p1warns);
     } else {
-        notify ("Unresolved errors encountered in pass one, exiting...\n");
+        notify ("Unresolved errors encountered in pass one.\n");
     }
 
     // write buffers to file
@@ -611,7 +639,6 @@ int8_t assemble (char *file)
 typedef struct ProjectNode {
     filearr_t out;
     arrs_t res;
-    uint16_t origaddr;
     uint32_t origind;
     uint32_t ln;
 } pnode_t;
@@ -704,10 +731,8 @@ int8_t project (char **files)
     }
     notify ("in project mode...\n");
 
-    pnode_t *project = (pnode_t*) calloc (filecount, sizeof (pnode_t));
-
     notify ("Beginning pass one...\n");
-
+    pnode_t *project = (pnode_t*) calloc (filecount, sizeof (pnode_t));
     for (uint32_t i = 0; i < filecount; i++) {
         setcurrentfile (*(files + i));
 
@@ -719,20 +744,22 @@ int8_t project (char **files)
         project[i].res.tokbufarr = inittokenbufferarray ();
 
         project[i].ln = 1;
-        project[i].origaddr = preorig (project[i].out,
-                                       &project[i].ln,
-                                       &project[i].res);
-        project[i].origind = project[i].res.tokbufarr->ind;
-        project[i].ln++;
+        uint16_t addr = 0;
+        if (preorig (project[i].out, &project[i].ln, &project[i].res)) {
+            addr = project[i].res.filebuf->insbuf[0];
+            project[i].origind = project[i].res.tokbufarr->ind;
+            project[i].ln++;
+        } else {
+            error (project[i].ln, "No origin address declared!\n");
+        }
 
         char line[MAX_LEN + 1];
         uint8_t end = 0;
-        uint16_t addr = project[i].origaddr;
         macroarr_t *curmacro = project[i].res.macro;
 
         for (uint32_t ln = project[i].ln;
              fgets (line, MAX_LEN + 1, project[i].out.fp);
-             ln++)
+             ++ln)
         {
             TokenBuffer *buf = tokenize (line);
             if (buf->toknum == 0) {							// skip empty lines
@@ -780,7 +807,7 @@ int8_t project (char **files)
         for (uint32_t i = 0; i < filecount; i++) {
             setcurrentfile (*(files + i));
 
-            uint16_t addr = project[i].origaddr;
+            uint16_t addr = project[i].res.filebuf->insbuf[0];
 
             uint16_t end = project[i].res.tokbufarr->ind - project[i].origind;
             for (uint16_t j = project[i].origind;
@@ -793,27 +820,50 @@ int8_t project (char **files)
         notify ("%d error(s) and %d warning(s) in pass two\n",
                 geterrors() - p1errs, getwarnings() - p1warns);
     } else {
-        notify ("Unresolved errors encountered in pass one, exiting...\n");
+        notify ("Unresolved errors encountered in pass one.\n");
     }
 
+    // check for collisions between project object files
+    if (!geterrors ()) {
+        for (uint32_t i = 0; i < filecount; ++i) {
+            char *file1 = *(files + i);
+            setcurrentfile (file1);
+            filebuf_t *fbuf1 = project[i].res.filebuf;
+            uint16_t loaddr1 = fbuf1->insbuf[0];
+            uint16_t hiaddr1 = fbuf1->addrbuf[fbuf1->ind - 1];
+            for (uint32_t j = i + 1; j < filecount; ++j) {
+                char *file2 = *(files + j);
+                filebuf_t *fbuf2 = project[j].res.filebuf;
+                uint16_t loaddr2 = fbuf2->insbuf[0];
+                uint16_t hiaddr2 = fbuf2->addrbuf[fbuf2->ind - 1];
 
+                if (loaddr1 < loaddr2 && loaddr2 < hiaddr1 ||
+                    loaddr1 < hiaddr2 && hiaddr2 < hiaddr1)
+                {
+                    error (fbuf1->lnbuf[0],
+                            "Collision between \"%s\" and \"%s\"!",
+                            file1, file2);
+                }
+            }
+        }
+    }
+    
     // write buffers to file and clean up
     for (uint32_t i = 0; i < filecount; i++) {
-        writeobj (project[i].res.filebuf, project[i].out.obj);
-        writehex (project[i].res.filebuf, project[i].out.hex);
-        writebin (project[i].res.filebuf, project[i].out.bin);
-        writesym (project[i].res.label, project[i].out.sym);
-        writelst (project[i].res.filebuf,
-                  project[i].out.fp,
-                  project[i].out.lst);
+        arrs_t res = project[i].res;
+        writeobj (res.filebuf, project[i].out.obj);
+        writehex (res.filebuf, project[i].out.hex);
+        writebin (res.filebuf, project[i].out.bin);
+        writesym (res.label, project[i].out.sym);
+        writelst (res.filebuf, project[i].out.fp, project[i].out.lst);
         
         if (geterrors()) clean (*(files + i));
 
-        freefilebuf (project[i].res.filebuf);
-        freealiasarr (project[i].res.alias);
-        freemacroarr (project[i].res.macro);
-        freelabelarr (project[i].res.label);
-        freetokenbufferarray (project[i].res.tokbufarr);
+        freefilebuf (res.filebuf);
+        freealiasarr (res.alias);
+        freemacroarr (res.macro);
+        freelabelarr (res.label);
+        freetokenbufferarray (res.tokbufarr);
         closeasmfiles (&project[i].out);
     }
     free (project);

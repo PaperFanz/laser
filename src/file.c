@@ -1,3 +1,26 @@
+/*
+*   Laser- a command line utility to assemble LC3 assembly code
+*
+*   Copyright Notice:
+*
+*       Copyright 2018, 2019 Zhiyuan Fan
+*
+*   License Notice:
+*
+*       Laser is free software: you can redistribute it and/or modify
+*       it under the terms of the GNU General Public License as published by
+*       the Free Software Foundation, either version 3 of the License, or
+*       (at your option) any later version.
+*
+*       Laser is distributed in the hope that it will be useful,
+*       but WITHOUT ANY WARRANTY; without even the implied warranty of
+*       MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+*       GNU General Public License for more details.
+*
+*       You should have received a copy of the GNU General Public License
+*       along with Laser.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 #define USES_FLAG
 #define USES_FILE
 #define USES_LABEL
@@ -242,7 +265,7 @@ void writelst (filebuf_t *buf, FILE *fp, FILE *lst)
         */
         while (ind != maxind && buf->lnbuf[ind] == ln) {
             uint16_t ins = buf->insbuf[ind];
-            fprintf (lst, " x%04X | %s%s%s%s |      |\n", ins, instobin(ins));
+            fprintf (lst, "        | x%04X | %s%s%s%s |      |\n", ins, instobin(ins));
             ind++;
         }
     }
