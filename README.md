@@ -8,36 +8,27 @@ and LC3Edit through new pseudoops, along with a project assembly mode.
 
 ## Installing
 
-Installing is fairly simple as far as terminal apps go. Follow the instructions 
-below or read BUILDING.md for instructions on building from source.
+For now, the only way to get Laser is to build from source. See 
+[BUILDING.md](BUILDING.md) for instructions on how to build Laser from source.
 
 ### Linux
 
-Currently, the simplest installation method for Linux for now is to build from 
-source. Since there are no external dependencies, this process is relatively 
-painless.
-
-```c
-// todo
-```
-
-For a more detailed explanation of these commands, please see BUILDING.md.
+Coming soon!
 
 ### Windows
 
-A precompiled binary for Windows is provided under the releases tab. Adding 
-this executable to your windows %PATH will allow you to invoke it in either 
-the Windows command prompt or powershell. Alternatively, you can install 
-Windows Subsystem Linux and use the Linux instructions to build from source.
+Coming soon!
 
 ### Mac OSX
 
+Coming soon!
+
 ## Usage
 
-See USAGE.md
+See [USAGE.md](USAGE.md)
 
 ## Building from Source
 
-see BUILDING.md
+see [BUILDING.md](BUILDING.md)
 
 ## Copyright
