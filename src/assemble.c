@@ -196,21 +196,19 @@ uint8_t passone (uint32_t ln, uint16_t *addr, TokenBuffer *buf, arrs_t *arrs)
 
             // this error will be handled later, in the opnum checking
             if (j + 1 >= buf->toknum) break;
-            ++j;
 
             if (pop == STRINGZ) {
-                *addr += token[j]->len;
+                *addr += token[j + 1]->len;
+                ++j;            // increment past string argument (unchecked)
                 ++opcount;
             } else if (pop == BLKW) {
-                uint8_t offt = offtype (token[j]);
-                if (offt > 0) *addr += offset (offt, token[j]);
-                ++opcount;
+                uint8_t offt = offtype (token[j + 1]);
+                if (offt > 0) *addr += offset (offt, token[j + 1]);
             } else if (pop == FILL) {
                 *addr += 1;
-                ++opcount;
             } else {
                 warning (ln, "Ignoring unexpected use of '%s' in program body",
-                        token[j - 1]->str);
+                        token[j]->str);
             }
         } else if (isregister (token[j]) >= 0) {
             opcount++;
