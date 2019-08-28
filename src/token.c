@@ -79,9 +79,9 @@ Token* putstr (char *line, uint16_t *lineptr)
 int8_t iseow (char c)
 {
     int8_t eow = 0;
-    const char eowchars[] = {0, 32, 44, 9, 10, 13};
+    const char eowchars[] = {0, 13, '\t', '\n', ' ', ',', ';'};
 
-    for (uint8_t i = 0; i < 6; i++) {
+    for (uint8_t i = 0; i < 7; i++) {
         if (c == eowchars[i]) eow++;
     }
 

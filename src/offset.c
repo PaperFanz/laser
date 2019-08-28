@@ -54,7 +54,8 @@ int16_t hextodec (char hex[])
 int16_t hexoffset (char *offset)
 {
     int16_t offval = 0;
-    char *hex = strchr (offset, 'x');
+    char *hex = strchr (offset, 'x');       // for normal people who use 0x00
+    if (!hex) hex = strchr (offset, 'X');   // for the heathens that use 0X00
     hex++;
     if (hex[0] == '-') {
         hex++;
@@ -95,7 +96,9 @@ int16_t binoffset (char *offset)
     int8_t neg = 0;
     int16_t offval = 0;
     // move pointer past leading characters
-    char *bin = strchr (offset, 'b');
+    char *bin = strchr (offset, 'b');       // for normal people who use 0b00
+    if (!bin) bin = strchr (offset, 'B');   // for the heathens that use 0B00
+
     bin++;
     if (bin[0] == '-') {
         bin++;
@@ -157,14 +160,14 @@ uint8_t offtype (Token *tok)
     char *token = tok->str;
     char *tmp;
     char c;
-    if ((tmp = strchr (token, 'x')) != NULL) {
+    if ((tmp = strchr (token, 'x')) || (tmp = strchr (token, 'X'))) {
         tmp++;
         if (*tmp == '-') tmp++;
         for (uint16_t i = 0; (c = tmp[i]); i++) {
             if (!isxdigit (c)) return INVALID_OFF;
         }
         return HEX;
-    } else if ((tmp = strchr (token, 'b')) != NULL) {
+    } else if ((tmp = strchr (token, 'b')) || (tmp = strchr (token, 'B'))) {
         tmp++;
         if (*tmp == '-') tmp++;
         for (uint16_t i = 0; (c = tmp[i]); i++) {

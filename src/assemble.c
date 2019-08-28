@@ -226,7 +226,9 @@ uint8_t passone (uint32_t ln, uint16_t *addr, TokenBuffer *buf, arrs_t *arrs)
         }
     }
 
-    if (opcount > opnum) {
+    if (opnum == -1) {
+        
+    } else if (opcount > opnum) {
         warning (ln, "'%s' expects %d operands", tok, opnum);
     } else if (opcount < opnum) {
         error (ln,	"'%s' expects %d operands", tok, opnum);
@@ -521,7 +523,7 @@ uint8_t passtwo (uint32_t tbufind, uint16_t *addr, arrs_t *arrs)
         }
 
     } else {
-        error (ln, "Unrecognized token '%s'", token[0]);
+        error (ln, "Unrecognized token '%s'", token[0]->str);
     }
 
     if (end) return 1;

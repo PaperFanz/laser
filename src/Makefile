@@ -4,7 +4,7 @@ IDIR = ../include
 ODIR = obj
 
 CC = gcc
-CFLAGS = -I $(IDIR) -g
+CFLAGS = -I $(IDIR)
 
 _DEPS = laser.h token.h
 DEPS = $(patsubst %, $(IDIR)/%,$(_DEPS))

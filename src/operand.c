@@ -33,6 +33,16 @@ int8_t arrcmp (char *str, const char *arr[][2], uint8_t size)
     return -1;
 }
 
+int8_t brrcmp (char *str, const char *arr[][3], uint8_t size)
+{
+    for (uint8_t i = 0; i < size; i++) {
+        if (strcmp (str, arr[i][0]) == 0 ||
+            strcmp (str, arr[i][1]) == 0 ||
+            strcmp (str, arr[i][2]) == 0) return i;
+    }
+    return -1;
+}
+
 int8_t isregister (Token *token)
 {
     const char *regs[][2] = {
@@ -51,18 +61,18 @@ int8_t isregister (Token *token)
 
 int8_t isbranch (Token *token)
 {
-    const char *brs[][2] = {
-        {"BR", "br"},
-        {"BRp", "brp"},
-        {"BRz", "brz"},
-        {"BRzp", "brzp"},
-        {"BRn", "brn"},
-        {"BRnp", "brnp"},
-        {"BRnz", "brnz"},
-        {"BRnzp", "brnzp"}
+    const char *brs[][3] = {
+        {"BR", "BR", "br"},
+        {"BRP", "BRp", "brp"},
+        {"BRZ", "BRz", "brz"},
+        {"BRZP", "BRzp", "brzp"},
+        {"BRN", "BRn", "brn"},
+        {"BRNP", "BRnp", "brnp"},
+        {"BRNZ", "BRnz", "brnz"},
+        {"BRNZP", "BRnzp", "brnzp"}
     };
 
-    int8_t tmp = arrcmp (token->str, brs, 8);
+    int8_t tmp = brrcmp (token->str, brs, 8);
     tmp = (tmp == 0) ? 7 : tmp;
     return tmp;
 }
