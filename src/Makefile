@@ -1,14 +1,19 @@
-CC = gcc
-CFLAGS = -I $(IDIR)
+SHELL = /bin/sh
 
 IDIR = ../include
-LDIR = ../lib
 ODIR = obj
 
-_DEPS = laser.h convert.h parse.h calc.h config.h
+CC = clang
+CFLAGS = -I $(IDIR)
+
+_DEPS = laser.h token.h
 DEPS = $(patsubst %, $(IDIR)/%,$(_DEPS))
 
-_OBJ = laser.o convert.o parse.o calc.o
+_MAIN_OBJ =  laser.o
+_PARSE_OBJ = file.o flag.o notify.o
+_DEP_OBJ = alias.o label.o macro.o token.o offset.o 
+_ASM_OBJ = assemble.o operand.o pseudoop.o
+_OBJ = $(_MAIN_OBJ) $(_PARSE_OBJ) $(_DEP_OBJ) $(_ASM_OBJ)
 OBJ = $(patsubst %, $(ODIR)/%,$(_OBJ))
 
 $(ODIR)/%.o: %.c $(DEPS)
