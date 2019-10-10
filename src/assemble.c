@@ -69,7 +69,7 @@ uint16_t preorig (filearr_t f, uint32_t *ln, arrs_t *arrs)
 
         TokenBuffer *buf = tokenize (line);
         Token **token = buf->token;
-        if (buf->toknum == 0){													// skip empty lines
+        if (buf->toknum == 0){  						// skip empty lines
             freetokenarr (buf);
             continue;
         }
@@ -176,11 +176,20 @@ uint8_t passone (uint32_t ln, uint16_t *addr, TokenBuffer *buf, arrs_t *arrs)
 
         if (j == 0 && isvalidlabel (token[j])) {
             /*
-                a label should only be added to the sumbol table if it is the
+                a label should only be added to the symbol table if it is the
                 first token in a line
             */
             tok = token[j]->str;
-            addlabel (arrs->label, ln, token[j], *addr);
+            
+            char *exists = existlabel (arrs->label, *addr);
+
+            if (exists == NULL) {
+                addlabel (arrs->label, ln, token[j], *addr);
+            } else {
+                error (ln, "Multiple labels pointing to same address: '%s' and '%s'",
+                        exists, token[j]->str);    
+            }
+            
             opnum = 0;
         } else if ((op = isoperand (token[j])) >= 0) {
             tok = token[j]->str;
@@ -544,7 +553,7 @@ int8_t assemble (char *file)
     notify ("Assembling \"%s\"...\n", file);
 
     filearr_t f = {NULL, NULL, NULL, NULL, NULL, NULL};
-    if (openasmfiles (&f, file)) return 1;			// exit if files unopenable
+    if (openasmfiles (&f, file)) return 1;	     // exit if files unopenable
 
     arrs_t arrs = {
         initfilebuf (),
@@ -837,8 +846,8 @@ int8_t project (char **files)
                 uint16_t loaddr2 = fbuf2->insbuf[0];
                 uint16_t hiaddr2 = fbuf2->addrbuf[fbuf2->ind - 1];
 
-                if (loaddr1 < loaddr2 && loaddr2 < hiaddr1 ||
-                    loaddr1 < hiaddr2 && hiaddr2 < hiaddr1)
+                if ((loaddr1 < loaddr2 && loaddr2 < hiaddr1) ||
+                    (loaddr1 < hiaddr2 && hiaddr2 < hiaddr1))
                 {
                     error (fbuf1->lnbuf[0],
                             "Collision between \"%s\" and \"%s\"!",

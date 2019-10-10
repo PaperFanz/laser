@@ -147,6 +147,8 @@
 
     uint16_t labeladdr (labelarr_t *l, Token *label);
 
+    char* existlabel (labelarr_t *l, uint16_t addr);
+
     labelarr_t* initlabelarr (void);
 
     void freelabelarr (labelarr_t *l);

@@ -59,9 +59,19 @@ uint8_t isvalidlabel (Token *tok)
 
 uint16_t labeladdr (labelarr_t *l, Token *label)
 {
-    for (uint16_t i = 0; i < l->ind; i++) {
+    for (uint16_t i = 0; i < l->ind; ++i) {
         if (strcmp (label->str, l->arr[i].label->str) == 0) {
             return l->arr[i].address;
+        }
+    }
+    return 0;
+}
+
+char* existlabel (labelarr_t *l, uint16_t addr)
+{
+    for (uint16_t i = 0; i < l->ind; ++i) {
+        if (l->arr[i].address == addr) {
+            return l->arr[i].label->str;
         }
     }
     return 0;

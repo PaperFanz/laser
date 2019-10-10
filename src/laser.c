@@ -27,7 +27,7 @@
 #define USES_ASSEMBLE
 #include "laser.h"
 
-int8_t main (int argc, char **argv)
+int main (int argc, char **argv)
 {
     int8_t err = 0;
 
