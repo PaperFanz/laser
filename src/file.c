@@ -91,7 +91,7 @@ uint8_t openasmfiles (filearr_t *f, char *file)
     }
     replaceextension (file, ".obj");
 
-    f->obj = fopen (file, "w");
+    f->obj = fopen (file, "wb");
     if (f->obj == NULL) {
         notify ("Unable to open %s!\n", file);
         failed++;
