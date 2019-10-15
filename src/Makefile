@@ -3,7 +3,7 @@ SHELL = /bin/sh
 IDIR = ../include
 ODIR = obj
 
-CC = clang
+CC = gcc
 CFLAGS = -I $(IDIR)
 
 _DEPS = laser.h token.h

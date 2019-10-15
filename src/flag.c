@@ -45,7 +45,7 @@ const char *about = "Laser- a command line utility to assemble LC3 assembly code
                     "\tYou should have received a copy of the GNU General Public License\n"
                     "\talong with Laser.  If not, see <https://www.gnu.org/licenses/>.\n";
 
-const char *version_num = "2.0.0";
+const char *version_num = "2.0.1";
 
 const char *usage = "Laser- a command line utility to assemble LC3 assembly code\n\n"
                     "Usage:\n"

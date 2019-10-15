@@ -2,6 +2,9 @@
 *.o
 laser
 laser-*
+*.exe
+*.ifp
+*.zip
 
 # ignore test files
 *.txt
