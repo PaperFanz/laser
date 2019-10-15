@@ -63,17 +63,13 @@ void endlog (void)
 void setcurrentfile (char *file)
 {
     // strip directories from filename string
-    char *ret = NULL;
-    #ifdef _WIN32
+    char *ret;
+#if defined(_WIN32) || defined(_WIN64)
     ret = strrchr (file, '\\') + 1;
-    #endif
-    #ifdef _WIN64
-    ret = strrchr (file, '\\') + 1;
-    #endif
-    #ifdef linux
+#else
     ret = strrchr (file, '/') + 1;
-    #endif
-    if (ret) file = ret;
+#endif
+    if (ret > file) file = ret;
     CURRENT_FILE = file;
 }
 
@@ -123,7 +119,11 @@ void warning (uint32_t ln, const char *format, ...)
 
     if (!NO_WARNINGS) {
         va_start (strs, format);
+#if defined(_WIN32) || defined(_WIN64)
+        printf ("Warning (%s line %d): ", CURRENT_FILE, ln);
+#else       
         printf ("\033[01;33mWarning (%s line %d):\033[0m ", CURRENT_FILE, ln);
+#endif
         vprintf (format, strs);
         printf("\n");
         va_end (strs);
@@ -147,7 +147,11 @@ void error (uint32_t ln, const char *format, ...)
 
     if (!NO_ERRORS) {
         va_start (strs, format);
+#ifdef _WIN32
+        printf ("Error (%s line %d): ", CURRENT_FILE, ln);
+#else
         printf ("\033[1;31mError (%s line %d):\033[0m ", CURRENT_FILE, ln);
+#endif
         vprintf (format, strs);
         printf("\n");
         va_end (strs);
