@@ -12,7 +12,7 @@ Under the releases tab, there are pre-compiled binaries for Windows, Mac, and
 Linux. In addition, it is highly recommended that you use this program with an 
 extensible editor like VSCode or Notepad++, and to add Laser as a shortcut in 
 your editor. If all this installation stuff is not up your alley or you'd like 
-to learn more about how Laser was created, take a loot at 
+to learn more about how Laser was created, take a look at 
 [BUILDING.md](BUILDING.md) for instructions on how to build Laser from source.
 
 ### Linux/Mac OS X
