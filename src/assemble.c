@@ -625,15 +625,15 @@ int8_t assemble (char *file)
     writebin (arrs.filebuf, f.bin);
     writesym (arrs.label, f.sym);
     writelst (arrs.filebuf, f.fp, f.lst);
+    closeasmfiles (&f);
     
     if (geterrors()) clean (file);
-
+    
     freefilebuf (arrs.filebuf);
     freealiasarr (arrs.alias);
     freemacroarr (arrs.macro);
     freelabelarr (arrs.label);
     freetokenbufferarray (arrs.tokbufarr);
-    closeasmfiles (&f);
 
     notify ("Done!\n\n");
 
