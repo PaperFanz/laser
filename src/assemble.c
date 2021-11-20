@@ -625,8 +625,6 @@ int8_t assemble (char *file)
     writebin (arrs.filebuf, f.bin);
     writesym (arrs.label, f.sym);
     writelst (arrs.filebuf, f.fp, f.lst);
-    
-    if (geterrors()) clean (file);
 
     freefilebuf (arrs.filebuf);
     freealiasarr (arrs.alias);
@@ -634,6 +632,8 @@ int8_t assemble (char *file)
     freelabelarr (arrs.label);
     freetokenbufferarray (arrs.tokbufarr);
     closeasmfiles (&f);
+    
+    if (geterrors()) clean (file);   
 
     notify ("Done!\n\n");
 
